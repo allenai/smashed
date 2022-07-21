@@ -1,27 +1,92 @@
-# python-project-template
+# SMASHED
 
-This is a template repository for Python-based research projects.
+**S**equential **MA**ppers for **S**equences of **HE**terogeneous **D**ictionaries is a set of Python interfaces designed to apply transformations to samples in datasets, which are often implemented as sequences of dictionaries.
 
-## Usage
+## Example of Usage
 
-1. [Create a new repository](https://github.com/allenai/python-project-template/generate) from this template with the desired name of your Python project.
+Mappers are initialized and then applied sequentially. In the following example, we create a mapper that is applied to a samples, each containing a sequence of strings.
+The mappers are responsible for the following operations.
+1. Tokenize each sequence, cropping it to a maximum length if necessary.
+2. Stride sequences together to a maximum length or number of samples.
+3. Add padding symbols to sequences and attention masks.
+4. Concatenate all sequences from a stride into a single sequence.
 
-2. Change the name of the `my_project` directory to the name of your repo / Python project.
 
-3. Replace all mentions of `my_project` throughout this repository with the new name.
 
-    On OS X, a quick way to find all mentions of `my_project` is:
+```python
+import transformers
+from smashed.interfaces.simple import (
+    Dataset,
+    TokenizerMapper,
+    MultiSequenceStriderMapper,
+    TokensSequencesPaddingMapper,
+    AttentionMaskSequencePaddingMapper,
+    SequencesConcatenateMapper,
+)
 
-    ```bash
-    find . -type f -not -path './.git/*' -not -path ./README.md -not -path './docs/build/*' -not -path '*__pycache__*' | xargs grep 'my_project'
-    ```
+tokenizer = transformers.AutoTokenizer.from_pretrained(
+    pretrained_model_name_or_path='bert-base-uncased',
+)
 
-    There is also a one-liner to find and replace all mentions `my_project` with `actual_name_of_project`:
+mappers = [
+    TokenizerMapper(
+        input_field='sentences',
+        tokenizer=tokenizer,
+        add_special_tokens=False,
+        truncation=True,
+        max_length=80
+    ),
+    MultiSequenceStriderMapper(
+        max_stride_count=2,
+        max_length=512,
+        tokenizer=tokenizer,
+        length_reference_field='input_ids'
+    ),
+    TokensSequencesPaddingMapper(
+        tokenizer=tokenizer,
+        input_field='input_ids'
+    ),
+    AttentionMaskSequencePaddingMapper(
+        tokenizer=tokenizer,
+        input_field='attention_mask'
+    ),
+    SequencesConcatenateMapper()
+]
 
-    ```bash
-    find . -type f -not -path './.git/*' -not -path ./README.md -not -path './docs/build/*' -not -path '*__pycache__*' -exec sed -i '' -e 's/my_project/actual_name_of_project/' {} \;
-    ```
+dataset = Dataset([
+    {
+        'sentences': [
+            'This is a sentence.',
+            'This is another sentence.',
+            'Together, they make a paragraph.',
+        ]
+    },
+    {
+        'sentences': [
+            'This sentence belongs to another sample',
+            'Overall, the dataset is made of multiple samples.',
+            'Each sample is made of multiple sentences.',
+            'Samples might have a different number of sentences.',
+            'And that is the story!',
+        ]
+    }
+])
 
-4. Update the README.md.
+for mapper in mappers:
+    dataset = mapper.map(dataset)
 
-5. Commit and push your changes, then make sure all CI checks pass.
+print(len(dataset))
+
+# >>> 5
+
+print(dataset[0])
+
+# >>> {'input_ids': [101, 2023, 2003, 1037, 6251, 1012, 102, 2023, 2003, 2178, 6251, 1012, 102], 'attention_mask': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+```
+
+## Dataset Interfaces Available
+
+The initial version of SMASHED supports two interfaces for dataset:
+
+1. **`interfaces.simple.Dataset`**: A simple dataset representation that is just a list of python dictionaries with some extra convenience methods to make it work with SMASHED. You can crate a simple dataset by passing a list of dictionaries to `interfaces.simple.Dataset`.
+2. **HuggingFace `datasets` library**. SMASHED mappers work with any datasets from HuggingFace, whether it is a regular or iterable dataset.
