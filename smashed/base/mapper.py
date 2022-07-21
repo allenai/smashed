@@ -8,6 +8,30 @@ from .types import \
 
 
 class BaseMapper(ABC):
+    """An abstract implementation of a Mapper; must be subclassed.
+
+    A mapper is an object that transforms samples in a dataset; it can either
+    produce one transformed sample per input sample (1-to-1 mapping,
+    self.batched = False) or produce n samples per input sample (1-to-n mapping,
+    self.batched = True).
+
+    When creating a mapper from this base class, one need to assign three
+    attributes:
+    - self.input_fields: a list of the names of the input fields that are
+        required to be present in the dataset for the mapper to work.
+    - self.output_fields: a list of the names of the output fields that are
+        produced by the mapper.
+    - self.batched: a boolean indicating whether the mapper produces one
+        transformed sample per input sample (False) or n samples per input
+        sample (True).
+
+    Beside the above attributes, the mapper also needs to implement the
+    transform method, which either receives a single sample (if
+    self.batched = False) or a list of samples (if self.batched = True).
+
+    Optionally, it can also implement the cast_columns method, which returns
+    a dictionary of new types for some (or all) of the input/output columns.
+    """
 
     __batched__: Optional[bool] = None
     __input_fields__: Optional[Sequence[str]] = None

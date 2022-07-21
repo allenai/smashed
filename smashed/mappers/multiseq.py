@@ -16,6 +16,14 @@ class TokensSequencesPaddingMapper(BaseMapper):
         tokenizer: PreTrainedTokenizerBase,
         input_field: str = 'input_ids',
     ) -> None:
+        """ Mapper that add BOS/SEP/EOS sequences of tokens.
+
+        Args:
+            tokenizer (PreTrainedTokenizerBase): Tokenizer to use for
+                looking up special BOS/SEP/EOS tokens.
+            input_field (str, optional): The field to add special tokens to.
+                Defaults to 'input_ids'.
+        """
         super().__init__()
 
         self.input_fields = [input_field]
@@ -81,6 +89,14 @@ class AttentionMaskSequencePaddingMapper(TokensSequencesPaddingMapper):
     def __init__(self,
                  tokenizer: PreTrainedTokenizerBase,
                  input_field: str = 'attention_mask') -> None:
+        """Mapper to add BOS/SEP/EOS tokens to an attention mask sequence.
+
+        Args:
+            tokenizer (PreTrainedTokenizerBase): Tokenizer to use for
+                looking up size of special BOS/SEP/EOS tokens.
+            input_field (str, optional): The field to add special tokens to.
+                Defaults to 'attention_mask'.
+        """
         super().__init__(tokenizer=tokenizer, input_field=input_field)
 
         # attention masks are always masked with ones
@@ -93,6 +109,14 @@ class TokenTypeIdsSequencePaddingMapper(TokensSequencesPaddingMapper):
     def __init__(self,
                  tokenizer: PreTrainedTokenizerBase,
                  input_field: str = 'token_type_ids') -> None:
+        """Mapper to add BOS/SEP/EOS tokens to a token type ids sequence.
+
+        Args:
+            tokenizer (PreTrainedTokenizerBase): Tokenizer to use for
+                looking up size of special BOS/SEP/EOS tokens.
+            input_field (str, optional): The field to add special tokens to.
+                Defaults to 'token_type_ids'.
+        """
         super().__init__(tokenizer=tokenizer, input_field=input_field)
 
     def transform(self, data: TransformElementType) -> TransformElementType:
@@ -116,6 +140,14 @@ class MakeAttentionMaskMapper(BaseMapper):
     def __init__(self,
                  input_field: str = 'input_ids',
                  output_field: str = 'attention_mask') -> None:
+        """Mapper to create attention masks from input ids.
+
+        Args:
+            input_field (str, optional): The field to determine the
+                shape of the attention mask. Defaults to 'input_ids'.
+            output_field (str, optional): The name of the field containing
+                the attention mask. Defaults to 'attention_mask'.
+        """
         super().__init__()
         self.input_fields = [input_field]
         self.output_fields = [output_field]
@@ -133,6 +165,27 @@ class LabelsMaskerMapper(BaseMapper):
                  strategy: Literal['all', 'one', 'sample'] = 'all',
                  sample_prob: Optional[float] = None,
                  label_mask_id: LabelType = -100) -> None:
+        """ Given a sequence of labels, this mapper will mask some of them.
+        Useful when wanting to create more samples by masking a subset of
+        labels, or when running evaluations and want to predict one label at
+        the time.
+
+        Args:
+            labels_field (str, optional): The field containing the labels.
+                Defaults to 'labels'.
+            strategy (Literal['all', 'one', 'sample'], optional): The strategy
+                to use for masking. If 'all', no values are masked. If 'one',
+                we generate m separate samples for each label, where for each
+                sample, we mask one label. If 'sample', we generate sample
+                a subset of labels with a probability of `sample_prob`.
+                Defaults to 'all'.
+            sample_prob (float, optional): The probability of sampling when
+                `strategy` is 'sample'. Defaults to None. If strategy is
+                'sample' and sample_prob is None, an error is raised.
+            label_mask_id (LabelType, optional): The value to use for a masked
+                label. Defaults to -100.
+
+        """
         super().__init__()
         self.input_fields = [labels_field]
         self.output_fields = [labels_field]
@@ -215,6 +268,33 @@ class MultiSequenceStriderMapper(BaseMapper):
                  extra_length_per_seq: Optional[int] = None,
                  tokenizer: Optional[PreTrainedTokenizerBase] = None,
                  max_step: Optional[int] = None) -> None:
+        """Mapper to create multiple subset sequences from a single sequence
+        of sequences.
+
+        The multiple sequences are created by sliding a window of size
+        `max_stride_count` over the original sequence or `max_length` if
+        the total number of accumulated tokens exceeds it (whichever comes
+        first).
+
+        Args:
+            max_stride_count (int): The maximum number of sequences to include
+                in each subset sequence of sequences.
+            length_reference_field (str): The field to use to determine the
+                rolling length of a subset sequence.
+            max_length (int, optional): The maximum length of units in
+                the subset sequence. Defaults to None (i.e., not used).
+            extra_length_per_seq (int, optional): Optional field in case
+                you we expect each sequence to be extended by another mapper
+                after MultiSequenceStriderMapper. For example, if you are
+                expecting to add special tokens for BOS/EOS/SEP,
+                extra_length_per_seq could be 2 if BOS, EOS, and SEP are
+                length 1.
+            tokenizer (PreTrainedTokenizerBase, optional): A HuggingFace
+                tokenizer to use to determine the length of BOS/EOS/SEP
+                tokens. If not provided, extra_length_per_seq is used.
+            max_step (int, optional): Not used at the moment.
+
+        """
         super().__init__()
 
         self.input_fields = self.output_fields = [length_reference_field]
@@ -301,6 +381,28 @@ class SingleValueToSequenceMapper(BaseMapper):
                  like_field: str = 'input_ids',
                  strategy: Literal['first', 'last', 'all'] = 'first',
                  padding_id: LabelType = -100) -> None:
+        """Mapper to create a sequence of values from single value.
+        Useful when casting a sequence classification task to a sequence
+        tagging task, e.g. making a prediction for a sequence of sentences
+        by concatenating the sentences, and then predicting on the BOS/SEP
+        tokens.
+
+        Args:
+            single_value_field: name of the field containing the single
+                label value.
+            like_field: name of the field whose shape will be used to repeat
+                the single value to create the sequence. Default is 'input_ids'.
+            strategy: strategy to use to create the sequence.
+                - If 'first', the single value will be the first element of the
+                    new sequence, and all other positions will be filled with
+                    the padding_id.
+                - If 'last', the single value will be the last element of the
+                    new sequence, and all other positions will be filled with
+                    the padding_id.
+                - If 'all', the single value will be repeated for each position
+                    of the new sequence; the padding_id will be ignored.
+            padding_id: id to use for the padding token. Default is -100.
+        """
         super().__init__()
 
         self.input_fields = [single_value_field, like_field]

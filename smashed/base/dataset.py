@@ -7,6 +7,14 @@ D = TypeVar('D', bound='BaseDataset')
 
 
 class BaseDataset(Protocol):
+    """A protocol for datasets. In general, a dataset is a collection of samples
+    that can be iterated over. Datasets support a map operation that can either
+    transform a sample into another sample (1-to-1 mapping) or generate
+    multiple samples from a single sample (1-to-many mapping).
+
+    Dataset APIs are modeled after HuggingFace ArrowDataset APIs."""
+
+
     @property
     def features(self) -> Features:
         ...

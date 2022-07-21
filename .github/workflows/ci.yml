@@ -102,4 +102,4 @@ jobs:
         if: always()
         run: |
           . .venv/bin/activate
-          pip uninstall -y my_project
+          pip uninstall -y smashed

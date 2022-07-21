@@ -27,7 +27,7 @@ def read_requirements(filename: str):
 # version.py defines the VERSION and VERSION_SHORT variables.
 # We use exec here so we don't import cached_path whilst setting up.
 VERSION = {}  # type: ignore
-with open("my_project/version.py", "r") as version_file:
+with open("smashed/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
 
 setup(
@@ -44,7 +44,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     keywords="",
-    url="https://github.com/allenai/my_project",
+    url="https://github.com/allenai/smashed",
     author="Allen Institute for Artificial Intelligence",
     author_email="contact@allenai.org",
     license="Apache",

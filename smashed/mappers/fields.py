@@ -8,6 +8,15 @@ class ChangeFieldsMapper(BaseMapper):
     def __init__(self,
                  keep_fields:  Optional[Sequence[str]] = None,
                  drop_fields: Optional[Sequence[str]] = None):
+        """Mapper that removes some of the fields in a dataset.
+        Either `keep_fields` or `drop_fields` must be specified, but not both.
+
+        Args:
+            keep_fields (Sequence[str]): Fields to keep, all other fields
+                are dropped. Defaults to [].
+            drop_fields (Sequence[str]): Fields to drop, all other fields
+                are kept. Defaults to [].
+        """
 
         # xor between keep_fields and remove_fields
         if (keep_fields is not None and drop_fields is not None) or \
@@ -48,6 +57,23 @@ class MakeFieldMapper(BaseMapper):
         shape_like: Optional[str] = None,
         value_fn: Optional[Callable[[TransformElementType], Any]] = None
     ):
+        """Mapper that adds a new field to a dataset.
+        Either `value` or `value_fn` must be specified, but not both.
+        `value` is a constant value to assign to the new field, while
+        `value_fn` is a function that takes the full sample as input and
+        returns a value to assign to the new field.
+
+        Args:
+            field_name (str): Name of the new field.
+            value (Optional[Any], optional): Value to assign to the new field.
+            shape_like (Optional[str], optional): If a fixed value is provided,
+                this existing field that will be used to determine the shape of
+                the new field. Defaults to None.
+            value_fn (Optional[Callable[[TransformElementType], Any]], optional):
+                Function to call to assign a value to the new field.
+                Defaults to None.
+        """
+
         self.input_fields = []
         self.output_fields = [field_name]
         self.batched = False
