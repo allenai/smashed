@@ -17,3 +17,6 @@ pytest
 
 # Flaky tests
 flaky
+
+# Cache downloads while running tests
+cached-path>=1.1.5

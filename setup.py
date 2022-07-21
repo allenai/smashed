@@ -31,7 +31,7 @@ with open("my_project/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
 
 setup(
-    name="my_project",
+    name="smashed",
     version=VERSION["VERSION"],
     description="",
     long_description=open("README.md").read(),
