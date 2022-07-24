@@ -2,5 +2,5 @@
 ###### Core dependencies #######
 ################################
 
-torch>=1.11
-transformers>=4.16
+torch>=1.9
+transformers>=4.5
