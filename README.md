@@ -6,6 +6,7 @@
 
 Mappers are initialized and then applied sequentially. In the following example, we create a mapper that is applied to a samples, each containing a sequence of strings.
 The mappers are responsible for the following operations.
+
 1. Tokenize each sequence, cropping it to a maximum length if necessary.
 2. Stride sequences together to a maximum length or number of samples.
 3. Add padding symbols to sequences and attention masks.
