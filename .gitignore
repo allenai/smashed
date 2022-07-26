@@ -51,3 +51,6 @@ site/
 
 # ignore local secrets
 .pypirc
+
+# ignore build artifacts
+*.egg-info/

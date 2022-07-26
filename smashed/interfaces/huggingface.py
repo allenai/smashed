@@ -32,7 +32,8 @@ __all__ = [
     'BinarizerMapper',
     'TokenizerMapper',
     'OneVsOtherAnnotatorMapper',
-    'ChangeFieldsMapper'
+    'ChangeFieldsMapper',
+    'ValidUnicodeMapper'
 ]
 
 
@@ -140,5 +141,12 @@ class OneVsOtherAnnotatorMapper(
 class ChangeFieldsMapper(
     _HuggingFaceInterfaceMixInMapper,
     fields.ChangeFieldsMapper
+):
+    ...
+
+
+class ValidUnicodeMapper(
+    _HuggingFaceInterfaceMixInMapper,
+    tokenize.ValidUnicodeMapper
 ):
     ...

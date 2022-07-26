@@ -72,7 +72,8 @@ class TokenizerMapper(BaseMapper):
 
 
 class ValidUnicodeMapper(BaseMapper):
-    """Given input_fields of type List[str], replaces invalid Unicode characters with something else"""
+    """Given input_fields of type List[str], replaces invalid Unicode
+    characters with something else"""
 
     def __init__(
             self,
@@ -84,7 +85,9 @@ class ValidUnicodeMapper(BaseMapper):
         self.batched = False
         self.input_fields = input_fields
         self.prefix = f'{output_prefix}_' if output_prefix else ''
-        self.output_fields = [f'{self.prefix}{input_field}' for input_field in self.input_fields]
+        self.output_fields = [
+            f'{self.prefix}{input_field}' for input_field in self.input_fields
+        ]
         self.unicode_categories = unicode_categories
         self.replace_token = replace_token
 
@@ -97,8 +100,6 @@ class ValidUnicodeMapper(BaseMapper):
                 ) else token
                 for token in tokens
             ]
-        new_data = {
-            f'{self.prefix}{k}': v if k not in self.input_fields else _transform(v)
-            for k, v in data.items()
-        }
+        new_data = {f'{self.prefix}{k}': v if k not in self.input_fields
+                    else _transform(v) for k, v in data.items()}
         return new_data
