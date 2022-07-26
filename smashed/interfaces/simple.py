@@ -22,7 +22,8 @@ __all__ = [
     'TokenizerMapper',
     'OneVsOtherAnnotatorMapper',
     'ChangeFieldsMapper',
-    'MakeFieldMapper'
+    'MakeFieldMapper',
+    'ValidUnicodeMapper'
 ]
 
 
@@ -187,5 +188,11 @@ class ChangeFieldsMapper(
 class MakeFieldMapper(
     _SimpleInterfaceMixInMapper,
     fields.MakeFieldMapper
+):
+    ...
+
+class ValidUnicodeMapper(
+    _SimpleInterfaceMixInMapper,
+    tokenize.ValidUnicodeMapper
 ):
     ...

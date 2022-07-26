@@ -1,24 +1,25 @@
 from ..base import BaseMapper, TransformElementType
 
-from typing import Optional, Any
+import unicodedata
+from typing import Optional, Any, List
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 
 class TokenizerMapper(BaseMapper):
     def __init__(
-        self,
-        tokenizer: PreTrainedTokenizerBase,
-        input_field: str,
-        output_prefix: Optional[str] = None,
-        add_special_tokens: Optional[bool] = True,
-        max_length: Optional[int] = None,
-        return_token_type_ids: Optional[bool] = False,
-        return_attention_mask: Optional[bool] = True,
-        return_overflowing_tokens: Optional[bool] = False,
-        return_special_tokens_mask: Optional[bool] = False,
-        return_offsets_mapping: Optional[bool] = False,
-        return_length: Optional[bool] = False,
-        **tk_kwargs: Any
+            self,
+            tokenizer: PreTrainedTokenizerBase,
+            input_field: str,
+            output_prefix: Optional[str] = None,
+            add_special_tokens: Optional[bool] = True,
+            max_length: Optional[int] = None,
+            return_token_type_ids: Optional[bool] = False,
+            return_attention_mask: Optional[bool] = True,
+            return_overflowing_tokens: Optional[bool] = False,
+            return_special_tokens_mask: Optional[bool] = False,
+            return_offsets_mapping: Optional[bool] = False,
+            return_length: Optional[bool] = False,
+            **tk_kwargs: Any
     ) -> None:
         super().__init__()
 
@@ -68,3 +69,36 @@ class TokenizerMapper(BaseMapper):
         batch_encoding = {f'{self.prefix}{k}': v
                           for k, v in batch_encoding.items()}
         return dict(batch_encoding)
+
+
+class ValidUnicodeMapper(BaseMapper):
+    """Given input_fields of type List[str], replaces invalid Unicode characters with something else"""
+
+    def __init__(
+            self,
+            input_fields: List[str],
+            unicode_categories: List[str],
+            replace_token: str,
+            output_prefix: Optional[str] = None,
+    ):
+        self.batched = False
+        self.input_fields = input_fields
+        self.prefix = f'{output_prefix}_' if output_prefix else ''
+        self.output_fields = [f'{self.prefix}{input_field}' for input_field in self.input_fields]
+        self.unicode_categories = unicode_categories
+        self.replace_token = replace_token
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        def _transform(tokens: List[str]) -> List[str]:
+            return [
+                self.replace_token if all(
+                    unicodedata.category(ch) in self.unicode_categories
+                    for ch in token
+                ) else token
+                for token in tokens
+            ]
+        new_data = {
+            f'{self.prefix}{k}': v if k not in self.input_fields else _transform(v)
+            for k, v in data.items()
+        }
+        return new_data
