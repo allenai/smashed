@@ -86,3 +86,33 @@ class TestTokenizerMapper(unittest.TestCase):
         assert self.tokenizer.decode(new_dataset[0]['input_ids'][1]) == '[CLS] this is the subsequent unit in this instance [SEP]'
         assert self.tokenizer.decode(new_dataset[1]['input_ids'][0]) == '[CLS] this is the next instance. [SEP]'
 
+    def test_overflow(self):
+        mapper = TokenizerMapper(
+            input_field='text',
+            tokenizer=self.tokenizer,
+            truncation=True,
+            max_length=10,
+            return_overflowing_tokens=True
+        )
+        dataset = Dataset([
+            {
+                'text': [
+                    'This is an instance that will be truncated because it is longer than ten word pieces.',
+                    'This is the subsequent unit in this instance that will be separately truncated.'
+                ]
+            },
+            {
+                'text': [
+                    'This is the next instance.'
+                ]
+            }
+        ])
+        new_dataset = mapper.map(dataset)
+        assert len(dataset) == len(new_dataset)     # same num dicts
+        assert 'overflow_to_sample_mapping' in new_dataset[0]
+        assert self.tokenizer.decode(new_dataset[0]['input_ids'][0]) == '[CLS] this is an instance that will be truncated [SEP]'
+        assert self.tokenizer.decode(new_dataset[0]['input_ids'][1]) == '[CLS] because it is longer than ten word pieces [SEP]'
+        assert self.tokenizer.decode(new_dataset[0]['input_ids'][2]) == '[CLS]. [SEP]'
+        assert self.tokenizer.decode(new_dataset[0]['input_ids'][3]) == '[CLS] this is the subsequent unit in this instance [SEP]'
+        assert self.tokenizer.decode(new_dataset[0]['input_ids'][4]) == '[CLS] that will be separately truncated. [SEP]'
+        assert self.tokenizer.decode(new_dataset[1]['input_ids'][0]) == '[CLS] this is the next instance. [SEP]'
