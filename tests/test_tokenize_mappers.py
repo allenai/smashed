@@ -116,3 +116,23 @@ class TestTokenizerMapper(unittest.TestCase):
         assert self.tokenizer.decode(new_dataset[0]['input_ids'][3]) == '[CLS] this is the subsequent unit in this instance [SEP]'
         assert self.tokenizer.decode(new_dataset[0]['input_ids'][4]) == '[CLS] that will be separately truncated. [SEP]'
         assert self.tokenizer.decode(new_dataset[1]['input_ids'][0]) == '[CLS] this is the next instance. [SEP]'
+
+    def test_char_offsets(self):
+        mapper = TokenizerMapper(
+            input_field='text',
+            tokenizer=self.tokenizer,
+            return_offsets_mapping=True
+        )
+        dataset = Dataset([
+            {
+                'text': [
+                    'This is a Pterodactyl.'
+                ]
+            }
+        ])
+        new_dataset = mapper.map(dataset)
+        # offsets are start:end char spans into the original text. each wordpiece has its own start/end.
+        # special tokens like [cls] and [sep] dont have any offsets (start == end char)
+        assert [dataset[0]['text'][0][start:end] for start, end in new_dataset[0]['offset_mapping'][0]] == ['', 'This', 'is', 'a', 'Pt', 'ero', 'da', 'ct', 'yl', '.', '']
+
+
