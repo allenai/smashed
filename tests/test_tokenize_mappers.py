@@ -135,4 +135,90 @@ class TestTokenizerMapper(unittest.TestCase):
         # special tokens like [cls] and [sep] dont have any offsets (start == end char)
         assert [dataset[0]['text'][0][start:end] for start, end in new_dataset[0]['offset_mapping'][0]] == ['', 'This', 'is', 'a', 'Pt', 'ero', 'da', 'ct', 'yl', '.', '']
 
+    def test_split_into_words(self):
+        mapper = TokenizerMapper(
+            input_field='text',
+            tokenizer=self.tokenizer,
+            truncation=True,
+            max_length=10,
+            return_offsets_mapping=True,
+            is_split_into_words=True
+        )
+
+        dataset = Dataset([
+            {
+                'text': [
+                    'This is a Pterodactyl.'
+                ]
+            }
+        ])
+        new_dataset = mapper.map(dataset)
+        # compare this with `test_char_offsets()`. there, we see `offset_mapping` has list elements,
+        # but here, it's collapsed into one field
+        assert [dataset[0]['text'][0][start:end] for start, end in new_dataset[0]['offset_mapping']] == ['', 'This', 'is', 'a', 'Pt', 'ero', 'da', 'ct', 'yl', '']
+
+
+        # now try with a larger dataset to test things like truncation and all that
+        dataset = Dataset([
+            {
+                'text': [
+                    'This is a sentence.',
+                    'This is two sentences. Here is the second one.'
+                ]
+            },
+            {
+                'text': [
+                    'This is a separate instance.',
+                    'This',
+                    'is',
+                    'some',
+                    'tokens',
+                    '.'
+                ]
+            }
+        ])
+        new_dataset = mapper.map(dataset)
+        # when `is_split_into_words=False`, `input_ids` keeps elements in the List[str] separate. that is, tokenizes each separately.
+        # when `is_split_into_words=True`, `input_ids` collapses the List[str] into a single str for tokenization.
+        # to see difference, compare with the test results from `test_map()`
+        assert self.tokenizer.decode(new_dataset[0]['input_ids']) == '[CLS] this is a sentence. this is two [SEP]'
+        assert self.tokenizer.decode(new_dataset[1]['input_ids']) == '[CLS] this is a separate instance. this is [SEP]'
+
+
+        # compare with `test_overflow()`
+        # when we set `return_overflowing_tokens=True`, we gain the list elements of `input_ids` again.
+        # what happens here is, the list elements are stitched together due to `is_split_into_words=True`,
+        # then the overflow logic is applied to create more instances.
+        # key difference versus what we see in `test_overflow()` is this no longer adheres to
+        # boundaries between List[str] elements within an instance (dict).
+        # specifically, the boundary between `...ten word pieces.` and `This is the subsequent...` is gone now.
+        mapper = TokenizerMapper(
+            input_field='text',
+            tokenizer=self.tokenizer,
+            truncation=True,
+            max_length=10,
+            return_offsets_mapping=True,
+            is_split_into_words=True,
+            return_overflowing_tokens=True
+        )
+        dataset = Dataset([
+            {
+                'text': [
+                    'This is an instance that will be truncated because it is longer than ten word pieces.',
+                    'This is the subsequent unit in this instance that will be separately truncated.'
+                ]
+            },
+            {
+                'text': [
+                    'This is the next instance.'
+                ]
+            }
+        ])
+        new_dataset = mapper.map(dataset)
+        assert self.tokenizer.decode(new_dataset[0]['input_ids'][0]) == '[CLS] this is an instance that will be truncated [SEP]'
+        assert self.tokenizer.decode(new_dataset[0]['input_ids'][1]) == '[CLS] because it is longer than ten word pieces [SEP]'
+        assert self.tokenizer.decode(new_dataset[0]['input_ids'][2]) == '[CLS]. this is the subsequent unit in this [SEP]'
+        assert self.tokenizer.decode(new_dataset[0]['input_ids'][3]) == '[CLS] instance that will be separately truncated. [SEP]'
+        assert self.tokenizer.decode(new_dataset[1]['input_ids'][0]) == '[CLS] this is the next instance. [SEP]'
+
 
