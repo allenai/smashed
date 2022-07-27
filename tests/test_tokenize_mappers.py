@@ -244,8 +244,8 @@ class TestTokenizerMapper(unittest.TestCase):
             }
         ])
         new_dataset = mapper.map(dataset)
-        assert 'words' in new_dataset
-        assert 'word_ids' in new_dataset
+        assert 'words' in new_dataset[0]
+        assert 'word_ids' in new_dataset[0]
         # there are 2 primary functionalities we need to check here
         # first, word pieces are correctly mapped. see how Pterodactyl, which is split into 5 wordpieces, is correctly mapped back to its original word
         # second, despite truncation & returning overflow causing there to be additional new sequences, that we can still map back to
