@@ -13,12 +13,15 @@ class TokenizerMapper(BaseMapper):
             output_prefix: Optional[str] = None,
             add_special_tokens: Optional[bool] = True,
             max_length: Optional[int] = None,
+            is_split_into_words: Optional[bool] = False,
             return_token_type_ids: Optional[bool] = False,
             return_attention_mask: Optional[bool] = True,
             return_overflowing_tokens: Optional[bool] = False,
             return_special_tokens_mask: Optional[bool] = False,
             return_offsets_mapping: Optional[bool] = False,
             return_length: Optional[bool] = False,
+            return_word_ids: Optional[bool] = False,
+            return_words: Optional[bool] = False,
             **tk_kwargs: Any
     ) -> None:
         super().__init__()
@@ -29,6 +32,7 @@ class TokenizerMapper(BaseMapper):
 
         tk_kwargs = {'add_special_tokens': add_special_tokens,
                      'max_length': max_length,
+                     'is_split_into_words': is_split_into_words,
                      **(tk_kwargs or {})}
 
         input_fields = [input_field]
@@ -59,16 +63,45 @@ class TokenizerMapper(BaseMapper):
         if return_length:
             output_fields.append(f'{self.prefix}length')
 
+        if 'is_split_into_words' in tk_kwargs and return_word_ids:
+            output_fields.append(f'{self.prefix}word_ids')
+            if return_words:
+                output_fields.append(f'{self.prefix}words')
+
         self.tokenize_kwargs = tk_kwargs
         self.input_fields = input_fields
         self.output_fields = output_fields
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        batch_encoding = self.tokenizer(data[self.input_fields[0]],
-                                        **self.tokenize_kwargs)
-        batch_encoding = {f'{self.prefix}{k}': v
-                          for k, v in batch_encoding.items()}
-        return dict(batch_encoding)
+        batch_encoding = self.tokenizer(data[self.input_fields[0]], **self.tokenize_kwargs)
+        # token_to_word mappings are unfortunately not natively returned by HF.tokenizer
+        # so we need to operate separately on the `batch_encoding` object to get this info.
+        if f'{self.prefix}word_ids' in self.output_fields:
+            word_idss = [
+                batch_encoding[sequence_id].word_ids
+                for sequence_id in range(len(batch_encoding['input_ids']))
+            ]
+            if f'{self.prefix}words' in self.output_fields:
+                wordss = [
+                    [
+                        None if word_id is None else data[self.input_fields[0]][word_id]
+                        for word_id in word_ids
+                    ]
+                    for word_ids in word_idss
+                ]
+            else:
+                wordss = None
+        else:
+            word_idss = None
+            wordss = None
+            
+        # cast to dict
+        batch_encoding_as_dict = {f'{self.prefix}{k}': v for k, v in batch_encoding.items()}
+        if word_idss is not None:
+            batch_encoding_as_dict[f'{self.prefix}word_ids'] = word_idss
+            if wordss is not None:
+                batch_encoding_as_dict[f'{self.prefix}words'] = wordss
+        return dict(batch_encoding_as_dict)
 
 
 class ValidUnicodeMapper(BaseMapper):
