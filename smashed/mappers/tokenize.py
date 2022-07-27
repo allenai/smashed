@@ -19,6 +19,8 @@ class TokenizerMapper(BaseMapper):
             return_special_tokens_mask: Optional[bool] = False,
             return_offsets_mapping: Optional[bool] = False,
             return_length: Optional[bool] = False,
+            return_word_ids: Optional[bool] = False,
+            return_words: Optional[bool] = False,
             **tk_kwargs: Any
     ) -> None:
         super().__init__()
@@ -59,6 +61,11 @@ class TokenizerMapper(BaseMapper):
         if return_length:
             output_fields.append(f'{self.prefix}length')
 
+        if 'is_split_into_words' in tk_kwargs and return_word_ids:
+            output_fields.append(f'{self.prefix}word_ids')
+            if return_words:
+                output_fields.append(f'{self.prefix}words')
+
         self.tokenize_kwargs = tk_kwargs
         self.input_fields = input_fields
         self.output_fields = output_fields
@@ -66,9 +73,25 @@ class TokenizerMapper(BaseMapper):
     def transform(self, data: TransformElementType) -> TransformElementType:
         batch_encoding = self.tokenizer(data[self.input_fields[0]],
                                         **self.tokenize_kwargs)
-        batch_encoding = {f'{self.prefix}{k}': v
-                          for k, v in batch_encoding.items()}
-        return dict(batch_encoding)
+        batch_encoding_as_dict = {f'{self.prefix}{k}': v
+                                  for k, v in batch_encoding.items()}
+        if f'{self.prefix}word_ids' in self.output_fields:
+            word_idss = [
+                batch_encoding[sequence_id].word_ids
+                for sequence_id in range(len(batch_encoding['input_ids']))
+            ]
+            batch_encoding_as_dict[f'{self.prefix}word_ids'] = word_idss
+            if f'{self.prefix}words' in self.output_fields:
+                wordss = [
+                    [
+                        None if word_id is None else data[self.input_fields[0]][word_id]
+                        for word_id in word_ids
+                    ]
+                    for word_ids in word_idss
+                ]
+                batch_encoding_as_dict[f'{self.prefix}words'] = wordss
+
+        return dict(batch_encoding_as_dict)
 
 
 class ValidUnicodeMapper(BaseMapper):

@@ -221,4 +221,37 @@ class TestTokenizerMapper(unittest.TestCase):
         assert self.tokenizer.decode(new_dataset[0]['input_ids'][3]) == '[CLS] instance that will be separately truncated. [SEP]'
         assert self.tokenizer.decode(new_dataset[1]['input_ids'][0]) == '[CLS] this is the next instance. [SEP]'
 
+    def test_return_words(self):
+        mapper = TokenizerMapper(
+            input_field='text',
+            tokenizer=self.tokenizer,
+            truncation=True,
+            max_length=10,
+            return_offsets_mapping=True,
+            is_split_into_words=True,
+            return_overflowing_tokens=True,
+            return_word_ids=True,
+            return_words=True
+        )
+        dataset = Dataset([
+            {
+                'text': [
+                    'This', 'is', 'a', 'Pterodactyl', 'that', 'will', 'be', 'truncated',
+                    'because', 'it', 'is', 'longer', 'than', 'ten', 'word', 'pieces', '.',
+                    'This', 'is', 'the', 'subsequent', 'Pterodactyl', 'in', 'this', 'instance',
+                    'that', 'will', 'be', 'separately', 'truncated', '.'
+                ]
+            }
+        ])
+        new_dataset = mapper.map(dataset)
+        assert 'words' in new_dataset
+        assert 'word_ids' in new_dataset
+        # there are 2 primary functionalities we need to check here
+        # first, word pieces are correctly mapped. see how Pterodactyl, which is split into 5 wordpieces, is correctly mapped back to its original word
+        # second, despite truncation & returning overflow causing there to be additional new sequences, that we can still map back to
+        #  the original word in the sequence. See how tokens in sequence [1] and [2] can still get mapped back to the original word.
+        assert new_dataset[0]['words'][0] == [None, 'This', 'is', 'a', 'Pterodactyl', 'Pterodactyl', 'Pterodactyl', 'Pterodactyl', 'Pterodactyl', None]
+        assert new_dataset[0]['words'][1] == [None, 'that', 'will', 'be', 'truncated', 'because', 'it', 'is', 'longer', None]
+        assert new_dataset[0]['words'][2] == [None, 'than', 'ten', 'word', 'pieces', '.', 'This', 'is', 'the', None]
+
 
