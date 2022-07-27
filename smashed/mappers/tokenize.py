@@ -13,6 +13,7 @@ class TokenizerMapper(BaseMapper):
             output_prefix: Optional[str] = None,
             add_special_tokens: Optional[bool] = True,
             max_length: Optional[int] = None,
+            is_split_into_words: Optional[bool] = False,
             return_token_type_ids: Optional[bool] = False,
             return_attention_mask: Optional[bool] = True,
             return_overflowing_tokens: Optional[bool] = False,
@@ -31,6 +32,7 @@ class TokenizerMapper(BaseMapper):
 
         tk_kwargs = {'add_special_tokens': add_special_tokens,
                      'max_length': max_length,
+                     'is_split_into_words': is_split_into_words,
                      **(tk_kwargs or {})}
 
         input_fields = [input_field]
@@ -71,16 +73,14 @@ class TokenizerMapper(BaseMapper):
         self.output_fields = output_fields
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        batch_encoding = self.tokenizer(data[self.input_fields[0]],
-                                        **self.tokenize_kwargs)
-        batch_encoding_as_dict = {f'{self.prefix}{k}': v
-                                  for k, v in batch_encoding.items()}
+        batch_encoding = self.tokenizer(data[self.input_fields[0]], **self.tokenize_kwargs)
+        # token_to_word mappings are unfortunately not natively returned by HF.tokenizer
+        # so we need to operate separately on the `batch_encoding` object to get this info.
         if f'{self.prefix}word_ids' in self.output_fields:
             word_idss = [
                 batch_encoding[sequence_id].word_ids
                 for sequence_id in range(len(batch_encoding['input_ids']))
             ]
-            batch_encoding_as_dict[f'{self.prefix}word_ids'] = word_idss
             if f'{self.prefix}words' in self.output_fields:
                 wordss = [
                     [
@@ -89,8 +89,18 @@ class TokenizerMapper(BaseMapper):
                     ]
                     for word_ids in word_idss
                 ]
+            else:
+                wordss = None
+        else:
+            word_idss = None
+            wordss = None
+            
+        # cast to dict
+        batch_encoding_as_dict = {f'{self.prefix}{k}': v for k, v in batch_encoding.items()}
+        if word_idss is not None:
+            batch_encoding_as_dict[f'{self.prefix}word_ids'] = word_idss
+            if wordss is not None:
                 batch_encoding_as_dict[f'{self.prefix}words'] = wordss
-
         return dict(batch_encoding_as_dict)
 
 
