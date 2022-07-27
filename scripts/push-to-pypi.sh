@@ -37,7 +37,7 @@ fi
 
 
 # no need to keep all previous builds
-rm -rf dist/*
+rm -rf dist/* build/*
 
 # go back to original dir
 cd ${CURRENT_DIR}
