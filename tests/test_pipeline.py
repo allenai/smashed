@@ -1,9 +1,9 @@
-'''
+"""
 Unit test for composing mappers and pipelines
 
 Author: Luca Soldaini
 Email:  lucas@allenai.org
-'''
+"""
 
 import unittest
 
@@ -14,6 +14,7 @@ from smashed.base.pipeline import Pipeline
 class MockMapper(SingleBaseMapper):
     """A mock mapper that returns the same data it receives.
     Used for testing."""
+
     def __init__(self, stage: int):
         super().__init__()
         self.stage = stage

@@ -32,9 +32,9 @@ class BinarizerMapper(SingleBaseMapper):
     def cast_columns(self, features: Features) -> Dict[str, FeatureType]:
         field_name, *_ = self.input_fields
         if isinstance(features[field_name], self.__sequence_type__):
-            new_field = self.__sequence_type__(self.__value_type__('int64'))
+            new_field = self.__sequence_type__(self.__value_type__("int64"))
         else:
-            new_field = self.__value_type__('int64')
+            new_field = self.__value_type__("int64")
 
         return {field_name: new_field}
 
@@ -42,7 +42,10 @@ class BinarizerMapper(SingleBaseMapper):
         field_name, *_ = self.input_fields
 
         if isinstance(data[field_name], list):
-            return {field_name: [1 if v > self.threshold else 0
-                                 for v in data[field_name]]}
+            return {
+                field_name: [
+                    1 if v > self.threshold else 0 for v in data[field_name]
+                ]
+            }
         else:
             return {field_name: 1 if data[field_name] > self.threshold else 0}

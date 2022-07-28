@@ -5,7 +5,7 @@ from .dataset import BaseDataset
 from .mapper import BaseMapper
 
 
-DatasetType = TypeVar('DatasetType', bound='BaseDataset')
+DatasetType = TypeVar("DatasetType", bound="BaseDataset")
 
 
 class Pipeline:
@@ -25,24 +25,22 @@ class Pipeline:
     def __init__(self, *mappers: BaseMapper) -> None:
         self.mappers = mappers
 
-    def __repr__(self: 'Pipeline') -> str:
+    def __repr__(self: "Pipeline") -> str:
         mappers_it = (repr(m) for m in self.mappers)
         return f'Pipeline({" -> ".join(mappers_it)})'
 
-    def __str__(self: 'Pipeline') -> str:
+    def __str__(self: "Pipeline") -> str:
         mappers_it = (str(m) for m in self.mappers)
         return f'Pipeline({" -> ".join(mappers_it)})'
 
     def __lshift__(
-        self: 'Pipeline',
-        other: Union[BaseMapper, 'Pipeline']
-    ) -> 'Pipeline':
+        self: "Pipeline", other: Union[BaseMapper, "Pipeline"]
+    ) -> "Pipeline":
         return self.chain(other, self)
 
     def __rshift__(
-        self: 'Pipeline',
-        other: Union[BaseMapper, 'Pipeline']
-    ) -> 'Pipeline':
+        self: "Pipeline", other: Union[BaseMapper, "Pipeline"]
+    ) -> "Pipeline":
         return self.chain(self, other)
 
     def __eq__(self, other: object) -> bool:
@@ -57,10 +55,10 @@ class Pipeline:
 
     @classmethod
     def chain(
-        cls: Type['Pipeline'],
-        lead: Union[BaseMapper, 'Pipeline'],
-        tail: Union[BaseMapper, 'Pipeline']
-    ) -> 'Pipeline':
+        cls: Type["Pipeline"],
+        lead: Union[BaseMapper, "Pipeline"],
+        tail: Union[BaseMapper, "Pipeline"],
+    ) -> "Pipeline":
         """Create a new pipeline by chaining two mappers/pipelines together."""
         if isinstance(lead, BaseMapper):
             lead = Pipeline(lead)
@@ -69,9 +67,7 @@ class Pipeline:
         return cls(*(lead.mappers + tail.mappers))
 
     def __call__(
-        self: 'Pipeline',
-        dataset: DatasetType,
-        **map_kwargs: Any
+        self: "Pipeline", dataset: DatasetType, **map_kwargs: Any
     ) -> DatasetType:
         """Transform a dataset by applying this pipeline's mappers."""
 

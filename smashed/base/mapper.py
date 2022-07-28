@@ -1,20 +1,31 @@
 from abc import ABCMeta, abstractmethod
 from typing import (
-    TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
 )
 
 from .dataset import BaseDataset
 from .types import (
-    Features, FeatureType, TransformBatchType, TransformElementType
+    Features,
+    FeatureType,
+    TransformBatchType,
+    TransformElementType,
 )
 
 if TYPE_CHECKING:
     from .pipeline import Pipeline
 
-__all__ = ['SingleBaseMapper', 'BatchedBaseMapper']
+__all__ = ["SingleBaseMapper", "BatchedBaseMapper"]
 
 
-DatasetType = TypeVar('DatasetType', bound='BaseDataset')
+DatasetType = TypeVar("DatasetType", bound="BaseDataset")
 
 
 class BaseMapper(metaclass=ABCMeta):
@@ -31,13 +42,15 @@ class BaseMapper(metaclass=ABCMeta):
     input/output columns.
     """
 
-    __slots__: List[str] = ['input_fields', 'output_fields']
+    __slots__: List[str] = ["input_fields", "output_fields"]
     input_fields: List[str]
     output_fields: List[str]
 
-    def __init__(self: 'BaseMapper',
-                 input_fields: Optional[List[str]] = None,
-                 output_fields: Optional[List[str]] = None) -> None:
+    def __init__(
+        self: "BaseMapper",
+        input_fields: Optional[List[str]] = None,
+        output_fields: Optional[List[str]] = None,
+    ) -> None:
         """Create a new Mapper.
 
         Args:
@@ -54,32 +67,30 @@ class BaseMapper(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def batched(self: 'BaseMapper') -> bool:
+    def batched(self: "BaseMapper") -> bool:
         raise NotImplementedError("batched property must be implemented")
 
-    def _verify_output(self: 'BaseMapper', data: Dict[str, Any]):
+    def _verify_output(self: "BaseMapper", data: Dict[str, Any]):
         for field in self.output_fields:
             if field not in data:
-                raise ValueError(f'Field {field} not found in returned data')
+                raise ValueError(f"Field {field} not found in returned data")
 
     def __lshift__(
-        self: 'BaseMapper',
-        other: Union['BaseMapper', 'Pipeline']
-    ) -> 'Pipeline':
+        self: "BaseMapper", other: Union["BaseMapper", "Pipeline"]
+    ) -> "Pipeline":
         """Create a new Pipeline by combining this mapper with another."""
 
         # import actual implementation here to avoid circular imports
         from .pipeline import Pipeline
+
         return Pipeline(self) << other
 
-    def __rshift__(self: 'BaseMapper', other: 'BaseMapper') -> 'Pipeline':
+    def __rshift__(self: "BaseMapper", other: "BaseMapper") -> "Pipeline":
         """Create a new Pipeline by combining this mapper with another."""
         return other << self
 
     def map(
-        self: 'BaseMapper',
-        dataset: DatasetType,
-        **map_kwargs: Any
+        self: "BaseMapper", dataset: DatasetType, **map_kwargs: Any
     ) -> DatasetType:
         """Transform a dataset by applying this mapper's transform method.
 
@@ -94,10 +105,10 @@ class BaseMapper(metaclass=ABCMeta):
 
         for field in self.input_fields:
             if field not in dataset.features:
-                msg = f'Field {field} not found in input dataset {dataset}'
+                msg = f"Field {field} not found in input dataset {dataset}"
                 raise ValueError(msg)
 
-        map_kwargs = {'batched': self.batched, **map_kwargs}
+        map_kwargs = {"batched": self.batched, **map_kwargs}
 
         if self.batched:
             dataset = dataset.map(function=self._batch_transform, **map_kwargs)
@@ -112,13 +123,12 @@ class BaseMapper(metaclass=ABCMeta):
 
         for field in self.output_fields:
             if field not in dataset.features:
-                raise ValueError(f'Field {field} not found in returned data')
+                raise ValueError(f"Field {field} not found in returned data")
         return dataset
 
     @abstractmethod
     def _batch_transform(
-        self: 'BaseMapper',
-        data: TransformBatchType
+        self: "BaseMapper", data: TransformBatchType
     ) -> TransformBatchType:
         """Internal method for transforming a batch of data; this method
         is called by the map method when the mapper is batched.
@@ -135,11 +145,11 @@ class BaseMapper(metaclass=ABCMeta):
             TransformBatchType: A batch of transformed data.
         """
         raise NotImplementedError(
-            'Mapper subclass must implement _batch_transform'
+            "Mapper subclass must implement _batch_transform"
         )
 
     @abstractmethod
-    def transform(self: 'BaseMapper', data: Any) -> Any:
+    def transform(self: "BaseMapper", data: Any) -> Any:
         """Transform a single sample of a dataset. This method should be
         overridden by actual mapper implementations.
 
@@ -153,11 +163,10 @@ class BaseMapper(metaclass=ABCMeta):
         Returns:
             Any: _description_
         """
-        raise NotImplementedError('Mapper subclass must implement transform')
+        raise NotImplementedError("Mapper subclass must implement transform")
 
     def cast_columns(
-        self: 'BaseMapper',
-        features: Features
+        self: "BaseMapper", features: Features
     ) -> Dict[str, FeatureType]:
         return {}
 
@@ -171,19 +180,18 @@ class SingleBaseMapper(BaseMapper, metaclass=ABCMeta):
     The transform method should accept a single sample dictionary as input
     and return a single sample dictionary as output.
     """
+
     @property
     def batched(self) -> bool:
         return False
 
     def _batch_transform(
-        self: 'BaseMapper',
-        data: TransformBatchType
+        self: "BaseMapper", data: TransformBatchType
     ) -> TransformBatchType:
-        raise ValueError('SingleBaseMapper does not support batching')
+        raise ValueError("SingleBaseMapper does not support batching")
 
     def transform(
-        self: 'BaseMapper',
-        data: TransformElementType
+        self: "BaseMapper", data: TransformElementType
     ) -> TransformElementType:
         """Transform a single sample of a dataset. This method should be
         overridden by actual mapper implementations.
@@ -198,7 +206,7 @@ class SingleBaseMapper(BaseMapper, metaclass=ABCMeta):
                 sample dictionary with string keys and values of any type.
                 The keys can be different from the input keys.
         """
-        raise NotImplementedError('Mapper subclass must implement transform')
+        raise NotImplementedError("Mapper subclass must implement transform")
 
 
 class BatchedBaseMapper(BaseMapper, metaclass=ABCMeta):
@@ -218,8 +226,7 @@ class BatchedBaseMapper(BaseMapper, metaclass=ABCMeta):
 
     @abstractmethod
     def _batch_transform(
-        self: 'BatchedBaseMapper',
-        data: TransformBatchType
+        self: "BatchedBaseMapper", data: TransformBatchType
     ) -> TransformBatchType:
         """Internal method for transforming a batch of data; this method
         is called by the map method when the mapper is batched.
@@ -235,8 +242,10 @@ class BatchedBaseMapper(BaseMapper, metaclass=ABCMeta):
             return keys.index(k)
 
         to_transform_iterable = (
-            dict(zip(keys, sample)) for sample in
-            zip(*(v for _, v in sorted(data.items(), key=_index_fn)))
+            dict(zip(keys, sample))
+            for sample in zip(
+                *(v for _, v in sorted(data.items(), key=_index_fn))
+            )
         )
         transformed_batch: Dict[str, List[Any]] = {}
         for transformed_sample in self.transform(to_transform_iterable):
@@ -247,8 +256,7 @@ class BatchedBaseMapper(BaseMapper, metaclass=ABCMeta):
 
     @abstractmethod
     def transform(
-        self: 'BatchedBaseMapper',
-        data: Iterable[TransformElementType]
+        self: "BatchedBaseMapper", data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
         """Transform a batch of data. This method should be overridden by
         actual mapper implementations.
@@ -265,4 +273,4 @@ class BatchedBaseMapper(BaseMapper, metaclass=ABCMeta):
                 iterable may be different from the number of samples in the
                 input.
         """
-        raise NotImplementedError('Mapper subclass must implement transform')
+        raise NotImplementedError("Mapper subclass must implement transform")
