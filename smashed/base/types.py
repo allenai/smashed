@@ -1,5 +1,4 @@
-from typing import Dict, Any, List
-
+from typing import Any, Dict, List
 
 TransformElementType = Dict[str, Any]
 TransformBatchType = Dict[str, List[Any]]

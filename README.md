@@ -84,33 +84,33 @@ print(dataset[0])
 
 # >>> {
 #    'input_ids': [
-#        101, 
-#        2023, 
-#        2003, 
-#        1037, 
-#        6251, 
-#        1012, 
-#        102, 
-#        2023, 
-#        2003, 
-#        2178, 
-#        6251, 
-#        1012, 
+#        101,
+#        2023,
+#        2003,
+#        1037,
+#        6251,
+#        1012,
+#        102,
+#        2023,
+#        2003,
+#        2178,
+#        6251,
+#        1012,
 #        102
-#    ], 
+#    ],
 #    'attention_mask': [
-#        1, 
-#        1, 
-#        1, 
-#        1, 
-#        1, 
-#        1, 
-#        1, 
-#        1, 
-#        1, 
-#        1, 
-#        1, 
-#        1, 
+#        1,
+#        1,
+#        1,
+#        1,
+#        1,
+#        1,
+#        1,
+#        1,
+#        1,
+#        1,
+#        1,
+#        1,
 #        1
 #    ]
 # }
@@ -122,3 +122,22 @@ The initial version of SMASHED supports two interfaces for dataset:
 
 1. **`interfaces.simple.Dataset`**: A simple dataset representation that is just a list of python dictionaries with some extra convenience methods to make it work with SMASHED. You can crate a simple dataset by passing a list of dictionaries to `interfaces.simple.Dataset`.
 2. **HuggingFace `datasets` library**. SMASHED mappers work with any datasets from HuggingFace, whether it is a regular or iterable dataset.
+
+## Developing SMASHED
+
+To contribute to SMASHED, make sure to:
+
+1. (If you are not part of AI2) Fork the repository on GitHub.
+2. Clone it locally.
+3. Create a new branch in for the new feature.
+4. Install development dependencies with `pip install dev-requirements.txt`.
+5. Add your new mapper or feature.
+6. Add unit tests.
+7. Run tests, linting, and type checking from the root directory of the repo:
+    1. *Style:* `flake8 .`  (Should return no error)
+    2. *Style:* `black . -l 79` (Should format for you)
+    3. *Style:* `isort -l 79 .` (Should sort imports for you)
+    4. *Static type check:* `mypy .` (Should return no error)
+    5. *Tests:* `pytest -v --color=yes tests/` (Should return no error)
+8. Commit, push, and create a pull request.
+9. Tag `soldni` to review the PR.
