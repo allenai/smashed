@@ -11,7 +11,8 @@ class OneVsOtherAnnotatorMapper(SingleBaseMapper):
         position: int = 0,
     ) -> None:
         super().__init__(
-            input_fields=[input_field], output_fields=[label_field, preds_field]
+            input_fields=[input_field],
+            output_fields=[label_field, preds_field],
         )
         self.position = position
 

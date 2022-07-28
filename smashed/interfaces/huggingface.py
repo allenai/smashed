@@ -78,7 +78,8 @@ class AttentionMaskSequencePaddingMapper(
 
 
 class TokenTypeIdsSequencePaddingMapper(
-    _HuggingFaceInterfaceMixInMapper, multiseq.TokenTypeIdsSequencePaddingMapper
+    _HuggingFaceInterfaceMixInMapper,
+    multiseq.TokenTypeIdsSequencePaddingMapper,
 ):
     ...
 

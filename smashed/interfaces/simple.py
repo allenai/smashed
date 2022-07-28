@@ -69,7 +69,8 @@ class Dataset(list, BaseDataset):
     ) -> "Dataset":
         def cast_fn(sample: TransformElementType) -> TransformElementType:
             return {
-                k: (feature(v) if k == column else v) for k, v in sample.items()
+                k: (feature(v) if k == column else v)
+                for k, v in sample.items()
             }
 
         return self.map(cast_fn)
@@ -77,7 +78,9 @@ class Dataset(list, BaseDataset):
 
 class _SimpleInterfaceMixInMapper(BaseMapper):
     def map(  # type: ignore
-        self: "_SimpleInterfaceMixInMapper", dataset: Dataset, **map_kwargs: Any
+        self: "_SimpleInterfaceMixInMapper",
+        dataset: Dataset,
+        **map_kwargs: Any,
     ) -> Dataset:
         # this function is re-implemented to provide nice
         # type annotations.

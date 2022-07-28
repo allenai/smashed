@@ -21,7 +21,16 @@ class TestValidUnicodeMapper(unittest.TestCase):
         """Test that ValidUnicodeMapper correctly performs the replacement"""
         mapper = ValidUnicodeMapper(
             input_fields=["tokens"],
-            unicode_categories=["Cc", "Cf", "Co", "Cs", "Mn", "Zl", "Zp", "Zs"],
+            unicode_categories=[
+                "Cc",
+                "Cf",
+                "Co",
+                "Cs",
+                "Mn",
+                "Zl",
+                "Zp",
+                "Zs",
+            ],
             replace_token="[UNK]",
         )
         dataset = Dataset(

@@ -133,11 +133,11 @@ To contribute to SMASHED, make sure to:
 4. Install development dependencies with `pip install dev-requirements.txt`.
 5. Add your new mapper or feature.
 6. Add unit tests.
-7. Run tests, linting, and type checking:
-    1. *Style:* `flake8 smashed/ && flake8 tests/`
-    2. *Style:* `black smashed/ && black tests/`
-    3. *Style:* `isort smashed/ && isort tests/`
-    4. *Static type check:* `mypy smashed/ -v && mypy tests/`
-    5. *Tests:* `pytest -v --color=yes tests/`
+7. Run tests, linting, and type checking from the root directory of the repo:
+    1. *Style:* `flake8 .`  (Should return no error)
+    2. *Style:* `black . -l 79` (Should format for you)
+    3. *Style:* `isort -l 79 .` (Should sort imports for you)
+    4. *Static type check:* `mypy .` (Should return no error)
+    5. *Tests:* `pytest -v --color=yes tests/` (Should return no error)
 8. Commit, push, and create a pull request.
 9. Tag `soldni` to review the PR.

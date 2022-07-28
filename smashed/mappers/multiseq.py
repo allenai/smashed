@@ -452,9 +452,13 @@ class SingleValueToSequenceMapper(SingleBaseMapper):
     ) -> Sequence[Union[int, float]]:
 
         if self.strategy == "first":
-            return [value] + [self.padding_id for _ in range(len(like_seq) - 1)]
+            return [value] + [
+                self.padding_id for _ in range(len(like_seq) - 1)
+            ]
         elif self.strategy == "last":
-            return [self.padding_id for _ in range(len(like_seq) - 1)] + [value]
+            return [self.padding_id for _ in range(len(like_seq) - 1)] + [
+                value
+            ]
         elif self.strategy == "all":
             return [value for _ in like_seq]
         else:
