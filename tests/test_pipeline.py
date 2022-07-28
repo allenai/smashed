@@ -6,8 +6,9 @@ Email:  lucas@allenai.org
 '''
 
 import unittest
-from smashed.base.pipeline import Pipeline
+
 from smashed.base.mapper import SingleBaseMapper
+from smashed.base.pipeline import Pipeline
 
 
 class MockMapper(SingleBaseMapper):
