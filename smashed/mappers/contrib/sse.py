@@ -1,16 +1,15 @@
-from ...base import BaseMapper, TransformElementType
+from ...base.mapper import SingleBaseMapper
+from ...base.types import TransformElementType
 
 
-class OneVsOtherAnnotatorMapper(BaseMapper):
+class OneVsOtherAnnotatorMapper(SingleBaseMapper):
     def __init__(self,
                  input_field: str = 'annotations',
                  label_field: str = 'labels',
                  preds_field: str = 'preds',
                  position: int = 0) -> None:
-        super().__init__()
-        self.input_fields = [input_field]
-        self.output_fields = [label_field, preds_field]
-        self.batched = False
+        super().__init__(input_fields=[input_field],
+                         output_fields=[label_field, preds_field])
         self.position = position
 
     def transform(self, data: TransformElementType) -> TransformElementType:

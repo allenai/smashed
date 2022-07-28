@@ -1,11 +1,13 @@
-from ..base import BaseMapper, TransformElementType
-
 import unicodedata
-from typing import Optional, Any, List
+from typing import Any, List, Optional
+
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
+from ..base.mapper import SingleBaseMapper
+from ..base.types import TransformElementType
 
-class TokenizerMapper(BaseMapper):
+
+class TokenizerMapper(SingleBaseMapper):
     def __init__(
             self,
             tokenizer: PreTrainedTokenizerBase,
@@ -24,18 +26,15 @@ class TokenizerMapper(BaseMapper):
             return_words: Optional[bool] = False,
             **tk_kwargs: Any
     ) -> None:
-        super().__init__()
-
-        self.batched = False
-        self.tokenizer = tokenizer
         self.prefix = f'{output_prefix}_' if output_prefix else ''
+        self.to_tokenize_filed = input_field
+        self.tokenizer = tokenizer
 
         tk_kwargs = {'add_special_tokens': add_special_tokens,
                      'max_length': max_length,
                      'is_split_into_words': is_split_into_words,
                      **(tk_kwargs or {})}
 
-        input_fields = [input_field]
         output_fields = [f'{self.prefix}input_ids']
 
         # various options for the tokenizer affect which fields are returned
@@ -69,13 +68,18 @@ class TokenizerMapper(BaseMapper):
                 output_fields.append(f'{self.prefix}words')
 
         self.tokenize_kwargs = tk_kwargs
-        self.input_fields = input_fields
-        self.output_fields = output_fields
+        super().__init__(input_fields=[self.to_tokenize_filed],
+                         output_fields=output_fields)
+
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        batch_encoding = self.tokenizer(data[self.input_fields[0]], **self.tokenize_kwargs)
-        # token_to_word mappings are unfortunately not natively returned by HF.tokenizer
-        # so we need to operate separately on the `batch_encoding` object to get this info.
+        batch_encoding = self.tokenizer(
+            data[self.to_tokenize_filed],
+            **self.tokenize_kwargs
+        )
+        # token_to_word mappings are unfortunately not natively returned by
+        # HF.tokenizer; so we need to operate separately on the
+        # `batch_encoding` object to get this info.
         if f'{self.prefix}word_ids' in self.output_fields:
             word_idss = [
                 batch_encoding[sequence_id].word_ids
@@ -94,7 +98,7 @@ class TokenizerMapper(BaseMapper):
         else:
             word_idss = None
             wordss = None
-            
+
         # cast to dict
         batch_encoding_as_dict = {f'{self.prefix}{k}': v for k, v in batch_encoding.items()}
         if word_idss is not None:
@@ -104,23 +108,25 @@ class TokenizerMapper(BaseMapper):
         return dict(batch_encoding_as_dict)
 
 
-class ValidUnicodeMapper(BaseMapper):
+class ValidUnicodeMapper(SingleBaseMapper):
     """Given input_fields of type List[str], replaces invalid Unicode
     characters with something else"""
 
     def __init__(
-            self,
-            input_fields: List[str],
-            unicode_categories: List[str],
-            replace_token: str,
-            output_prefix: Optional[str] = None,
+        self,
+        input_fields: List[str],
+        unicode_categories: List[str],
+        replace_token: str,
+        # output_prefix: Optional[str] = None,
     ):
-        self.batched = False
-        self.input_fields = input_fields
-        self.prefix = f'{output_prefix}_' if output_prefix else ''
-        self.output_fields = [
-            f'{self.prefix}{input_field}' for input_field in self.input_fields
-        ]
+        # self.batched = False
+        # self.input_fields = input_fields
+        # self.prefix = f'{output_prefix}_' if output_prefix else ''
+        # self.output_fields = [
+        #     f'{self.prefix}{input_field}' for input_field in self.input_fields
+        # ]
+        super().__init__(input_fields=input_fields,
+                         output_fields=input_fields)
         self.unicode_categories = unicode_categories
         self.replace_token = replace_token
 
@@ -133,6 +139,8 @@ class ValidUnicodeMapper(BaseMapper):
                 ) else token
                 for token in tokens
             ]
-        new_data = {f'{self.prefix}{k}': v if k not in self.input_fields
-                    else _transform(v) for k, v in data.items()}
-        return new_data
+        return {k: v if k not in self.input_fields
+                else _transform(v) for k, v in data.items()}
+        # new_data = {f'{self.prefix}{k}': v if k not in self.input_fields
+        #             else _transform(v) for k, v in data.items()}
+        # return new_data

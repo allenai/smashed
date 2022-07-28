@@ -1,8 +1,9 @@
+from smashed.base.dataset import BaseDataset
 from ..utils import requires
 
 requires("datasets")
 
-from typing import Any, Sequence, Type, TypeVar, Dict
+from typing import Any, Protocol, Sequence, Type, TypeVar, Dict, overload
 
 from datasets.arrow_dataset import Dataset
 from datasets.iterable_dataset import IterableDataset
@@ -16,7 +17,15 @@ from ..mappers.contrib import sse
 from datasets import features
 
 
-HfDatasetType = TypeVar("HfDatasetType", Dataset, IterableDataset)
+class HfDatasetProtocol(Dataset, BaseDataset):
+    ...
+
+class HfIterableDatasetProtocol(IterableDataset, BaseDataset):
+    ...
+
+HfDatasetType = TypeVar(
+    "HfDatasetType", HfDatasetProtocol, HfIterableDatasetProtocol
+)
 
 
 __all__ = [
@@ -38,16 +47,15 @@ __all__ = [
 
 
 class _HuggingFaceInterfaceMixInMapper(BaseMapper):
+    def map(                            # type: ignore
+        self,
+        dataset: HfDatasetType,
+        **map_kwargs: Any
+    ) -> HfDatasetType:
+        # this function is re-implemented to provide nice type annotations.
+        # therefore, we remove the mypy type warnings with the ignore above.
 
-    def map(self, dataset: Dataset, **map_kwargs: Any) -> Dataset:
         return super().map(dataset, **map_kwargs)
-
-    @classmethod
-    def chain(cls: Type['_HuggingFaceInterfaceMixInMapper'],
-              dataset: HfDatasetType,
-              mappers: Sequence['_HuggingFaceInterfaceMixInMapper'],
-              **map_kwargs: Any) -> HfDatasetType:
-        ...
 
     def cast_columns(self, features: Features) -> Dict[str, FeatureType]:
         return super().cast_columns(features)
@@ -138,7 +146,10 @@ class OneVsOtherAnnotatorMapper(
     ...
 
 
-class ChangeFieldsMapper(
+# We ignore type error bc they are due to the fact that the `map` method here
+# maps to a BaseDataset vs the Dataset/IterableDataset type expected
+# by _HuggingFaceInterfaceMixInMapper.
+class ChangeFieldsMapper(                       # type: ignore
     _HuggingFaceInterfaceMixInMapper,
     fields.ChangeFieldsMapper
 ):

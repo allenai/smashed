@@ -1,11 +1,12 @@
-from typing import Any, Callable, Iterable, Optional, Sequence, Type
+from typing import Any, Callable, Optional, Sequence
 
-
-from ..base import (BaseDataset, BaseMapper, Features, FeatureType,
-                    TransformElementType)
-from ..mappers import multiseq, shape, tokenize, fields
+from ..base.dataset import BaseDataset
+from ..base.mapper import BaseMapper
+from ..base.types import (
+    Features, FeatureType, TransformBatchType, TransformElementType
+)
+from ..mappers import fields, multiseq, shape, tokenize
 from ..mappers.contrib import sse
-
 
 __all__ = [
     'Dataset',
@@ -75,22 +76,42 @@ class Dataset(list, BaseDataset):
 
 
 class _SimpleInterfaceMixInMapper(BaseMapper):
-    def map(self, dataset: Dataset, **map_kwargs: Any) -> Dataset:
+    def map(                                        # type: ignore
+        self: '_SimpleInterfaceMixInMapper',
+        dataset: Dataset,
+        **map_kwargs: Any
+    ) -> Dataset:
+        # this function is re-implemented to provide nice
+        # type annotations.
+
+        if not isinstance(dataset, Dataset):
+            raise ValueError(f'Dataset must be of type `{Dataset}`'
+                             f' but I got `{type(dataset)}` instead.')
+
+        # This ensures that the super for the next in line in the mro,
+        # which should be whatever actual implementation of the mapper
+        # this mixin is mixed in with, will be called.
         return super().map(dataset, **map_kwargs)
 
-    @classmethod
-    def chain(cls: Type['_SimpleInterfaceMixInMapper'],
-              dataset: Dataset,
-              mappers: Sequence['_SimpleInterfaceMixInMapper'],
-              **map_kwargs: Any) -> Dataset:
-        return super().chain(dataset, mappers, **map_kwargs)
+    @property
+    def batched(self: '_SimpleInterfaceMixInMapper') -> bool:
+        # This ensures that the super for the next in line in the mro,
+        # which should be whatever actual implementation of the mapper
+        # this mixin is mixed in with, will be called.
+        return super().batched
 
-    def batch_transform(
-        self: '_SimpleInterfaceMixInMapper',
-        data: Iterable[TransformElementType]
-    ) -> Iterable[TransformElementType]:
+    def _batch_transform(               # type: ignore
+        self,                           # type: ignore
+        data: TransformBatchType        # type: ignore
+    ) -> TransformBatchType:            # type: ignore
         # Simple mappers are called with slightly different data from
         # the base class, so we need to override this method.
+
+        # Note that we need to disable the type check to avoid a mess
+        # with mypy. It's a bit of a hack, because the type returned here is
+        # not what mypy expects, but it works as long as Dataset is an
+        # instance of a list.
+
         yield from super().transform(data)
 
 
@@ -178,7 +199,10 @@ class OneVsOtherAnnotatorMapper(
     ...
 
 
-class ChangeFieldsMapper(
+# We ignore type error bc they are due to the fact that
+# the `map` method here maps to a BaseDataset vs the Dataset
+# type expected by _SimpleInterfaceMixInMapper.
+class ChangeFieldsMapper(               # type: ignore
     _SimpleInterfaceMixInMapper,
     fields.ChangeFieldsMapper
 ):

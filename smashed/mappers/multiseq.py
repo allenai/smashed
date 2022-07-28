@@ -1,16 +1,18 @@
 import itertools
 import random
 from typing import (Any, Iterable, List, Literal, Optional,
-                    Sequence, Tuple, TypeVar)
+                    Sequence, Tuple, Union)
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
-from ..base import BaseMapper, TransformElementType
+from ..base.types import TransformElementType
+from ..base.mapper import SingleBaseMapper, BatchedBaseMapper
 
 
-LabelType = TypeVar('LabelType', int, float)
+class TokensSequencesPaddingMapper(SingleBaseMapper):
+    bos: List[int]
+    sep: List[int]
+    eos: List[int]
 
-
-class TokensSequencesPaddingMapper(BaseMapper):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerBase,
@@ -24,24 +26,24 @@ class TokensSequencesPaddingMapper(BaseMapper):
             input_field (str, optional): The field to add special tokens to.
                 Defaults to 'input_ids'.
         """
-        super().__init__()
-
-        self.input_fields = [input_field]
-        self.output_fields = [input_field]
+        super().__init__(input_fields=[input_field],
+                         output_fields=[input_field])
         self.bos, self.sep, self.eos = self._find_special_token_ids(tokenizer)
-        self.batched = False
+
 
     @staticmethod
     def _find_special_token_ids(
         tokenizer: PreTrainedTokenizerBase
-    ) -> Tuple[Sequence[int], Sequence[int], Sequence[int]]:
+    ) -> Tuple[List[int], List[int], List[int]]:
         """By default, tokenizers only know how to concatenate 2 fields
         as input; However, for our purposes, we might care about more than
         just 2. This function tries to figure out the best strategy by
         tokenizing two fake sequences and selecting beginning, mid, and
         end sequence(s) tokens."""
 
-        bos, sep, eos = [], [], []
+        bos: List[int] = []
+        sep: List[int] = []
+        eos: List[int] = []
 
         class FirstFakeSequenceSymbol(int):
             ...
@@ -136,7 +138,7 @@ class TokenTypeIdsSequencePaddingMapper(TokensSequencesPaddingMapper):
         return data
 
 
-class MakeAttentionMaskMapper(BaseMapper):
+class MakeAttentionMaskMapper(SingleBaseMapper):
     def __init__(self,
                  input_field: str = 'input_ids',
                  output_field: str = 'attention_mask') -> None:
@@ -148,9 +150,8 @@ class MakeAttentionMaskMapper(BaseMapper):
             output_field (str, optional): The name of the field containing
                 the attention mask. Defaults to 'attention_mask'.
         """
-        super().__init__()
-        self.input_fields = [input_field]
-        self.output_fields = [output_field]
+        super().__init__(input_fields=[input_field],
+                         output_fields=[output_field])
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         sequences = data[self.input_fields[0]]
@@ -159,12 +160,13 @@ class MakeAttentionMaskMapper(BaseMapper):
         return data
 
 
-class LabelsMaskerMapper(BaseMapper):
+class LabelsMaskerMapper(BatchedBaseMapper):
+
     def __init__(self,
                  labels_field: str = 'labels',
                  strategy: Literal['all', 'one', 'sample'] = 'all',
                  sample_prob: Optional[float] = None,
-                 label_mask_id: LabelType = -100) -> None:
+                 label_mask_id: Union[int, float] = -100) -> None:
         """ Given a sequence of labels, this mapper will mask some of them.
         Useful when wanting to create more samples by masking a subset of
         labels, or when running evaluations and want to predict one label at
@@ -186,10 +188,8 @@ class LabelsMaskerMapper(BaseMapper):
                 label. Defaults to -100.
 
         """
-        super().__init__()
-        self.input_fields = [labels_field]
-        self.output_fields = [labels_field]
-        self.batched = True
+        super().__init__(input_fields=[labels_field],
+                         output_fields=[labels_field])
 
         if strategy not in ['all', 'one', 'sample']:
             raise ValueError(f'Unknown strategy {strategy}')
@@ -200,7 +200,7 @@ class LabelsMaskerMapper(BaseMapper):
 
         self.strategy: str = strategy
         self.sample_prob: float = sample_prob or 0.0
-        self.label_mask_id: LabelType = label_mask_id
+        self.label_mask_id: Union[int, float] = label_mask_id
 
     def transform(
         self,
@@ -260,7 +260,7 @@ class LabelsMaskerMapper(BaseMapper):
                     yield new_sample
 
 
-class MultiSequenceStriderMapper(BaseMapper):
+class MultiSequenceStriderMapper(BatchedBaseMapper):
     def __init__(self,
                  max_stride_count: int,
                  length_reference_field: str,
@@ -295,10 +295,9 @@ class MultiSequenceStriderMapper(BaseMapper):
             max_step (int, optional): Not used at the moment.
 
         """
-        super().__init__()
+        super().__init__(input_fields=[length_reference_field],
+                         output_fields=[length_reference_field])
 
-        self.input_fields = self.output_fields = [length_reference_field]
-        self.batched = True
         self.max_stride_count = max_stride_count
         self.max_length = max_length or float('inf')
 
@@ -375,12 +374,12 @@ class MultiSequenceStriderMapper(BaseMapper):
             yield out
 
 
-class SingleValueToSequenceMapper(BaseMapper):
+class SingleValueToSequenceMapper(SingleBaseMapper):
     def __init__(self,
                  single_value_field: str,
                  like_field: str = 'input_ids',
                  strategy: Literal['first', 'last', 'all'] = 'first',
-                 padding_id: LabelType = -100) -> None:
+                 padding_id: Union[int, float] = -100) -> None:
         """Mapper to create a sequence of values from single value.
         Useful when casting a sequence classification task to a sequence
         tagging task, e.g. making a prediction for a sequence of sentences
@@ -403,26 +402,23 @@ class SingleValueToSequenceMapper(BaseMapper):
                     of the new sequence; the padding_id will be ignored.
             padding_id: id to use for the padding token. Default is -100.
         """
-        super().__init__()
-
-        self.input_fields = [single_value_field, like_field]
-        self.output_fields = [single_value_field]
+        super().__init__(input_fields=[single_value_field, like_field],
+                         output_fields=[single_value_field])
         self.strategy = strategy
         self.padding_id = padding_id
-        self.batched = False
 
     def _make_sequence_from_value(
         self,
-        value: LabelType,
+        value: Union[int, float],
         like_seq: Sequence[Any]
-    ) -> Sequence[LabelType]:
+    ) -> Sequence[Union[int, float]]:
 
         if self.strategy == 'first':
-            return ([value] +       # type: ignore
+            return ([value] +
                     [self.padding_id for _ in range(len(like_seq) - 1)])
         elif self.strategy == 'last':
             return ([self.padding_id for _ in range(len(like_seq) - 1)] +
-                    [value])        # type: ignore
+                    [value])
         elif self.strategy == 'all':
             return [value for _ in like_seq]
         else:
@@ -439,16 +435,13 @@ class SingleValueToSequenceMapper(BaseMapper):
         return data
 
 
-class SequencesConcatenateMapper(BaseMapper):
+class SequencesConcatenateMapper(SingleBaseMapper):
     def __init__(self, concat_fields: Optional[List[str]] = None):
-        super().__init__()
-
+        super().__init__(input_fields=concat_fields,
+                         output_fields=concat_fields)
         self.concat_fields = (
             set(concat_fields) if concat_fields is not None else None
         )
-        self.input_fields = concat_fields or []
-        self.output_fields = concat_fields or []
-        self.batched = False
 
     def _to_concat(self, field_name: str) -> bool:
         return self.concat_fields is None or field_name in self.concat_fields

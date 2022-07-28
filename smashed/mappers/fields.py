@@ -1,20 +1,25 @@
 
-from typing import Any, Optional, Sequence, Callable
+from typing import Any, Optional, List, Callable, TypeVar
 
-from ..base import BaseMapper, TransformElementType, BaseDataset
+from ..base.types import TransformElementType
+from ..base.dataset import BaseDataset
+from ..base.mapper import SingleBaseMapper
 
 
-class ChangeFieldsMapper(BaseMapper):
+D = TypeVar('D', bound='BaseDataset')
+
+
+class ChangeFieldsMapper(SingleBaseMapper):
     def __init__(self,
-                 keep_fields:  Optional[Sequence[str]] = None,
-                 drop_fields: Optional[Sequence[str]] = None):
+                 keep_fields:  Optional[List[str]] = None,
+                 drop_fields: Optional[List[str]] = None):
         """Mapper that removes some of the fields in a dataset.
         Either `keep_fields` or `drop_fields` must be specified, but not both.
 
         Args:
-            keep_fields (Sequence[str]): Fields to keep, all other fields
+            keep_fields (List[str]): Fields to keep, all other fields
                 are dropped. Defaults to [].
-            drop_fields (Sequence[str]): Fields to drop, all other fields
+            drop_fields (List[str]): Fields to drop, all other fields
                 are kept. Defaults to [].
         """
 
@@ -23,14 +28,13 @@ class ChangeFieldsMapper(BaseMapper):
                 (keep_fields is None and drop_fields is None):
             raise ValueError('Must specify `keep_fields` or `drop_fields`')
 
-        self.input_fields = drop_fields or []
-        self.output_fields = keep_fields or []
+        super().__init__(input_fields=drop_fields,
+                         output_fields=keep_fields)
 
-        self.batched = False
 
     def map(self,
-            dataset: BaseDataset,
-            **map_kwargs: Any) -> BaseDataset:
+            dataset: D,
+            **map_kwargs: Any) -> D:
         map_kwargs = {'remove_columns': list(dataset.features.keys()),
                       **map_kwargs}
         return super().map(dataset, **map_kwargs)
@@ -49,7 +53,7 @@ class ChangeFieldsMapper(BaseMapper):
         return new_data
 
 
-class MakeFieldMapper(BaseMapper):
+class MakeFieldMapper(SingleBaseMapper):
     def __init__(
         self,
         field_name: str,
@@ -73,10 +77,7 @@ class MakeFieldMapper(BaseMapper):
                 Function to call to assign a value to the new field.
                 Defaults to None.
         """
-
-        self.input_fields = []
-        self.output_fields = [field_name]
-        self.batched = False
+        super().__init__(output_fields=[field_name])
 
         if value_fn is None:
             if value is None:

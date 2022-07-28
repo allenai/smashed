@@ -8,8 +8,8 @@ Tests for ShapeMappers module
 
 import unittest
 
-from smashed.mappers.shape import FlattenMapper
-from smashed.interfaces.simple import Dataset
+from smashed.interfaces.simple import Dataset, FlattenMapper
+
 
 class TestFlattenMapper(unittest.TestCase):
     """Test FlattenMapper"""
