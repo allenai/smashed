@@ -135,8 +135,8 @@ To contribute to SMASHED, make sure to:
 6. Add unit tests.
 7. Run tests, linting, and type checking from the root directory of the repo:
     1. *Style:* `flake8 .`  (Should return no error)
-    2. *Style:* `black . -l 79` (Should format for you)
-    3. *Style:* `isort -l 79 .` (Should sort imports for you)
+    2. *Style:* `black .` (Should format for you)
+    3. *Style:* `isort .` (Should sort imports for you)
     4. *Static type check:* `mypy .` (Should return no error)
     5. *Tests:* `pytest -v --color=yes tests/` (Should return no error)
 8. Commit, push, and create a pull request.
