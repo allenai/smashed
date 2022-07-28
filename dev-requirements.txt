@@ -2,10 +2,10 @@
     flake8
 
     # Static type checking
-    mypy>=0.941
+    mypy>=0.971
 
     # Automatic code formatting
-    black>=22.1.0
+    black>=22.6.0
     isort>=5.10.1
 
     # Running tests
