@@ -14,7 +14,6 @@ class BaseDataset(Protocol):
 
     Dataset APIs are modeled after HuggingFace ArrowDataset APIs."""
 
-
     @property
     def features(self) -> Features:
         ...

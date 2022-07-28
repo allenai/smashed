@@ -35,7 +35,8 @@ class Pipeline:
 
     def __lshift__(
         self: 'Pipeline',
-        other: Union[BaseMapper, 'Pipeline']) -> 'Pipeline':
+        other: Union[BaseMapper, 'Pipeline']
+    ) -> 'Pipeline':
         return self.chain(other, self)
 
     def __rshift__(
@@ -44,7 +45,7 @@ class Pipeline:
     ) -> 'Pipeline':
         return self.chain(self, other)
 
-    def __eq__(self, other: 'Pipeline') -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Pipeline):
             return False
         if len(self.mappers) != len(other.mappers):

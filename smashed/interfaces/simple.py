@@ -215,6 +215,7 @@ class MakeFieldMapper(
 ):
     ...
 
+
 class ValidUnicodeMapper(
     _SimpleInterfaceMixInMapper,
     tokenize.ValidUnicodeMapper

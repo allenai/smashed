@@ -2,10 +2,11 @@ import itertools
 import random
 from typing import (Any, Iterable, List, Literal, Optional,
                     Sequence, Tuple, Union)
+
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
+from ..base.mapper import BatchedBaseMapper, SingleBaseMapper
 from ..base.types import TransformElementType
-from ..base.mapper import SingleBaseMapper, BatchedBaseMapper
 
 
 class TokensSequencesPaddingMapper(SingleBaseMapper):
@@ -29,7 +30,6 @@ class TokensSequencesPaddingMapper(SingleBaseMapper):
         super().__init__(input_fields=[input_field],
                          output_fields=[input_field])
         self.bos, self.sep, self.eos = self._find_special_token_ids(tokenizer)
-
 
     @staticmethod
     def _find_special_token_ids(
@@ -77,9 +77,11 @@ class TokensSequencesPaddingMapper(SingleBaseMapper):
         seqs_count = len(sequences)
 
         padded_sequences = [
-            (self.bos if i == 0 else []) +
-            seq +
-            (self.eos if (i + 1) == seqs_count else self.sep)
+            (
+                self.bos if i == 0 else []
+            ) + seq + (
+                self.eos if (i + 1) == seqs_count else self.sep
+            )
             for i, seq in enumerate(sequences)
         ]
         data[self.input_fields[0]] = padded_sequences
@@ -125,12 +127,14 @@ class TokenTypeIdsSequencePaddingMapper(TokensSequencesPaddingMapper):
         sequences = data[self.input_fields[0]]
         seqs_count = len(sequences)
         padded_sequences = [
-            # a sequence start with BOS tags or SEP tags
-            ([i for _ in self.bos] if i == 0 else [i for _ in self.sep]) +
-            seq +
-            # a sequence ends with EOS tags or nothing if it is not
-            # the last sequence
-            ([i for _ in self.eos] if (i + 1) == seqs_count else [])
+            (
+                # a sequence start with BOS tags or SEP tags
+                [i for _ in self.bos] if i == 0 else [i for _ in self.sep]
+            ) + seq + (
+                # a sequence ends with EOS tags or nothing if it is not
+                # the last sequence
+                [i for _ in self.eos] if (i + 1) == seqs_count else []
+            )
             for i, seq in enumerate(sequences)
         ]
         data[self.input_fields[0]] = padded_sequences
@@ -334,10 +338,9 @@ class MultiSequenceStriderMapper(BatchedBaseMapper):
             cumulative_stride_length = 0
 
             for seq_pos_end in range(len(sample[ref_field_name])):
-                current_seq_length = (
-                    len(sample[ref_field_name][seq_pos_end]) +
+                current_seq_length = \
+                    len(sample[ref_field_name][seq_pos_end]) + \
                     self.extra_length_per_seq
-                )
 
                 if current_seq_length > self.max_length:
                     raise ValueError(
@@ -414,11 +417,11 @@ class SingleValueToSequenceMapper(SingleBaseMapper):
     ) -> Sequence[Union[int, float]]:
 
         if self.strategy == 'first':
-            return ([value] +
-                    [self.padding_id for _ in range(len(like_seq) - 1)])
+            return [value] + \
+                   [self.padding_id for _ in range(len(like_seq) - 1)]
         elif self.strategy == 'last':
-            return ([self.padding_id for _ in range(len(like_seq) - 1)] +
-                    [value])
+            return [self.padding_id for _ in range(len(like_seq) - 1)] + \
+                   [value]
         elif self.strategy == 'all':
             return [value for _ in like_seq]
         else:

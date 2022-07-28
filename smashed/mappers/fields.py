@@ -11,7 +11,7 @@ D = TypeVar('D', bound='BaseDataset')
 
 class ChangeFieldsMapper(SingleBaseMapper):
     def __init__(self,
-                 keep_fields:  Optional[List[str]] = None,
+                 keep_fields: Optional[List[str]] = None,
                  drop_fields: Optional[List[str]] = None):
         """Mapper that removes some of the fields in a dataset.
         Either `keep_fields` or `drop_fields` must be specified, but not both.
@@ -30,7 +30,6 @@ class ChangeFieldsMapper(SingleBaseMapper):
 
         super().__init__(input_fields=drop_fields,
                          output_fields=keep_fields)
-
 
     def map(self,
             dataset: D,

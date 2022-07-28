@@ -12,6 +12,7 @@ from transformers.models.auto.tokenization_auto import AutoTokenizer
 from smashed.mappers.tokenize import TokenizerMapper, ValidUnicodeMapper
 from smashed.interfaces.simple import Dataset
 
+
 class TestValidUnicodeMapper(unittest.TestCase):
     """Test ValidUnicodeMapper"""
     def test_map(self):
@@ -246,7 +247,6 @@ class TestTokenizerMapper(unittest.TestCase):
                 for start, end in new_dataset[0]['offset_mapping']] == \
                ['', 'This', 'is', 'a', 'Pt', 'ero', 'da', 'ct', 'yl', '']
 
-
         # now try with a larger dataset to test things like
         # truncation and all that
         dataset = Dataset([
@@ -272,7 +272,6 @@ class TestTokenizerMapper(unittest.TestCase):
                '[CLS] this is a sentence. this is two [SEP]'
         assert self.tokenizer.decode(new_dataset[1]['input_ids']) == \
                '[CLS] this is a separate instance. this is [SEP]'
-
 
         # compare with `test_overflow()`
         mapper = TokenizerMapper(

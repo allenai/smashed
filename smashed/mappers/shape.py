@@ -9,7 +9,6 @@ class FlattenMapper(SingleBaseMapper):
     def __init__(self, field: str) -> None:
         super().__init__(input_fields=[field], output_fields=[field])
 
-
     def transform(self, data: TransformElementType) -> TransformElementType:
         field_name, *_ = self.input_fields
 

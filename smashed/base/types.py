@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Protocol
+from typing import Dict, Any, List
 
 
 TransformElementType = Dict[str, Any]

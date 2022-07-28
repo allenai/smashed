@@ -1,27 +1,27 @@
 from smashed.base.dataset import BaseDataset
+
+from typing import Any, Dict, TypeVar
+
 from ..utils import requires
+from ..base import BaseMapper
+from ..mappers import fields, multiseq, shape, tokenize
+from ..mappers.contrib import sse
 
 requires("datasets")
 
-from typing import Any, Protocol, Sequence, Type, TypeVar, Dict, overload
-
-from datasets.arrow_dataset import Dataset
-from datasets.iterable_dataset import IterableDataset
-from datasets.features.features import Features, FeatureType
-
-
-from ..base import BaseMapper
-from ..mappers import multiseq, shape, tokenize, fields
-from ..mappers.contrib import sse
-
-from datasets import features
+from datasets import features                                   # noqa: E402
+from datasets.arrow_dataset import Dataset                      # noqa: E402
+from datasets.features.features import Features, FeatureType    # noqa: E402
+from datasets.iterable_dataset import IterableDataset           # noqa: E402
 
 
 class HfDatasetProtocol(Dataset, BaseDataset):
     ...
 
+
 class HfIterableDatasetProtocol(IterableDataset, BaseDataset):
     ...
+
 
 HfDatasetType = TypeVar(
     "HfDatasetType", HfDatasetProtocol, HfIterableDatasetProtocol
