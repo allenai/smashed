@@ -1,8 +1,8 @@
 from itertools import chain
 from typing import Dict
 
-from ..base.types import TransformElementType, Features, FeatureType
 from ..base.mapper import SingleBaseMapper
+from ..base.types import Features, FeatureType, TransformElementType
 
 
 class FlattenMapper(SingleBaseMapper):

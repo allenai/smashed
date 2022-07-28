@@ -4,7 +4,6 @@ from typing import Any, Tuple, Type, TypeVar, Union
 from .dataset import BaseDataset
 from .mapper import BaseMapper
 
-
 DatasetType = TypeVar("DatasetType", bound="BaseDataset")
 
 

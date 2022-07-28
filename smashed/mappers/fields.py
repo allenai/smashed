@@ -1,9 +1,8 @@
-from typing import Any, Optional, List, Callable, TypeVar
+from typing import Any, Callable, List, Optional, TypeVar
 
-from ..base.types import TransformElementType
 from ..base.dataset import BaseDataset
 from ..base.mapper import SingleBaseMapper
-
+from ..base.types import TransformElementType
 
 D = TypeVar("D", bound="BaseDataset")
 

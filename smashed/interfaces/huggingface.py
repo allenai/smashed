@@ -1,11 +1,11 @@
-from smashed.base.dataset import BaseDataset
-
 from typing import Any, Dict, TypeVar
 
-from ..utils import requires
+from smashed.base.dataset import BaseDataset
+
 from ..base import BaseMapper
 from ..mappers import fields, multiseq, shape, tokenize
 from ..mappers.contrib import sse
+from ..utils import requires
 
 requires("datasets")
 

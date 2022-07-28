@@ -1,7 +1,6 @@
 from typing import Callable, Optional, Protocol, TypeVar
 
-from .types import FeatureType, Features
-
+from .types import Features, FeatureType
 
 D = TypeVar("D", bound="BaseDataset")
 
