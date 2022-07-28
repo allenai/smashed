@@ -9,8 +9,9 @@ Tests for TokenizeMappers module
 import unittest
 
 from transformers.models.auto.tokenization_auto import AutoTokenizer
-from smashed.mappers.tokenize import TokenizerMapper, ValidUnicodeMapper
+
 from smashed.interfaces.simple import Dataset
+from smashed.mappers.tokenize import TokenizerMapper, ValidUnicodeMapper
 
 
 class TestValidUnicodeMapper(unittest.TestCase):
