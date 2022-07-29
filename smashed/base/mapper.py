@@ -190,6 +190,7 @@ class SingleBaseMapper(BaseMapper, metaclass=ABCMeta):
     ) -> TransformBatchType:
         raise ValueError("SingleBaseMapper does not support batching")
 
+    @abstractmethod
     def transform(
         self: "BaseMapper", data: TransformElementType
     ) -> TransformElementType:
@@ -224,7 +225,6 @@ class BatchedBaseMapper(BaseMapper, metaclass=ABCMeta):
     def batched(self) -> bool:
         return True
 
-    @abstractmethod
     def _batch_transform(
         self: "BatchedBaseMapper", data: TransformBatchType
     ) -> TransformBatchType:
