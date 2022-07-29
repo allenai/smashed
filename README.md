@@ -116,6 +116,36 @@ print(dataset[0])
 # }
 ```
 
+## Building a Pipeline
+
+Mappers can also be composed into a pipeline using the `>>` (or `<<`) operator. For example, the code above can be rewritten as follows:
+
+```python
+pipeline = TokenizerMapper(
+    input_field='sentences',
+    tokenizer=tokenizer,
+    add_special_tokens=False,
+    truncation=True,
+    max_length=80
+) >> MultiSequenceStriderMapper(
+    max_stride_count=2,
+    max_length=512,
+    tokenizer=tokenizer,
+    length_reference_field='input_ids'
+) >> TokensSequencesPaddingMapper(
+    tokenizer=tokenizer,
+    input_field='input_ids'
+) >> AttentionMaskSequencePaddingMapper(
+    tokenizer=tokenizer,
+    input_field='attention_mask'
+) >> SequencesConcatenateMapper()
+
+dataset = ...
+
+# apply the full pipeline to the dataset
+pipeline.map(dataset)
+```
+
 ## Dataset Interfaces Available
 
 The initial version of SMASHED supports two interfaces for dataset:
