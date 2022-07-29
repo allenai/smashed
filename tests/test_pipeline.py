@@ -9,6 +9,7 @@ import unittest
 
 from smashed.base.mapper import SingleBaseMapper
 from smashed.base.pipeline import Pipeline
+from smashed.interfaces.simple import Dataset
 
 
 class MockMapper(SingleBaseMapper):
@@ -20,7 +21,7 @@ class MockMapper(SingleBaseMapper):
         self.stage = stage
 
     def transform(self, data: dict) -> dict:
-        return data
+        return {'stage': (data.get('stage', []) + [self.stage])}
 
     def __eq__(self, __o: object) -> bool:
         """Check if two mappers are equal; useful to
@@ -62,3 +63,12 @@ class TestPipeline(unittest.TestCase):
         pipeline2 = mapper1 << mapper2
         self.assertNotEqual(pipeline1, pipeline2)
         self.assertEqual(pipeline1.mappers, pipeline2.mappers[::-1])
+
+    def test_run_pipeline(self):
+        """Test a full pipeline"""
+        pipeline = MockMapper(1) >> MockMapper(2) >> MockMapper(3)
+
+        dataset = Dataset([{'stage': [0]}])
+        dataset = pipeline.map(dataset)
+
+        self.assertEqual(dataset[0]['stage'], [0, 1, 2, 3])
