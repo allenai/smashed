@@ -174,6 +174,10 @@ class BinarizerMapper(_SimpleInterfaceMixInMapper, shape.BinarizerMapper):
     ...
 
 
+class UnpackingMapper(_SimpleInterfaceMixInMapper, shape.UnpackingMapper):
+    ...
+
+
 class TokenizerMapper(_SimpleInterfaceMixInMapper, tokenize.TokenizerMapper):
     ...
 

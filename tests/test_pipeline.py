@@ -21,7 +21,7 @@ class MockMapper(SingleBaseMapper):
         self.stage = stage
 
     def transform(self, data: dict) -> dict:
-        return {'stage': (data.get('stage', []) + [self.stage])}
+        return {"stage": (data.get("stage", []) + [self.stage])}
 
     def __eq__(self, __o: object) -> bool:
         """Check if two mappers are equal; useful to
@@ -68,7 +68,7 @@ class TestPipeline(unittest.TestCase):
         """Test a full pipeline"""
         pipeline = MockMapper(1) >> MockMapper(2) >> MockMapper(3)
 
-        dataset = Dataset([{'stage': [0]}])
+        dataset = Dataset([{"stage": [0]}])
         dataset = pipeline.map(dataset)
 
-        self.assertEqual(dataset[0]['stage'], [0, 1, 2, 3])
+        self.assertEqual(dataset[0]["stage"], [0, 1, 2, 3])
