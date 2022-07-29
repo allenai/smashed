@@ -73,7 +73,7 @@ class Pipeline:
             )
         )
 
-    def __call__(
+    def map(
         self: "Pipeline", dataset: DatasetType, **map_kwargs: Any
     ) -> DatasetType:
         """Transform a dataset by applying this pipeline's mappers."""
