@@ -1,4 +1,5 @@
 from functools import reduce
+from itertools import chain
 from typing import Any, Tuple, Type, TypeVar, Union
 
 from .dataset import BaseDataset
@@ -55,15 +56,22 @@ class Pipeline:
     @classmethod
     def chain(
         cls: Type["Pipeline"],
-        lead: Union[BaseMapper, "Pipeline"],
-        tail: Union[BaseMapper, "Pipeline"],
+        *mappers_or_pipelines: Union[BaseMapper, "Pipeline"],
     ) -> "Pipeline":
         """Create a new pipeline by chaining two mappers/pipelines together."""
-        if isinstance(lead, BaseMapper):
-            lead = Pipeline(lead)
-        if isinstance(tail, BaseMapper):
-            tail = Pipeline(tail)
-        return cls(*(lead.mappers + tail.mappers))
+
+        def _to_pip(
+            mapper_or_pipeline: Union[BaseMapper, "Pipeline"]
+        ) -> "Pipeline":
+            if isinstance(mapper_or_pipeline, BaseMapper):
+                mapper_or_pipeline = Pipeline(mapper_or_pipeline)
+            return mapper_or_pipeline
+
+        return Pipeline(
+            *chain.from_iterable(
+                _to_pip(m_or_p).mappers for m_or_p in mappers_or_pipelines
+            )
+        )
 
     def __call__(
         self: "Pipeline", dataset: DatasetType, **map_kwargs: Any
