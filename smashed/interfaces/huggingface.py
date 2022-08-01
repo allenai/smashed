@@ -123,6 +123,10 @@ class BinarizerMapper(_HuggingFaceInterfaceMixInMapper, shape.BinarizerMapper):
     __sequence_type__: type = features.Sequence
 
 
+class UnpackingMapper(_HuggingFaceInterfaceMixInMapper, shape.UnpackingMapper):
+    ...
+
+
 class TokenizerMapper(
     _HuggingFaceInterfaceMixInMapper, tokenize.TokenizerMapper
 ):
