@@ -7,7 +7,7 @@ from ..mappers import fields, multiseq, shape, tokenize
 from ..mappers.contrib import sse
 from ..utils import requires
 
-requires("datasets")
+requires("datasets", "2.4.0")
 
 # we add the noqa bit because datasets is not part of the core requirement.
 # Because we want to fail gracefully, `requires` above checks if `datasets`
