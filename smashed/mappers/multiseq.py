@@ -30,13 +30,8 @@ class SequencePaddingMapper(SingleBaseMapper):
         ] = lambda seq_num, is_last: [],
     ) -> None:
         """Mapper that adds custom prefix and suffinx values to each sentence.
-        Subclasses can override the prefix_values_fn and suffix_values_fn to create all
-        sort of padders.
-        You can use this to add custom special tokens to the beginning and end of
-        each sentence to indicate the type of the sentence or to use them for prediction.
-        Usually you would create an instance of this class for each of
-        `input_ids`, 'attention_mask' and 'token_type_ids' fields.
-
+        Subclasses can define their prefix_values_fn and suffix_values_fn to create
+        specialized padding mappers.
 
         Args:
             input_field (str): The field to add special tokens to.
