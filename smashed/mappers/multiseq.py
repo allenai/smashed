@@ -23,10 +23,10 @@ class SequencePaddingMapper(SingleBaseMapper):
         self,
         input_field,
         prefix_values_fn: Callable[
-            [int, bool], List[Any]
+            [int, bool], Union[List[Any], str]
         ] = lambda seq_num, is_last: [],
         suffix_values_fn: Callable[
-            [int, bool], List[Any]
+            [int, bool], Union[List[Any], str]
         ] = lambda seq_num, is_last: [],
     ) -> None:
         """Mapper that adds custom prefix and suffinx values to each sentence.
@@ -194,10 +194,13 @@ class CustomTokensSequencePaddingMapper(SequencePaddingMapper):
     def __init__(
         self,
         input_field: Optional[str] = "input_ids",
-        prefix_values: List[int] = [],
-        suffix_values: List[int] = [],
+        prefix_values: Union[List[int], str] = [],
+        suffix_values: Union[List[int], str] = [],
     ) -> None:
-        """Mapper that adds custom prefix and suffinx values to each sentence."""
+        """Mapper that adds custom prefix and suffinx values to each sentence.
+        Suffix and prefix can be either list of token_ids or a string, depending
+        on your `input_field`.
+        """
         super().__init__(
             input_field,
             prefix_values_fn=lambda seq_num, is_last: prefix_values,
