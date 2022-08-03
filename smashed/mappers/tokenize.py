@@ -162,3 +162,18 @@ class ValidUnicodeMapper(SingleBaseMapper):
         # new_data = {f'{self.prefix}{k}': v if k not in self.input_fields
         #             else _transform(v) for k, v in data.items()}
         # return new_data
+
+
+class PaddingMapper(SingleBaseMapper):
+    """Given input_fields of type List[str], figures out how to pad them
+    such that all examples in dataset in those fields have same length.
+    This can be useful because Huggingface padding has really weird behavior for custom
+    keys.  For example,
+
+    tokenizer.pad([{'input_ids': [0, 1, 2], 'aaa': [3, 3, 3]},
+                   {'input_ids': [3, 4], 'aaa': [4, 4]}])
+
+    will correctly pad `input_ids`, but not `aaa`.  This can break collation which often
+    calls `tokenizer.pad`.
+    """
+    
