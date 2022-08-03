@@ -95,7 +95,10 @@ class TokenizerMapper(SingleBaseMapper):
             batch_encoding["word_ids"] = [
                 # ignoring pylance complaining because word ids should
                 # be provided given that we are passing `is_split_into_words`
-                batch_encoding[sequence_id].word_ids  # type: ignore
+                [
+                    word_id if word_id is not None else -1
+                    for word_id in batch_encoding[sequence_id].word_ids
+                ]  # type: ignore
                 for sequence_id in range(
                     # ignoring pylance complaining because input_ids should
                     # always be a list of lists when `is_split_into_words`
