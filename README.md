@@ -12,12 +12,9 @@ The mappers are responsible for the following operations.
 3. Add padding symbols to sequences and attention masks.
 4. Concatenate all sequences from a stride into a single sequence.
 
-
-
 ```python
 import transformers
-from smashed.interfaces.simple import (
-    Dataset,
+from smashed.mappers import (
     TokenizerMapper,
     MultiSequenceStriderMapper,
     TokensSequencesPaddingMapper,
@@ -54,7 +51,7 @@ mappers = [
     SequencesConcatenateMapper()
 ]
 
-dataset = Dataset([
+dataset = [
     {
         'sentences': [
             'This is a sentence.',
@@ -71,7 +68,7 @@ dataset = Dataset([
             'And that is the story!',
         ]
     }
-])
+]
 
 for mapper in mappers:
     dataset = mapper.map(dataset)
