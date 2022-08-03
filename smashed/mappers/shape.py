@@ -2,7 +2,7 @@ from itertools import chain
 from typing import Any, Dict, Iterable, List, Optional
 
 from ..base.mapper import BatchedBaseMapper, SingleBaseMapper
-from ..base.types import Features, FeatureType, TransformElementType
+from ..base.types import TransformElementType
 
 
 class FlattenMapper(SingleBaseMapper):
@@ -22,21 +22,9 @@ class FlattenMapper(SingleBaseMapper):
 
 
 class BinarizerMapper(SingleBaseMapper):
-    __value_type__: type = str
-    __sequence_type__: type = list
-
     def __init__(self, field: str, threshold: float) -> None:
         super().__init__(input_fields=[field], output_fields=[field])
         self.threshold = threshold
-
-    def cast_columns(self, features: Features) -> Dict[str, FeatureType]:
-        field_name, *_ = self.input_fields
-        if isinstance(features[field_name], self.__sequence_type__):
-            new_field = self.__sequence_type__(self.__value_type__("int64"))
-        else:
-            new_field = self.__value_type__("int64")
-
-        return {field_name: new_field}
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         field_name, *_ = self.input_fields

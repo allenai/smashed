@@ -1,11 +1,9 @@
 from functools import reduce
 from itertools import chain
-from typing import Any, Tuple, Type, TypeVar, Union
+from typing import Any, Tuple, Type, Union
 
-from .dataset import BaseDataset
-from .mapper import BaseMapper
-
-DatasetType = TypeVar("DatasetType", bound="BaseDataset")
+from .mapper import AbstractBaseMapper
+from .types import DatasetType
 
 
 class Pipeline:
@@ -20,9 +18,9 @@ class Pipeline:
     mapper in the pipeline.
     """
 
-    mappers: Tuple[BaseMapper, ...]
+    mappers: Tuple[AbstractBaseMapper, ...]
 
-    def __init__(self, *mappers: BaseMapper) -> None:
+    def __init__(self, *mappers: AbstractBaseMapper) -> None:
         self.mappers = mappers
 
     def __repr__(self: "Pipeline") -> str:
@@ -34,12 +32,12 @@ class Pipeline:
         return f'Pipeline({" -> ".join(mappers_it)})'
 
     def __lshift__(
-        self: "Pipeline", other: Union[BaseMapper, "Pipeline"]
+        self: "Pipeline", other: Union[AbstractBaseMapper, "Pipeline"]
     ) -> "Pipeline":
         return self.chain(other, self)
 
     def __rshift__(
-        self: "Pipeline", other: Union[BaseMapper, "Pipeline"]
+        self: "Pipeline", other: Union[AbstractBaseMapper, "Pipeline"]
     ) -> "Pipeline":
         return self.chain(self, other)
 
@@ -56,14 +54,14 @@ class Pipeline:
     @classmethod
     def chain(
         cls: Type["Pipeline"],
-        *mappers_or_pipelines: Union[BaseMapper, "Pipeline"],
+        *mappers_or_pipelines: Union[AbstractBaseMapper, "Pipeline"],
     ) -> "Pipeline":
         """Create a new pipeline by chaining two mappers/pipelines together."""
 
         def _to_pip(
-            mapper_or_pipeline: Union[BaseMapper, "Pipeline"]
+            mapper_or_pipeline: Union[AbstractBaseMapper, "Pipeline"]
         ) -> "Pipeline":
-            if isinstance(mapper_or_pipeline, BaseMapper):
+            if isinstance(mapper_or_pipeline, AbstractBaseMapper):
                 mapper_or_pipeline = Pipeline(mapper_or_pipeline)
             return mapper_or_pipeline
 
@@ -78,7 +76,7 @@ class Pipeline:
     ) -> DatasetType:
         """Transform a dataset by applying this pipeline's mappers."""
 
-        def _map(dataset: DatasetType, mapper: BaseMapper):
+        def _map(dataset: DatasetType, mapper: AbstractBaseMapper):
             return mapper.map(dataset, **map_kwargs)
 
         return reduce(_map, self.mappers, dataset)
