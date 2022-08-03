@@ -157,12 +157,12 @@ To contribute to SMASHED, make sure to:
 1. (If you are not part of AI2) Fork the repository on GitHub.
 2. Clone it locally.
 3. Create a new branch in for the new feature.
-4. Install development dependencies with `pip install dev-requirements.txt`.
+4. Install development dependencies with `pip install -r dev-requirements.txt`.
 5. Add your new mapper or feature.
 6. Add unit tests.
 7. Run tests, linting, and type checking from the root directory of the repo:
-    1. *Style:* `flake8 .`  (Should return no error)
-    2. *Style:* `black .` (Should format for you)
+    1. *Style:* `black .` (Should format for you)
+    2. *Style:* `flake8 .`  (Should return no error)
     3. *Style:* `isort .` (Should sort imports for you)
     4. *Static type check:* `mypy .` (Should return no error)
     5. *Tests:* `pytest -v --color=yes tests/` (Should return no error)
