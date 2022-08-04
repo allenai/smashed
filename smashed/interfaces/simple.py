@@ -1,4 +1,7 @@
+from ..mappers.batchers import FixedBatchSizeMapper
+from ..mappers.collators import CollatorMapper, FromTokenizerCollatorMapper
 from ..mappers.contrib.sse import OneVsOtherAnnotatorMapper
+from ..mappers.converters import Python2TorchMapper, Torch2PythonMapper
 from ..mappers.fields import ChangeFieldsMapper, MakeFieldMapper
 from ..mappers.multiseq import (
     AttentionMaskSequencePaddingMapper,
@@ -11,7 +14,7 @@ from ..mappers.multiseq import (
     TokenTypeIdsSequencePaddingMapper,
 )
 from ..mappers.shape import BinarizerMapper, FlattenMapper, UnpackingMapper
-from ..mappers.tokenize import TokenizerMapper, ValidUnicodeMapper, PaddingMapper
+from ..mappers.tokenize import TokenizerMapper, ValidUnicodeMapper
 from ..utils import SmashedWarnings
 
 __all__ = [
@@ -32,7 +35,11 @@ __all__ = [
     "ChangeFieldsMapper",
     "MakeFieldMapper",
     "ValidUnicodeMapper",
-    "PaddingMapper"
+    "FixedBatchSizeMapper",
+    "CollatorMapper",
+    "FromTokenizerCollatorMapper",
+    "Python2TorchMapper",
+    "Torch2PythonMapper",
 ]
 
 

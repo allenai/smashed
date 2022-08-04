@@ -1,13 +1,23 @@
 from abc import ABCMeta
-from typing import Any, Dict, List, Tuple, TypeVar
+from typing import Any, Dict, Iterable, List, Tuple, TypeVar
+
+import torch
 
 from ..base.mapper import (
-    AbstractBaseMapper,
     BatchedBaseMapper,
+    DatasetInterfaceMapper,
     SingleBaseMapper,
 )
 from ..base.types import TransformBatchType
-from ..mappers import fields, multiseq, shape, tokenize
+from ..mappers import (
+    batchers,
+    collators,
+    converters,
+    fields,
+    multiseq,
+    shape,
+    tokenize,
+)
 from ..mappers.contrib import sse
 from ..utils import requires
 
@@ -40,11 +50,16 @@ __all__ = [
     "OneVsOtherAnnotatorMapper",
     "ChangeFieldsMapper",
     "ValidUnicodeMapper",
+    "FixedBatchSizeMapper",
+    "CollatorMapper",
+    "FromTokenizerCollatorMapper",
+    "Python2TorchMapper",
+    "Torch2PythonMapper",
 ]
 
 
 class HuggingFaceDatasetsInterfaceMapper(
-    AbstractBaseMapper, metaclass=ABCMeta
+    DatasetInterfaceMapper, metaclass=ABCMeta
 ):
     def _batch_transform(
         self: "HuggingFaceDatasetsInterfaceMapper", data: TransformBatchType
@@ -78,28 +93,39 @@ class HuggingFaceDatasetsInterfaceMapper(
 
         return transformed_batch
 
-    def map(self, dataset: HfDatasetType, **map_kwargs: Any) -> HfDatasetType:
+    def get_dataset_fields(
+        self: "HuggingFaceDatasetsInterfaceMapper", dataset: HfDatasetType
+    ) -> Iterable[str]:
+        return dataset.features.keys()
 
-        for field in self.input_fields:
-            if field not in dataset.features:
-                raise ValueError(f"Field {field} not found in dataset")
+    def map(
+        self: "HuggingFaceDatasetsInterfaceMapper",
+        dataset: HfDatasetType,
+        **map_kwargs: Any
+    ) -> HfDatasetType:
+
+        self.check_dataset_fields(
+            provided_fields=self.get_dataset_fields(dataset),
+            expected_fields=self.input_fields,
+        )
 
         if isinstance(self, BatchedBaseMapper):
-            dataset = dataset.map(
+            transformed_dataset = dataset.map(
                 self._batch_transform, **{**map_kwargs, "batched": True}
             )
         elif isinstance(self, SingleBaseMapper):
-            dataset = dataset.map(self.transform, **map_kwargs)
+            transformed_dataset = dataset.map(self.transform, **map_kwargs)
         else:
             raise TypeError(
                 "Mapper must inherit a SingleBaseMapper or a BatchedBaseMapper"
             )
 
-        for field in self.input_fields:
-            if field not in dataset.features:
-                raise ValueError(f"Field {field} not found in dataset")
+        self.check_dataset_fields(
+            provided_fields=self.get_dataset_fields(transformed_dataset),
+            expected_fields=self.output_fields,
+        )
 
-        return dataset
+        return transformed_dataset
 
 
 class TokensSequencesPaddingMapper(
@@ -208,3 +234,50 @@ class ValidUnicodeMapper(
     HuggingFaceDatasetsInterfaceMapper, tokenize.ValidUnicodeMapper
 ):
     ...
+
+
+class FixedBatchSizeMapper(
+    HuggingFaceDatasetsInterfaceMapper, batchers.FixedBatchSizeMapper
+):
+    ...
+
+
+class CollatorMapper(
+    HuggingFaceDatasetsInterfaceMapper, collators.CollatorMapper
+):
+    ...
+
+
+class FromTokenizerCollatorMapper(
+    HuggingFaceDatasetsInterfaceMapper, collators.FromTokenizerCollatorMapper
+):
+    ...
+
+
+class Python2TorchMapper(
+    HuggingFaceDatasetsInterfaceMapper, converters.Python2TorchMapper
+):
+    def __init__(self: "Python2TorchMapper", *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        if self.device and self.device != torch.device("cpu"):
+            raise RuntimeError(
+                '"device" argument is not supported for Python2TorchMapper'
+                " when using Huggingface datasets."
+            )
+        if len(self.field_cast_map) > 0:
+            raise RuntimeError(
+                '"field_cast_map" argument is not supported for '
+                "Python2TorchMapper when using Huggingface datasets."
+            )
+
+    def map(self, dataset: HfDatasetType, **map_kwargs: Any) -> HfDatasetType:
+        return dataset.with_format("torch")
+
+
+class Torch2PythonMapper(
+    HuggingFaceDatasetsInterfaceMapper, converters.Torch2PythonMapper
+):
+    def map(self, dataset: HfDatasetType, **_: Any) -> HfDatasetType:
+        # this changes the logic for converting to a python object
+        # to map to apis for HuggingFace datasets
+        return dataset.with_format(None)

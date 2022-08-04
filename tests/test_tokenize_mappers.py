@@ -33,22 +33,20 @@ class TestValidUnicodeMapper(unittest.TestCase):
             ],
             replace_token="[UNK]",
         )
-        dataset = Dataset(
-            [
-                {
-                    "tokens": [
-                        "This",
-                        "example",
-                        "has",
-                        "bad",
-                        "\uf02a",
-                        "\uf02a\u00ad",
-                        "Modalities\uf02a",
-                    ]
-                }
-            ]
-        )
-        new_dataset = mapper.map(dataset)
+        dataset = [
+            {
+                "tokens": [
+                    "This",
+                    "example",
+                    "has",
+                    "bad",
+                    "\uf02a",
+                    "\uf02a\u00ad",
+                    "Modalities\uf02a",
+                ]
+            }
+        ]
+        new_dataset: list = mapper.map(dataset)  # type: ignore
         self.assertListEqual(
             new_dataset,
             [
