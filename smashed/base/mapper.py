@@ -7,6 +7,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Sequence,
     TypeVar,
     Union,
 )
@@ -110,20 +111,40 @@ class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
         raise NotImplementedError("Mapper subclass must implement transform")
 
 
-class ListOfDictsDatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
+class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
     """A mixin class for a mapper that operates on a list of dictionaries.
     It's the default mapper type.
     """
 
+    def get_dataset_fields(
+        self: "DatasetInterfaceMapper", dataset: DatasetType
+    ) -> Union[Iterable[str], None]:
+        if isinstance(dataset, abc.Sequence):
+            return dataset[0].keys()
+
+    def check_dataset_fields(
+        self: "DatasetInterfaceMapper",
+        provided_fields: Union[Iterable[str], None],
+        expected_fields: Sequence[str],
+    ):
+        if provided_fields is None:
+            return
+
+        provided_fields_set = set(provided_fields)
+
+        for field in expected_fields:
+            if field not in provided_fields_set:
+                raise ValueError(f"Field {field} not found in dataset")
+
     def map(
-        self: "ListOfDictsDatasetInterfaceMapper",
+        self: "DatasetInterfaceMapper",
         dataset: DatasetType,
         **_: Any,
     ) -> DatasetType:
-        if isinstance(dataset, abc.Sequence):
-            for field in self.input_fields:
-                if field not in dataset[0]:
-                    raise ValueError(f"Field {field} not found in dataset")
+        self.check_dataset_fields(
+            provided_fields=self.get_dataset_fields(dataset),
+            expected_fields=self.input_fields,
+        )
 
         if isinstance(self, BatchedBaseMapper):
             transformed_dataset = list(self.transform(dataset))
@@ -136,14 +157,15 @@ class ListOfDictsDatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
                 "Mapper must inherit a SingleBaseMapper or a BatchedBaseMapper"
             )
 
-        for field in self.output_fields:
-            if field not in transformed_dataset[0]:
-                raise ValueError(f"Field {field} not found in dataset")
+        self.check_dataset_fields(
+            provided_fields=self.get_dataset_fields(transformed_dataset),
+            expected_fields=self.output_fields,
+        )
 
         return transformed_dataset
 
 
-class SingleBaseMapper(ListOfDictsDatasetInterfaceMapper, metaclass=ABCMeta):
+class SingleBaseMapper(DatasetInterfaceMapper, metaclass=ABCMeta):
     """An abstract implementation of a Mapper that operates on a single
     element. All mappers that operate on a single element should subclass
     this class.
@@ -173,7 +195,7 @@ class SingleBaseMapper(ListOfDictsDatasetInterfaceMapper, metaclass=ABCMeta):
         raise NotImplementedError("Mapper subclass must implement transform")
 
 
-class BatchedBaseMapper(ListOfDictsDatasetInterfaceMapper, metaclass=ABCMeta):
+class BatchedBaseMapper(DatasetInterfaceMapper, metaclass=ABCMeta):
     """An abstract implementation of a Mapper that operates on a batch of
     elements. All mappers that operate on a batch should subclass this
     class.
