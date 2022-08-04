@@ -11,7 +11,7 @@ from ..mappers.multiseq import (
     TokenTypeIdsSequencePaddingMapper,
 )
 from ..mappers.shape import BinarizerMapper, FlattenMapper, UnpackingMapper
-from ..mappers.tokenize import TokenizerMapper, ValidUnicodeMapper
+from ..mappers.tokenize import TokenizerMapper, ValidUnicodeMapper, PaddingMapper
 from ..utils import SmashedWarnings
 
 __all__ = [
@@ -32,6 +32,7 @@ __all__ = [
     "ChangeFieldsMapper",
     "MakeFieldMapper",
     "ValidUnicodeMapper",
+    "PaddingMapper"
 ]
 
 
