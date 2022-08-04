@@ -2,7 +2,6 @@ import itertools
 import random
 from typing import (
     Any,
-    Callable,
     Iterable,
     List,
     Literal,
@@ -18,58 +17,7 @@ from ..base.mapper import BatchedBaseMapper, SingleBaseMapper
 from ..base.types import TransformElementType
 
 
-class SequencePaddingMapper(SingleBaseMapper):
-    def __init__(
-        self,
-        input_field,
-        prefix_values_fn: Callable[
-            [int, bool], Union[List[Any], str]
-        ] = lambda seq_num, is_last: [],
-        suffix_values_fn: Callable[
-            [int, bool], Union[List[Any], str]
-        ] = lambda seq_num, is_last: [],
-    ) -> None:
-        """Mapper that adds custom prefix and suffinx values to each sentence.
-        Subclasses can override the prefix_values_fn and suffix_values_fn to create all
-        sort of padders.
-        You can use this to add custom special tokens to the beginning and end of
-        each sentence to indicate the type of the sentence or to use them for prediction.
-        Usually you would create an instance of this class for each of
-        `input_ids`, 'attention_mask' and 'token_type_ids' fields.
-
-
-        Args:
-            input_field (str): The field to add special tokens to.
-            prefix_values_fn (List[int]): Callable that outputs a List of padding values
-                to add to the beginning of each sentence. This is a Callable to be able to use
-                different padding values depending on the sequence position (`seq_num`).
-                seq_num will get a value of 0 for the first sentence, 1 for the second, etc.
-                `is_last` indicates wather the sentence is the last in the sequence.
-            suffix_values_fn (List[int]): Same as prefix_values_fn, but adds values to the end
-                of each sentence.
-        """
-        super().__init__(
-            input_fields=[input_field], output_fields=[input_field]
-        )
-        self.prefix_values_fn = prefix_values_fn
-        self.suffix_values_fn = suffix_values_fn
-
-    def transform(self, data: TransformElementType) -> TransformElementType:
-        sequences = data[self.input_fields[0]]
-
-        seqs_count = len(sequences)
-        padded_sequences = [
-            self.prefix_values_fn(i, i + 1 == seqs_count)
-            + seq
-            + self.suffix_values_fn(i, i + 1 == seqs_count)
-            for i, seq in enumerate(sequences)
-        ]
-        data[self.input_fields[0]] = padded_sequences
-
-        return data
-
-
-class TokensSequencesPaddingMapper(SequencePaddingMapper):
+class TokensSequencesPaddingMapper(SingleBaseMapper):
     bos: List[int]
     sep: List[int]
     eos: List[int]
@@ -87,17 +35,10 @@ class TokensSequencesPaddingMapper(SequencePaddingMapper):
             input_field (str, optional): The field to add special tokens to.
                 Defaults to 'input_ids'.
         """
-        self.bos, self.sep, self.eos = self._find_special_token_ids(tokenizer)
-
         super().__init__(
-            input_field=input_field,
-            prefix_values_fn=lambda seq_num, is_last: (
-                self.bos if seq_num == 0 else []
-            ),
-            suffix_values_fn=lambda seq_num, is_last: (
-                self.eos if is_last else self.sep
-            ),
+            input_fields=[input_field], output_fields=[input_field]
         )
+        self.bos, self.sep, self.eos = self._find_special_token_ids(tokenizer)
 
     @staticmethod
     def _find_special_token_ids(
@@ -140,6 +81,20 @@ class TokensSequencesPaddingMapper(SequencePaddingMapper):
 
         return bos, sep, eos
 
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        sequences = data[self.input_fields[0]]
+        seqs_count = len(sequences)
+
+        padded_sequences = [
+            (self.bos if i == 0 else [])
+            + seq
+            + (self.eos if (i + 1) == seqs_count else self.sep)
+            for i, seq in enumerate(sequences)
+        ]
+        data[self.input_fields[0]] = padded_sequences
+
+        return data
+
 
 class AttentionMaskSequencePaddingMapper(TokensSequencesPaddingMapper):
     def __init__(
@@ -178,70 +133,30 @@ class TokenTypeIdsSequencePaddingMapper(TokensSequencesPaddingMapper):
                 Defaults to 'token_type_ids'.
         """
         super().__init__(tokenizer=tokenizer, input_field=input_field)
-        self.prefix_values_fn = (
-            lambda seq_num, is_last: [seq_num for _ in self.bos]
-            if seq_num == 0
-            else [seq_num for _ in self.sep]
-        )
-        self.suffix_values_fn = (
-            lambda seq_num, is_last: [seq_num for _ in self.eos]
-            if is_last
-            else []
-        )
 
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        sequences = data[self.input_fields[0]]
+        seqs_count = len(sequences)
+        padded_sequences = [
+            (
+                # a sequence start with BOS tags or SEP tags
+                [i for _ in self.bos]
+                if i == 0
+                else [i for _ in self.sep]
+            )
+            + seq
+            + (
+                # a sequence ends with EOS tags or nothing if it is not
+                # the last sequence
+                [i for _ in self.eos]
+                if (i + 1) == seqs_count
+                else []
+            )
+            for i, seq in enumerate(sequences)
+        ]
+        data[self.input_fields[0]] = padded_sequences
 
-class CustomTokensSequencePaddingMapper(SequencePaddingMapper):
-    def __init__(
-        self,
-        input_field: Optional[str] = "input_ids",
-        prefix_values: Union[List[int], str] = [],
-        suffix_values: Union[List[int], str] = [],
-    ) -> None:
-        """Mapper that adds custom prefix and suffinx values to each sentence.
-        Suffix and prefix can be either list of token_ids or a string, depending
-        on your `input_field`.
-        """
-        super().__init__(
-            input_field,
-            prefix_values_fn=lambda seq_num, is_last: prefix_values,
-            suffix_values_fn=lambda seq_num, is_last: suffix_values,
-        )
-
-
-class CustomAttentionMaskSequencePaddingMapper(SequencePaddingMapper):
-    def __init__(
-        self,
-        input_field: str = "attention_mask",
-        prefix_num_tokens: int = 0,
-        suffix_num_tokens: int = 0,
-    ) -> None:
-
-        super().__init__(
-            input_field,
-            prefix_values_fn=lambda seq_num, is_last: [1] * prefix_num_tokens,
-            suffix_values_fn=lambda seq_num, is_last: [1] * suffix_num_tokens,
-        )
-
-
-class CustomTokenTypeIdsSequencePaddingMapper(SequencePaddingMapper):
-    def __init__(
-        self,
-        input_field: Optional[str] = "token_type_ids",
-        prefix_num_tokens: int = 0,
-        suffix_num_tokens: int = 0,
-    ) -> None:
-
-        super().__init__(
-            input_field,
-            prefix_values_fn=lambda seq_num, is_last: [
-                seq_num for _ in range(prefix_num_tokens)
-            ],
-            suffix_values_fn=lambda seq_num, is_last: [
-                seq_num for _ in range(suffix_num_tokens)
-            ]
-            if is_last
-            else [],
-        )
+        return data
 
 
 class MakeAttentionMaskMapper(SingleBaseMapper):
