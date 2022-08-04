@@ -51,8 +51,10 @@ __all__ = [
     "ChangeFieldsMapper",
     "ValidUnicodeMapper",
     "FixedBatchSizeMapper",
-    "CollatorMapper",
-    "FromTokenizerCollatorMapper",
+    "ListCollatorMapper",
+    "TensorCollatorMapper",
+    "FromTokenizerListCollatorMapper",
+    "FromTokenizerTensorCollatorMapper",
     "Python2TorchMapper",
     "Torch2PythonMapper",
 ]
@@ -242,14 +244,28 @@ class FixedBatchSizeMapper(
     ...
 
 
-class CollatorMapper(
-    HuggingFaceDatasetsInterfaceMapper, collators.CollatorMapper
+class ListCollatorMapper(
+    HuggingFaceDatasetsInterfaceMapper, collators.ListCollatorMapper
 ):
     ...
 
 
-class FromTokenizerCollatorMapper(
-    HuggingFaceDatasetsInterfaceMapper, collators.FromTokenizerCollatorMapper
+class FromTokenizerListCollatorMapper(
+    HuggingFaceDatasetsInterfaceMapper,
+    collators.FromTokenizerListCollatorMapper,
+):
+    ...
+
+
+class TensorCollatorMapper(
+    HuggingFaceDatasetsInterfaceMapper, collators.TensorCollatorMapper
+):
+    ...
+
+
+class FromTokenizerTensorCollatorMapper(
+    HuggingFaceDatasetsInterfaceMapper,
+    collators.FromTokenizerTensorCollatorMapper,
 ):
     ...
 

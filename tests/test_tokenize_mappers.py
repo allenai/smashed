@@ -11,7 +11,8 @@ import unittest
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 from smashed.interfaces.simple import Dataset
-from smashed.mappers.tokenize import TokenizerMapper, ValidUnicodeMapper, PaddingMapper
+from smashed.mappers.collators import ListCollatorMapper
+from smashed.mappers.tokenize import TokenizerMapper, ValidUnicodeMapper
 
 
 class TestValidUnicodeMapper(unittest.TestCase):
@@ -469,67 +470,74 @@ class TestPaddingMapper(unittest.TestCase):
 
     def test_map(self):
         """Test usual functionality of padding. default behavior."""
-        mapper = PaddingMapper(
-            pad_to_length=5,
-            pad_value=999
-        )
+        mapper = ListCollatorMapper(pad_to_length=5, unk_fields_pad_id=999)
         dataset = Dataset(
             [
                 {
                     "field1": [1, 2, 3, 4, 5],
-                    'field2': [6, 7, 8],
-                    'field3': [9, 10]
+                    "field2": [6, 7, 8],
+                    "field3": [9, 10],
                 },
                 {
                     "field1": [1, 2, 3],
-                    'field2': [4, 5, 6, 7],
-                    'field3': [8, 9, 10]
-                }
+                    "field2": [4, 5, 6, 7],
+                    "field3": [8, 9, 10],
+                },
             ]
         )
         new_dataset = mapper.map(dataset)
-        self.assertDictEqual(new_dataset[0], {
-            'field1': [1, 2, 3, 4, 5],
-            'field2': [6, 7, 8, 999, 999],
-            'field3': [9, 10, 999, 999, 999]
-        })
-        self.assertDictEqual(new_dataset[1], {
-            'field1': [1, 2, 3, 999, 999],
-            'field2': [4, 5, 6, 7, 999],
-            'field3': [8, 9, 10, 999, 999]
-        })
+        self.assertDictEqual(
+            new_dataset[0],
+            {
+                "field1": [1, 2, 3, 4, 5],
+                "field2": [6, 7, 8, 999, 999],
+                "field3": [9, 10, 999, 999, 999],
+            },
+        )
+        self.assertDictEqual(
+            new_dataset[1],
+            {
+                "field1": [1, 2, 3, 999, 999],
+                "field2": [4, 5, 6, 7, 999],
+                "field3": [8, 9, 10, 999, 999],
+            },
+        )
 
     def test_map_with_fields_to_pad(self):
         """Test functionality when have specific fields to pad.
         Should return all fields."""
-        mapper = PaddingMapper(
-            pad_to_length=5,
-            pad_value=999,
-            fields_to_pad=['field1', 'field3']
+        mapper = ListCollatorMapper(
+            pad_to_length=5, fields_pad_ids={"field1": 999, "field3": 999}
         )
         dataset = Dataset(
             [
                 {
                     "field1": [1, 2, 3, 4, 5],
-                    'field2': [6, 7, 8],
-                    'field3': [9, 10]
+                    "field2": [6, 7, 8],
+                    "field3": [9, 10],
                 },
                 {
                     "field1": [1, 2, 3],
-                    'field2': [4, 5, 6, 7],
-                    'field3': [8, 9, 10]
-                }
+                    "field2": [4, 5, 6, 7],
+                    "field3": [8, 9, 10],
+                },
             ]
         )
         new_dataset = mapper.map(dataset)
         # same num dicts
-        self.assertDictEqual(new_dataset[0], {
-            'field1': [1, 2, 3, 4, 5],
-            'field2': [6, 7, 8],
-            'field3': [9, 10, 999, 999, 999]
-        })
-        self.assertDictEqual(new_dataset[1], {
-            'field1': [1, 2, 3, 999, 999],
-            'field2': [4, 5, 6, 7],
-            'field3': [8, 9, 10, 999, 999]
-        })
+        self.assertDictEqual(
+            new_dataset[0],
+            {
+                "field1": [1, 2, 3, 4, 5],
+                "field2": [6, 7, 8],
+                "field3": [9, 10, 999, 999, 999],
+            },
+        )
+        self.assertDictEqual(
+            new_dataset[1],
+            {
+                "field1": [1, 2, 3, 999, 999],
+                "field2": [4, 5, 6, 7],
+                "field3": [8, 9, 10, 999, 999],
+            },
+        )

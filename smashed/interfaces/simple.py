@@ -1,5 +1,10 @@
 from ..mappers.batchers import FixedBatchSizeMapper
-from ..mappers.collators import CollatorMapper, FromTokenizerCollatorMapper
+from ..mappers.collators import (
+    FromTokenizerListCollatorMapper,
+    FromTokenizerTensorCollatorMapper,
+    ListCollatorMapper,
+    TensorCollatorMapper,
+)
 from ..mappers.contrib.sse import OneVsOtherAnnotatorMapper
 from ..mappers.converters import Python2TorchMapper, Torch2PythonMapper
 from ..mappers.fields import ChangeFieldsMapper, MakeFieldMapper
@@ -36,8 +41,10 @@ __all__ = [
     "MakeFieldMapper",
     "ValidUnicodeMapper",
     "FixedBatchSizeMapper",
-    "CollatorMapper",
-    "FromTokenizerCollatorMapper",
+    "ListCollatorMapper",
+    "TensorCollatorMapper",
+    "FromTokenizerListCollatorMapper",
+    "FromTokenizerTensorCollatorMapper",
     "Python2TorchMapper",
     "Torch2PythonMapper",
 ]

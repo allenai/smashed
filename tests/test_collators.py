@@ -11,8 +11,8 @@ from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 from smashed.mappers.batchers import FixedBatchSizeMapper
 from smashed.mappers.collators import (
-    CollatorMapper,
-    FromTokenizerCollatorMapper,
+    FromTokenizerTensorCollatorMapper,
+    TensorCollatorMapper,
 )
 from smashed.mappers.converters import Python2TorchMapper
 
@@ -27,7 +27,7 @@ class TestCollators(unittest.TestCase):
         pipeline = (
             Python2TorchMapper()
             >> FixedBatchSizeMapper(batch_size=3)
-            >> CollatorMapper(fields_pad_ids={"a": -1, "b": -2})
+            >> TensorCollatorMapper(fields_pad_ids={"a": -1, "b": -2})
         )
 
         collated_dataset = pipeline.map(dataset)
@@ -48,7 +48,7 @@ class TestCollators(unittest.TestCase):
         pipeline = (
             Python2TorchMapper()
             >> FixedBatchSizeMapper(batch_size=2)
-            >> FromTokenizerCollatorMapper(tokenizer)
+            >> FromTokenizerTensorCollatorMapper(tokenizer)
         )
         collated_dataset = pipeline.map(dataset)
 
