@@ -1,5 +1,5 @@
 import unicodedata
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
@@ -177,3 +177,36 @@ class PaddingMapper(SingleBaseMapper):
     calls `tokenizer.pad`.
     """
     
+    def __init__(
+        self,
+        pad_to_length: int,
+        pad_value: Any,
+        fields_to_pad: Optional[List[str]] = None
+    ):
+        super().__init__()
+        self.pad_to_length = pad_to_length
+        self.pad_value = pad_value
+        self.fields_to_pad = fields_to_pad
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+
+        fields_to_pad = data.keys() if self.fields_to_pad is None else self.fields_to_pad
+
+        def _pad(input_elements: List[Any]) -> List[Any]:
+            if len(input_elements) > self.pad_to_length:
+                raise ValueError(f'PaddingMapper expects every input sequence to be less'
+                                 f'than or equal to the `pad_to_length`. Please handle'
+                                 f'any truncation or whatever upstream in a different mapper,'
+                                 f'such as TokenizerMapper.'
+                                 f'\t{len(input_elements)} > {self.pad_to_length}'
+                                 f'\t{input_elements}')
+            else:
+                input_elements += [
+                    self.pad_value for _ in range(self.pad_to_length - len(input_elements))
+                ]
+            return input_elements
+
+        return {
+            k: v if k not in fields_to_pad else _pad(v)
+            for k, v in data.items()
+        }
