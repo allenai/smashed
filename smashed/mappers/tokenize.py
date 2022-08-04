@@ -1,5 +1,12 @@
+"""
+
+
+@lucas, @kylel
+
+"""
+
 import unicodedata
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
@@ -176,7 +183,6 @@ class PaddingMapper(SingleBaseMapper):
     will correctly pad `input_ids`, but not `aaa`.  This can break collation which often
     calls `tokenizer.pad`.
     """
-    
     def __init__(
         self,
         pad_to_length: int,
@@ -189,9 +195,8 @@ class PaddingMapper(SingleBaseMapper):
         self.fields_to_pad = fields_to_pad
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-
+        """Add padding to all list elements for the fields we specify."""
         fields_to_pad = data.keys() if self.fields_to_pad is None else self.fields_to_pad
-
         def _pad(input_elements: List[Any]) -> List[Any]:
             if len(input_elements) > self.pad_to_length:
                 raise ValueError(f'PaddingMapper expects every input sequence to be less'
@@ -200,12 +205,10 @@ class PaddingMapper(SingleBaseMapper):
                                  f'such as TokenizerMapper.'
                                  f'\t{len(input_elements)} > {self.pad_to_length}'
                                  f'\t{input_elements}')
-            else:
-                input_elements += [
-                    self.pad_value for _ in range(self.pad_to_length - len(input_elements))
-                ]
+            input_elements += [
+                self.pad_value for _ in range(self.pad_to_length - len(input_elements))
+            ]
             return input_elements
-
         return {
             k: v if k not in fields_to_pad else _pad(v)
             for k, v in data.items()
