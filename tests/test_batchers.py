@@ -18,11 +18,15 @@ class TestBatchers(unittest.TestCase):
         ]
         mapper = FixedBatchSizeMapper(batch_size=3)
         batched_dataset = mapper.map(dataset)
+
         self.assertEqual(len(batched_dataset), 4)
-        self.assertEqual(len(batched_dataset[0]), 3)
-        self.assertEqual(len(batched_dataset[1]), 3)
-        self.assertEqual(len(batched_dataset[2]), 3)
-        self.assertEqual(len(batched_dataset[3]), 1)
+
+        for key in "a b c".split():
+            self.assertEqual(len(batched_dataset[0][key]), 3)
+            self.assertEqual(len(batched_dataset[1][key]), 3)
+            self.assertEqual(len(batched_dataset[2][key]), 3)
+            self.assertEqual(len(batched_dataset[3][key]), 1)
+
         self.assertEqual(
             batched_dataset[0],
             {
