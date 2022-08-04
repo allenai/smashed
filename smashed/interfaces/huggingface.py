@@ -50,6 +50,11 @@ __all__ = [
     "OneVsOtherAnnotatorMapper",
     "ChangeFieldsMapper",
     "ValidUnicodeMapper",
+    "FixedBatchSizeMapper",
+    "CollatorMapper",
+    "FromTokenizerCollatorMapper",
+    "Python2TorchMapper",
+    "Torch2PythonMapper",
 ]
 
 
@@ -229,11 +234,6 @@ class ValidUnicodeMapper(
     HuggingFaceDatasetsInterfaceMapper, tokenize.ValidUnicodeMapper
 ):
     ...
-
-
-# from ..mappers.batchers import FixedBatchSizeMapper
-# from ..mappers.collators import CollatorMapper, FromTokenizerCollatorMapper
-# from ..mappers.converters import Python2TorchMapper, Torch2PythonMapper
 
 
 class FixedBatchSizeMapper(
