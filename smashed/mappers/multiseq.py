@@ -159,6 +159,129 @@ class TokenTypeIdsSequencePaddingMapper(TokensSequencesPaddingMapper):
         return data
 
 
+class AddPrefixSuffixMapper(SingleBaseMapper):
+    def __init__(
+        self,
+        input_field,
+        prefix: Optional[Any] = None,
+        suffix: Optional[Any] = None,
+    ) -> None:
+        """Mapper that wraps the sequence with `prefix` and/or a `suffix` objects.
+
+        Args:
+            input_field (str, optional): The field to add special tokens to.
+            prefix (Optional[Any]): an object to prepend to the sequence.
+                Can be for example a string or a list of strings.
+                Choose the right type depending on the input field format.
+            suffix (Optional[Any]): an object to append to the sequence.
+                Can be for example a string or a list of strings.
+                Choose the right type depending on the input field format.
+
+        """
+        super().__init__(
+            input_fields=[input_field], output_fields=[input_field]
+        )
+        self.prefix = prefix
+        self.suffix = suffix
+
+    def _maybe_wrap(self, seq):
+        if self.prefix is not None:
+            seq = self.prefix + seq
+        if self.suffix is not None:
+            seq = seq + self.suffix
+        return seq
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        sequences = data[self.input_fields[0]]
+        padded_sequences = [self._maybe_wrap(seq) for seq in sequences]
+        data[self.input_fields[0]] = padded_sequences
+        return data
+
+
+class TokensSequencesAddPrefixSuffixMapper(AddPrefixSuffixMapper):
+    def __init__(
+        self,
+        prefix: List[int] = [],
+        suffix: List[int] = [],
+        input_field: str = "input_ids",
+    ) -> None:
+        """Mapper that wraps the sequence with `prefix` and/or a `suffix`
+        lists of token ids.
+
+        Args:
+            input_field (str, optional): The field to add special tokens to.
+                Defaults to 'input_ids'.
+            prefix (List[int]): a list of ids to prepend to the sequence.
+                Defaults to [].
+            suffix (List[int]): a list of ids to append to the sequence
+                Defaults to [].
+        """
+        super().__init__(
+            input_field=input_field,
+            prefix=prefix,
+            suffix=suffix,
+        )
+
+
+class AttentionMaskAddPrefixSuffixMapper(AddPrefixSuffixMapper):
+    def __init__(
+        self,
+        num_prefix_tokens: int = 0,
+        num_suffix_tokens: int = 0,
+        input_field: str = "attention_mask",
+    ) -> None:
+        """Mapper that wraps the sequence with `num_prefix_tokens` and/or
+        `num_suffix_tokens` attention mask units.
+
+        Args:
+            num_prefix_tokens (List[int]): number of units to prepend to the attntion mask.
+                Defaults to 0.
+            num_suffix_tokens (List[int]): number of units to append to the attntion mask
+                Defaults to 0.
+            input_field (str, optional): The field to add special tokens to.
+                Defaults to 'attention_mask'.
+        """
+        super().__init__(
+            input_field=input_field,
+            prefix=[1] * num_prefix_tokens,
+            suffix=[1] * num_suffix_tokens,
+        )
+
+
+class TokenTypeIdsAddPrefixSuffixMapper(SingleBaseMapper):
+    def __init__(
+        self,
+        num_prefix_tokens: int = 0,
+        num_suffix_tokens: int = 0,
+        input_field: str = "token_type_ids",
+    ) -> None:
+        """Mapper that wraps the sequence with `num_prefix_tokens` and/or
+        `num_suffix_tokens` token type ids.
+
+        Args:
+            num_prefix_tokens (List[int]): number of token type ids to prepend.
+                Defaults to 0.
+            num_suffix_tokens (List[int]): number of token type ids to append.
+                Defaults to 0.
+            input_field (str, optional): The field to add special tokens to.
+                Defaults to 'token_type_ids'.
+        """
+        super().__init__(
+            input_fields=[input_field], output_fields=[input_field]
+        )
+        self.num_prefix_tokens = num_prefix_tokens
+        self.num_suffix_tokens = num_suffix_tokens
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        sequences = data[self.input_fields[0]]
+        padded_sequences = [
+            [i] * self.num_prefix_tokens + seq + [i] * self.num_suffix_tokens
+            for i, seq in enumerate(sequences)
+        ]
+        data[self.input_fields[0]] = padded_sequences
+        return data
+
+
 class MakeAttentionMaskMapper(SingleBaseMapper):
     def __init__(
         self,
