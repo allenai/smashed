@@ -1,3 +1,10 @@
+"""
+
+
+@lucas, @kylel
+
+"""
+
 import unicodedata
 from typing import Any, List, Optional
 
@@ -162,3 +169,55 @@ class ValidUnicodeMapper(SingleBaseMapper):
         # new_data = {f'{self.prefix}{k}': v if k not in self.input_fields
         #             else _transform(v) for k, v in data.items()}
         # return new_data
+
+
+class PaddingMapper(SingleBaseMapper):
+    """Given input_fields of type List[str], figures out how to pad them
+    such that all examples in dataset in those fields have same length.
+    This can be useful because Huggingface padding has really weird behavior for custom
+    keys.  For example,
+
+    tokenizer.pad([{'input_ids': [0, 1, 2], 'aaa': [3, 3, 3]},
+                   {'input_ids': [3, 4], 'aaa': [4, 4]}])
+
+    will correctly pad `input_ids`, but not `aaa`.  This can break collation which often
+    calls `tokenizer.pad`.
+    """
+
+    def __init__(
+        self,
+        pad_to_length: int,
+        pad_value: Any,
+        fields_to_pad: Optional[List[str]] = None,
+    ):
+        super().__init__()
+        self.pad_to_length = pad_to_length
+        self.pad_value = pad_value
+        self.fields_to_pad = fields_to_pad
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        """Add padding to all list elements for the fields we specify."""
+        fields_to_pad = (
+            data.keys() if self.fields_to_pad is None else self.fields_to_pad
+        )
+
+        def _pad(input_elements: List[Any]) -> List[Any]:
+            if len(input_elements) > self.pad_to_length:
+                raise ValueError(
+                    f"PaddingMapper expects every input sequence to be less"
+                    f"than or equal to the `pad_to_length`. Please handle"
+                    f"any truncation or whatever upstream in a different mapper,"
+                    f"such as TokenizerMapper."
+                    f"\t{len(input_elements)} > {self.pad_to_length}"
+                    f"\t{input_elements}"
+                )
+            input_elements += [
+                self.pad_value
+                for _ in range(self.pad_to_length - len(input_elements))
+            ]
+            return input_elements
+
+        return {
+            k: v if k not in fields_to_pad else _pad(v)
+            for k, v in data.items()
+        }

@@ -50,3 +50,7 @@ class SmashedWarnings:
     @classmethod
     def deprecation(cls, message: str):
         cls._warn(message, DeprecationWarning)
+
+    @classmethod
+    def precedence(cls, message: str):
+        cls._warn(message, RuntimeWarning)
