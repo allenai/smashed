@@ -165,7 +165,7 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
         return transformed_dataset
 
 
-class SingleBaseMapper(DatasetInterfaceMapper, metaclass=ABCMeta):
+class SingleBaseMapper(DatasetInterfaceMapper):
     """An abstract implementation of a Mapper that operates on a single
     element. All mappers that operate on a single element should subclass
     this class.
@@ -195,7 +195,7 @@ class SingleBaseMapper(DatasetInterfaceMapper, metaclass=ABCMeta):
         raise NotImplementedError("Mapper subclass must implement transform")
 
 
-class BatchedBaseMapper(DatasetInterfaceMapper, metaclass=ABCMeta):
+class BatchedBaseMapper(DatasetInterfaceMapper):
     """An abstract implementation of a Mapper that operates on a batch of
     elements. All mappers that operate on a batch should subclass this
     class.
