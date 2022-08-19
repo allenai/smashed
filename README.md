@@ -1,6 +1,6 @@
 # SMASHED
 
-![Colorful logo of smashed. It is the word smashed written in a playful font that vaguely looks like pipes.]()
+![Colorful logo of smashed. It is the word smashed written in a playful font that vaguely looks like pipes.](https://github.com/allenai/smashed/raw/main/resources/smashed.png)
 
 **S**equential **MA**ppers for **S**equences of **HE**terogeneous **D**ictionaries is a set of Python interfaces designed to apply transformations to samples in datasets, which are often implemented as sequences of dictionaries.
 
