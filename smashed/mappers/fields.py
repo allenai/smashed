@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 from ..base.mapper import SingleBaseMapper
-from ..base.types import TransformElementType
+from ..base.types import DatasetType, TransformElementType
 
 
 class ChangeFieldsMapper(SingleBaseMapper):
@@ -27,6 +27,9 @@ class ChangeFieldsMapper(SingleBaseMapper):
             raise ValueError("Must specify `keep_fields` or `drop_fields`")
 
         super().__init__(input_fields=drop_fields, output_fields=keep_fields)
+
+    def map(self, data: DatasetType, **_) -> DatasetType:
+        return super().map(data, remove_columns=True)
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         if self.input_fields:
