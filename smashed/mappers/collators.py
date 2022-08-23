@@ -255,28 +255,30 @@ class ListCollatorMapper(CollatorMixIn, SingleBaseMapper):
 
     def _pad(
         self: "ListCollatorMapper",
-        sequence_to_pad: List[Any],
+        seq_of_seq_to_pad: List[Any],
         padding_symbol: Any,
     ) -> List[Any]:
-        if (
-            self.pad_to_length is not None
-            and len(sequence_to_pad) > self.pad_to_length
-        ):
-            raise ValueError(
-                "PaddingMapper expects every input sequence to be less"
-                "than or equal to the `pad_to_length`. Please handle"
-                "any truncation or whatever upstream in a different"
-                " mapper, such as TokenizerMapper."
-                f"\t{len(sequence_to_pad)} > {self.pad_to_length}"
-                f"\t{sequence_to_pad}"
-            )
-
-        # This gets
-        pad_to_length = self.pad_to_length or max(map(len, sequence_to_pad))
+        if self.pad_to_length is not None:
+            if len(seq_of_seq_to_pad) > self.pad_to_length:
+                raise ValueError(
+                    "PaddingMapper expects every input sequence to be less"
+                    "than or equal to the `pad_to_length`. Please handle"
+                    "any truncation or whatever upstream in a different"
+                    " mapper, such as TokenizerMapper."
+                    f"\t{len(seq_of_seq_to_pad)} > {self.pad_to_length}"
+                    f"\t{seq_of_seq_to_pad}"
+                )
+            pad_to_len = self.pad_to_length
+        else:
+            # This gets the max length we should pad to: the length of the
+            # longest sequence in the list.
+            pad_to_len = max(map(len, seq_of_seq_to_pad))
 
         return [
-            elem_to_pad + [padding_symbol for _ in range(pad_to_length - len(elem_to_pad))]
-            for elem_to_pad in sequence_to_pad
+            seq_to_pad + [
+                padding_symbol for _ in range(pad_to_len - len(seq_to_pad))
+            ]
+            for seq_to_pad in seq_of_seq_to_pad
         ]
 
     def transform(self, data: TransformElementType) -> TransformElementType:
@@ -284,7 +286,7 @@ class ListCollatorMapper(CollatorMixIn, SingleBaseMapper):
 
         return {
             field_name: self._pad(
-                sequence_to_pad=field_value,
+                seq_of_seq_to_pad=field_value,
                 padding_symbol=self._get_padding_value(field_name=field_name)
             )
             for field_name, field_value in data.items()

@@ -28,8 +28,8 @@ class ChangeFieldsMapper(SingleBaseMapper):
 
         super().__init__(input_fields=drop_fields, output_fields=keep_fields)
 
-    def map(self, dataset: DatasetType, **_) -> DatasetType:
-        return super().map(dataset, remove_columns=True)
+    def map(self, dataset: DatasetType, *_, **map_kwargs: Any) -> DatasetType:
+        return super().map(dataset, remove_columns=True, **map_kwargs)
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         if self.input_fields:

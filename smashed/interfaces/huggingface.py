@@ -103,6 +103,7 @@ class HuggingFaceDatasetsInterfaceMapper(
     def map(
         self: "HuggingFaceDatasetsInterfaceMapper",
         dataset: HfDatasetType,
+        *_,
         **map_kwargs: Any
     ) -> HfDatasetType:
 
@@ -187,8 +188,13 @@ class FlattenMapper(HuggingFaceDatasetsInterfaceMapper, shape.FlattenMapper):
 class BinarizerMapper(
     HuggingFaceDatasetsInterfaceMapper, shape.BinarizerMapper
 ):
-    def map(self, dataset: HfDatasetType, **map_kwargs: Any) -> HfDatasetType:
-        dataset = super().map(dataset, **map_kwargs)
+    def map(
+        self,
+        dataset: HfDatasetType,
+        *map_args: Any,
+        **map_kwargs: Any
+    ) -> HfDatasetType:
+        dataset = super().map(dataset, *map_args, **map_kwargs)
 
         # we have to do this extra casting operation when dealing with
         # huggingface datasets because integer values are otherwise parsed
@@ -223,8 +229,15 @@ class OneVsOtherAnnotatorMapper(
 class ChangeFieldsMapper(
     HuggingFaceDatasetsInterfaceMapper, fields.ChangeFieldsMapper
 ):
-    def map(self, dataset: HfDatasetType, **map_kwargs: Any) -> HfDatasetType:
-        # columns need to be explicitly removed in huggingface datasets
+    def map(
+        self,
+        dataset: HfDatasetType,
+        *_,
+        **map_kwargs: Any
+    ) -> HfDatasetType:
+
+        # mechanism to remove columns in huggingface datasets is
+        # slightly different than in list of dict datasets.
         map_kwargs = {
             "remove_columns": list(dataset.features.keys()),
             **map_kwargs,
@@ -286,14 +299,14 @@ class Python2TorchMapper(
                 "Python2TorchMapper when using Huggingface datasets."
             )
 
-    def map(self, dataset: HfDatasetType, **map_kwargs: Any) -> HfDatasetType:
+    def map(self, dataset: HfDatasetType, *_, **__: Any) -> HfDatasetType:
         return dataset.with_format("torch")
 
 
 class Torch2PythonMapper(
     HuggingFaceDatasetsInterfaceMapper, converters.Torch2PythonMapper
 ):
-    def map(self, dataset: HfDatasetType, **_: Any) -> HfDatasetType:
+    def map(self, dataset: HfDatasetType, *_, **__: Any) -> HfDatasetType:
         # this changes the logic for converting to a python object
         # to map to apis for HuggingFace datasets
         return dataset.with_format(None)

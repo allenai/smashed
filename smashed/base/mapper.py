@@ -143,6 +143,7 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
         dataset: DatasetType,
         **map_kwargs: Any,
     ) -> DatasetType:
+        # this is for simple dataset
         ...
 
     @overload
@@ -152,12 +153,23 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
         remove_columns: Optional[bool] = False,
         **map_kwargs: Any,
     ) -> DatasetType:
+        # this is for simple dataset
+        ...
+
+    @overload
+    def map(
+        self: "DatasetInterfaceMapper",
+        dataset: DatasetType,
+        remove_columns: Optional[Union[str, List[str]]] = None,
+        **map_kwargs: Any,
+    ) -> DatasetType:
+        # this is for huggingface
         ...
 
     def map(
         self: "DatasetInterfaceMapper",
         dataset: DatasetType,
-        # remove_columns: Optional[bool] = False,
+        remove_columns: Optional[Any] = False,
         **map_kwargs: Any,
     ) -> DatasetType:
         """Transform a dataset by applying this mapper's transform method.
@@ -167,7 +179,15 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
             remove_columns (Optional[bool], optional): If True, remove discard
                 any columns that are in the input dataset, but are not returned
                 by the transform method. Defaults to False.
+            map_kwargs (Any, optional): Additional keyword arguments to pass to
+                the transform method. By default, this is empty; other
+                implementations may use this.
         """
+
+        # explicitly casting to a boolean since this is all that is
+        # supported by the simple mapper.
+        # TODO[lucas]: maybe support specifying which fields to keep?
+        remove_columns = bool(remove_columns)
 
         self.check_dataset_fields(
             provided_fields=self.get_dataset_fields(dataset),
