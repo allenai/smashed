@@ -4,12 +4,10 @@ from typing import (
     Any,
     Dict,
     List,
-    Literal,
     Mapping,
     Optional,
     Sequence,
-    Union,
-    overload,
+    Union
 )
 
 import torch
@@ -62,33 +60,17 @@ class CollatorMixIn:
 
         super().__init__()
 
-    @overload
-    def _get_padding_value(
-        self, field_name: str, error_on_missing: Literal[True]
-    ) -> int:
-        ...
-
-    @overload
-    def _get_padding_value(
-        self, field_name: str, error_on_missing: Literal[False]
-    ) -> Union[int, None]:
-        ...
-
-    def _get_padding_value(
-        self, field_name: str, error_on_missing: bool
-    ) -> Union[int, None]:
+    def _get_padding_value(self, field_name: str) -> int:
         if field_name in self.fields_pad_ids:
             return self.fields_pad_ids[field_name]
         elif self.unk_fields_pad_id is not None:
             return self.unk_fields_pad_id
-        elif error_on_missing:
+        else:
             raise ValueError(
                 f"Must specify a padding value for field {field_name}"
                 f"or provide a extra_fields_padding_id attribute to "
                 "the mapper to handle unrecognized fields"
             )
-        else:
-            return None
 
 
 class FromTokenizerMixIn(CollatorMixIn):
@@ -228,9 +210,7 @@ class TensorCollatorMapper(CollatorMixIn, SingleBaseMapper):
         collated_data = {
             field_name: self._pad(
                 sequence=list_of_tensors,
-                pad_value=self._get_padding_value(
-                    field_name=field_name, error_on_missing=True
-                ),
+                pad_value=self._get_padding_value(field_name=field_name),
                 pad_to_length=self.pad_to_length,
             )
             for field_name, list_of_tensors in data.items()
@@ -278,7 +258,10 @@ class ListCollatorMapper(CollatorMixIn, SingleBaseMapper):
         sequence_to_pad: List[Any],
         padding_symbol: Any,
     ) -> List[Any]:
-        if len(sequence_to_pad) > self.pad_to_length:
+        if (
+            self.pad_to_length is not None
+            and len(sequence_to_pad) > self.pad_to_length
+        ):
             raise ValueError(
                 "PaddingMapper expects every input sequence to be less"
                 "than or equal to the `pad_to_length`. Please handle"
@@ -287,26 +270,23 @@ class ListCollatorMapper(CollatorMixIn, SingleBaseMapper):
                 f"\t{len(sequence_to_pad)} > {self.pad_to_length}"
                 f"\t{sequence_to_pad}"
             )
-        sequence_to_pad += [
-            padding_symbol
-            for _ in range(self.pad_to_length - len(sequence_to_pad))
+
+        # This gets
+        pad_to_length = self.pad_to_length or max(map(len, sequence_to_pad))
+
+        return [
+            elem_to_pad + [padding_symbol for _ in range(pad_to_length - len(elem_to_pad))]
+            for elem_to_pad in sequence_to_pad
         ]
-        return sequence_to_pad
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         """Add padding to all list elements for the fields we specify."""
 
         return {
             field_name: self._pad(
-                sequence_to_pad=field_value, padding_symbol=padding_symbol
+                sequence_to_pad=field_value,
+                padding_symbol=self._get_padding_value(field_name=field_name)
             )
-            if (
-                padding_symbol := self._get_padding_value(
-                    field_name=field_name, error_on_missing=False
-                )
-            )
-            is not None
-            else field_value
             for field_name, field_value in data.items()
         }
 

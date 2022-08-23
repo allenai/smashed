@@ -139,8 +139,18 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
     def map(
         self: "DatasetInterfaceMapper",
         dataset: DatasetType,
+        remove_columns: Optional[bool] = False,
         **_: Any,
     ) -> DatasetType:
+        """Transform a dataset by applying this mapper's transform method.
+
+        Args:
+            dataset (DatasetType): The dataset to transform.
+            remove_columns (Optional[bool], optional): If True, remove discard
+                any columns that are in the input dataset, but are not returned
+                by the transform method. Defaults to False.
+        """
+
         self.check_dataset_fields(
             provided_fields=self.get_dataset_fields(dataset),
             expected_fields=self.input_fields,
@@ -148,10 +158,33 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
 
         if isinstance(self, BatchedBaseMapper):
             transformed_dataset = list(self.transform(dataset))
+            if (
+                not remove_columns
+                and transformed_dataset[0].keys() != dataset[0].keys()
+            ):
+                # user has asked to keep the original columns, but the
+                # mapper has tossed some of them away; we need to raise
+                # an error!
+                raise ValueError(
+                    f"Mapper {self.__class__.__name__} has removed columns "
+                    "when remove_columns is False; please fix your mapper "
+                    "or open an issue on GitHub if this is a built in mapper"
+                )
+
         elif isinstance(self, SingleBaseMapper):
-            transformed_dataset = [
-                self.transform(sample) for sample in dataset
-            ]
+            if remove_columns:
+                # we don't care about the original columns
+                transformed_dataset = [
+                    self.transform(sample) for sample in dataset
+                ]
+            else:
+                # user wants to keep the columns, so we merge the new fields
+                # with the old fields, while keeping the new ones if there
+                # is a name conflict
+                transformed_dataset = [
+                    {**sample, **self.transform(sample)}
+                    for sample in dataset
+                ]
         else:
             raise TypeError(
                 "Mapper must inherit a SingleBaseMapper or a BatchedBaseMapper"
@@ -159,7 +192,7 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
 
         self.check_dataset_fields(
             provided_fields=self.get_dataset_fields(transformed_dataset),
-            expected_fields=self.output_fields,
+            expected_fields=self.output_fields
         )
 
         return transformed_dataset
