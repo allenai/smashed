@@ -137,28 +137,28 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
             if field not in provided_fields_set:
                 raise ValueError(f"Field {field} not found in dataset")
 
-    # @overload
-    # def map(
-    #     self: "DatasetInterfaceMapper",
-    #     dataset: DatasetType,
-    #     **_: Any,
-    # ) -> DatasetType:
-    #     ...
+    @overload
+    def map(
+        self: "DatasetInterfaceMapper",
+        dataset: DatasetType,
+        **map_kwargs: Any,
+    ) -> DatasetType:
+        ...
 
-    # @overload
-    # def map(
-    #     self: "DatasetInterfaceMapper",
-    #     dataset: DatasetType,
-    #     remove_columns: Optional[bool] = False,
-    #     **_: Any,
-    # ) -> DatasetType:
-    #     ...
-
+    @overload
     def map(
         self: "DatasetInterfaceMapper",
         dataset: DatasetType,
         remove_columns: Optional[bool] = False,
-        **_: Any,
+        **map_kwargs: Any,
+    ) -> DatasetType:
+        ...
+
+    def map(
+        self: "DatasetInterfaceMapper",
+        dataset: DatasetType,
+        # remove_columns: Optional[bool] = False,
+        **map_kwargs: Any,
     ) -> DatasetType:
         """Transform a dataset by applying this mapper's transform method.
 
