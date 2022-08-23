@@ -54,3 +54,6 @@ site/
 
 # ignore build artifacts
 *.egg-info/
+
+# remove temp dir
+tmp/

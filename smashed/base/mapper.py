@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import abc
+from itertools import chain
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -8,8 +9,11 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
+    Tuple,
     TypeVar,
     Union,
+    overload,
 )
 
 from .types import DatasetType, TransformElementType
@@ -111,7 +115,7 @@ class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
         raise NotImplementedError("Mapper subclass must implement transform")
 
 
-class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
+class DatasetInterfaceMapper(AbstractBaseMapper):
     """A mixin class for a mapper that operates on a list of dictionaries.
     It's the default mapper type.
     """
@@ -136,22 +140,109 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
             if field not in provided_fields_set:
                 raise ValueError(f"Field {field} not found in dataset")
 
+    def _get_dataset_iterator_and_column_names(
+        self, dataset: DatasetType
+    ) -> Tuple[Iterable[TransformElementType], Set[str]]:
+        """Given an iterable dataset, return the name of the columns
+        as well as an iterator over the dataset."""
+
+        dataset_iter = iter(dataset)
+        try:
+            first_element = next(dataset_iter)
+        except StopIteration:
+            return iter([]), set()
+
+        column_names: Set[str] = {str(e) for e in first_element.keys()}
+
+        dataset_iter: Iterable[TransformElementType] = chain(
+            (first_element,), dataset_iter
+        )
+        return dataset_iter, column_names
+
+    @overload
     def map(
         self: "DatasetInterfaceMapper",
         dataset: DatasetType,
-        **_: Any,
+        **map_kwargs: Any,
     ) -> DatasetType:
+        # this is for simple dataset
+        ...
+
+    @overload
+    def map(
+        self: "DatasetInterfaceMapper",
+        dataset: DatasetType,
+        remove_columns: Optional[bool] = False,
+        **map_kwargs: Any,
+    ) -> DatasetType:
+        # this is for simple dataset
+        ...
+
+    @overload
+    def map(
+        self: "DatasetInterfaceMapper",
+        dataset: DatasetType,
+        remove_columns: Optional[Union[str, List[str]]] = None,
+        **map_kwargs: Any,
+    ) -> DatasetType:
+        # this is for huggingface
+        ...
+
+    def map(
+        self: "DatasetInterfaceMapper",
+        dataset: DatasetType,
+        remove_columns: Optional[Any] = False,
+        **map_kwargs: Any,
+    ) -> DatasetType:
+        """Transform a dataset by applying this mapper's transform method.
+
+        Args:
+            dataset (DatasetType): The dataset to transform.
+            remove_columns (Optional[bool], optional): If True, remove discard
+                any columns that are in the input dataset, but are not returned
+                by the transform method. Defaults to False.
+            map_kwargs (Any, optional): Additional keyword arguments to pass to
+                the transform method. By default, this is empty; other
+                implementations may use this.
+        """
+
+        # explicitly casting to a boolean since this is all that is
+        # supported by the simple mapper.
+        # TODO[lucas]: maybe support specifying which fields to keep?
+        remove_columns = bool(remove_columns)
+
         self.check_dataset_fields(
             provided_fields=self.get_dataset_fields(dataset),
             expected_fields=self.input_fields,
         )
 
         if isinstance(self, BatchedBaseMapper):
-            transformed_dataset = list(self.transform(dataset))
+            (
+                dataset_it,
+                columns_names,
+            ) = self._get_dataset_iterator_and_column_names(dataset)
+            transformed_dataset_it = self.transform(dataset_it)
+
+            if remove_columns:
+                transformed_dataset_it = (
+                    {k: v for k, v in elem.items() if k in columns_names}
+                    for elem in transformed_dataset_it
+                )
+            transformed_dataset = list(transformed_dataset_it)
+
         elif isinstance(self, SingleBaseMapper):
-            transformed_dataset = [
-                self.transform(sample) for sample in dataset
-            ]
+            if remove_columns:
+                # we don't care about the original columns
+                transformed_dataset = [
+                    self.transform(sample) for sample in dataset
+                ]
+            else:
+                # user wants to keep the columns, so we merge the new fields
+                # with the old fields, while keeping the new ones if there
+                # is a name conflict
+                transformed_dataset = [
+                    {**sample, **self.transform(sample)} for sample in dataset
+                ]
         else:
             raise TypeError(
                 "Mapper must inherit a SingleBaseMapper or a BatchedBaseMapper"

@@ -80,3 +80,7 @@ class Pipeline:
             return mapper.map(dataset, **map_kwargs)
 
         return reduce(_map, self.mappers, dataset)
+
+    def transform(self: "Pipeline", dataset: DatasetType) -> DatasetType:
+        """Transform a dataset by applying this pipeline's mappers."""
+        return self.map(dataset)

@@ -12,12 +12,80 @@ from transformers.models.auto.tokenization_auto import AutoTokenizer
 from smashed.mappers.batchers import FixedBatchSizeMapper
 from smashed.mappers.collators import (
     FromTokenizerTensorCollatorMapper,
+    ListCollatorMapper,
     TensorCollatorMapper,
 )
 from smashed.mappers.converters import Python2TorchMapper
 
 
-class TestCollators(unittest.TestCase):
+class TestListCollators(unittest.TestCase):
+    def test_base_collator(self):
+        dataset = [
+            {"a": [1, 2, 3], "b": [11, 12]},
+            {"a": [4, 5], "b": [13]},
+            {"a": [6, 7, 8, 9, 10], "b": [14]},
+            {"a": [15], "b": [15, 16, 17, 18, 19, 20]},
+            {"a": [21, 22], "b": [23, 24, 25]},
+        ]
+        pipeline = FixedBatchSizeMapper(batch_size=3) >> ListCollatorMapper(
+            fields_pad_ids={"a": -1, "b": -2}
+        )
+
+        collated_dataset = pipeline.map(dataset)
+
+        self.assertEqual(len(collated_dataset), 2)
+
+        for field in ("a", "b"):
+            self.assertEqual(len(collated_dataset[0][field]), 3)
+            self.assertEqual(len(collated_dataset[1][field]), 2)
+
+        self.assertEqual(
+            collated_dataset[0]["a"],
+            [[1, 2, 3, -1, -1], [4, 5, -1, -1, -1], [6, 7, 8, 9, 10]],
+        )
+        self.assertEqual(
+            collated_dataset[0]["b"], [[11, 12], [13, -2], [14, -2]]
+        )
+        self.assertEqual(
+            collated_dataset[1]["a"],
+            [
+                [15, -1],
+                [21, 22],
+            ],
+        )
+        self.assertEqual(
+            collated_dataset[1]["b"],
+            [[15, 16, 17, 18, 19, 20], [23, 24, 25, -2, -2, -2]],
+        )
+
+    def test_nested_collators(self):
+        dataset = [
+            {"a": [[1.0, 1.1], [2.0], [3.0, 3.1, 3.2, 3.3]], "b": [11, 12]},
+            {"a": [[4.0, 4.1, 4.2, 4.3, 4.4], [5.0, 5.1]], "b": [13]},
+        ]
+
+        pipeline = FixedBatchSizeMapper(batch_size=2) >> ListCollatorMapper(
+            fields_pad_ids={"a": -1, "b": -2}
+        )
+
+        collated_dataset = pipeline.map(dataset)
+
+        self.assertTrue(len(collated_dataset) == 1)
+        for seq in collated_dataset[0]["a"]:
+            self.assertEqual(len(seq), 3)
+            for inner_seq in seq:
+                self.assertEqual(len(inner_seq), 5)
+
+        grouped_a = collated_dataset[0]["a"]
+        self.assertEqual(grouped_a[0][0], [1.0, 1.1, -1, -1, -1])
+        self.assertEqual(grouped_a[0][1], [2.0, -1, -1, -1, -1])
+        self.assertEqual(grouped_a[0][2], [3.0, 3.1, 3.2, 3.3, -1])
+        self.assertEqual(grouped_a[1][0], [4.0, 4.1, 4.2, 4.3, 4.4])
+        self.assertEqual(grouped_a[1][1], [5.0, 5.1, -1, -1, -1])
+        self.assertEqual(grouped_a[1][2], [-1, -1, -1, -1, -1])
+
+
+class TestTensorCollators(unittest.TestCase):
     def test_base_collator(self):
         dataset = [
             {"a": [1, 2, 3], "b": [11, 12]},
