@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import abc
+from itertools import chain
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -8,6 +9,8 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Set,
+    Tuple,
     TypeVar,
     Union,
     overload,
@@ -112,7 +115,7 @@ class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
         raise NotImplementedError("Mapper subclass must implement transform")
 
 
-class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
+class DatasetInterfaceMapper(AbstractBaseMapper):
     """A mixin class for a mapper that operates on a list of dictionaries.
     It's the default mapper type.
     """
@@ -136,6 +139,25 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
         for field in expected_fields:
             if field not in provided_fields_set:
                 raise ValueError(f"Field {field} not found in dataset")
+
+    def _get_dataset_iterator_and_column_names(
+        self, dataset: DatasetType
+    ) -> Tuple[Iterable[TransformElementType], Set[str]]:
+        """Given an iterable dataset, return the name of the columns
+        as well as an iterator over the dataset."""
+
+        dataset_iter = iter(dataset)
+        try:
+            first_element = next(dataset_iter)
+        except StopIteration:
+            return iter([]), set()
+
+        column_names: Set[str] = {str(e) for e in first_element.keys()}
+
+        dataset_iter: Iterable[TransformElementType] = chain(
+            (first_element,), dataset_iter
+        )
+        return dataset_iter, column_names
 
     @overload
     def map(
@@ -195,19 +217,18 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
         )
 
         if isinstance(self, BatchedBaseMapper):
-            transformed_dataset = list(self.transform(dataset))
-            if (
-                not remove_columns
-                and transformed_dataset[0].keys() != dataset[0].keys()
-            ):
-                # user has asked to keep the original columns, but the
-                # mapper has tossed some of them away; we need to raise
-                # an error!
-                raise ValueError(
-                    f"Mapper {self.__class__.__name__} has removed columns "
-                    "when remove_columns is False; please fix your mapper "
-                    "or open an issue on GitHub if this is a built in mapper"
+            (
+                dataset_it,
+                columns_names,
+            ) = self._get_dataset_iterator_and_column_names(dataset)
+            transformed_dataset_it = self.transform(dataset_it)
+
+            if remove_columns:
+                transformed_dataset_it = (
+                    {k: v for k, v in elem.items() if k in columns_names}
+                    for elem in transformed_dataset_it
                 )
+            transformed_dataset = list(transformed_dataset_it)
 
         elif isinstance(self, SingleBaseMapper):
             if remove_columns:
@@ -235,7 +256,7 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
         return transformed_dataset
 
 
-class SingleBaseMapper(DatasetInterfaceMapper):
+class SingleBaseMapper(DatasetInterfaceMapper, metaclass=ABCMeta):
     """An abstract implementation of a Mapper that operates on a single
     element. All mappers that operate on a single element should subclass
     this class.
@@ -265,7 +286,7 @@ class SingleBaseMapper(DatasetInterfaceMapper):
         raise NotImplementedError("Mapper subclass must implement transform")
 
 
-class BatchedBaseMapper(DatasetInterfaceMapper):
+class BatchedBaseMapper(DatasetInterfaceMapper, metaclass=ABCMeta):
     """An abstract implementation of a Mapper that operates on a batch of
     elements. All mappers that operate on a batch should subclass this
     class.

@@ -1,6 +1,7 @@
+import functools
 from collections import abc
 from itertools import chain
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -20,6 +21,7 @@ class CollatorMixIn:
     def __init__(
         self,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
+        pad_to_length_dim: Optional[int] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
     ):
@@ -245,32 +247,116 @@ class ListCollatorMapper(CollatorMixIn, SingleBaseMapper):
 
     pad_to_length: int
 
+    def _get_list_shape_recursive(
+        self, sequence: Sequence[Any]
+    ) -> Tuple[int, ...]:
+        if not isinstance(sequence, abc.Sequence):
+            # we have unpacked as far as we can go; this is just a
+            # single element.
+            return tuple()
+
+        # this iterator will yield the shape of each element in the sequence
+        inner_dims = (self._get_list_shape_recursive(s) for s in sequence)
+
+        # the acutal shape is the maximum of the inner dims
+        inner_shape = tuple(max(dims) for dims in zip(*inner_dims))
+
+        return (len(sequence), *inner_shape)
+
+    def _pad_recursive(
+        self, sequence: List[Any], shape: Sequence[int], padding_symbol: Any
+    ) -> List[Any]:
+        """Recursively pads a list of [lists, ...].
+
+        Args:
+            sequence (List[Any]): The list to pad.
+            shape (Sequence[int]): The shape to pad to.
+            padding_symbol (Any): The symbol to pad with.
+
+        Returns:
+            List[Any]: _description_
+        """
+
+        if len(shape) < 2:
+            # we have reached the end of the shape; this is a single element
+            return sequence
+
+        _, dim_to_pad_shape, *rest_shape = shape
+
+        nested_pad_symbol = functools.reduce(
+            lambda x, _: [x], range(len(rest_shape)), padding_symbol
+        )
+
+        # Let's walk through the nested padding process here.
+        #
+        # Our overall goal is to turn a potentially nested sequence of
+        # list such as:
+        #
+        #       [[[1 2 3] [4 5]    ]
+        #        [[6 7]   [8]   [9]]]
+        #
+        # Into a list of lists of the same length, such as:
+        #
+        #       [[[1 2 3] [4 5 0] [0 0 0]]
+        #        [[6 7 0] [8 0 0] [9 0 0]]]
+        #
+        # The first step is to add any sequence that is completely missing
+        # such as the last example of the first row above. That will get us
+        # the following:
+        #
+        #      [[[1 2 3] [4 5] [0]]
+        #       [[6 7]   [8]   [9]]]
+        #
+        # We do that in the following line:
+        sequence_with_brand_new_padding = (
+            sub_seq + [nested_pad_symbol] * (dim_to_pad_shape - len(sub_seq))
+            for sub_seq in sequence
+        )
+
+        # The second step is to recursively pad the inner lists by
+        # calling this function on each subsequence. We do that as follows:
+        padded_sequence = [
+            self._pad_recursive(
+                sequence=sub_seq,
+                shape=(dim_to_pad_shape, *rest_shape),
+                padding_symbol=padding_symbol,
+            )
+            for sub_seq in sequence_with_brand_new_padding
+        ]
+
+        return padded_sequence
+
     def _pad(
         self: "ListCollatorMapper",
         seq_of_seq_to_pad: List[Any],
         padding_symbol: Any,
     ) -> List[Any]:
+
+        padding_shape = self._get_list_shape_recursive(seq_of_seq_to_pad)
+
         if self.pad_to_length is not None:
-            if len(seq_of_seq_to_pad) > self.pad_to_length:
+            if not all(p <= self.pad_to_length for p in padding_shape):
                 raise ValueError(
                     "PaddingMapper expects every input sequence to be less"
                     "than or equal to the `pad_to_length`. Please handle"
                     "any truncation or whatever upstream in a different"
                     " mapper, such as TokenizerMapper."
-                    f"\t{len(seq_of_seq_to_pad)} > {self.pad_to_length}"
+                    f"\t{padding_shape} > {self.pad_to_length}"
                     f"\t{seq_of_seq_to_pad}"
                 )
-            pad_to_len = self.pad_to_length
-        else:
-            # This gets the max length we should pad to: the length of the
-            # longest sequence in the list.
-            pad_to_len = max(map(len, seq_of_seq_to_pad))
+            padding_shape = (self.pad_to_length,) * len(padding_shape)
 
-        return [
-            seq_to_pad
-            + [padding_symbol for _ in range(pad_to_len - len(seq_to_pad))]
-            for seq_to_pad in seq_of_seq_to_pad
-        ]
+        if len(padding_shape) < 2:
+            # nothing to pad here; we need at minimum a list of lists
+            # for padding to make any sense.
+            return seq_of_seq_to_pad
+
+        padded_sequence = self._pad_recursive(
+            sequence=seq_of_seq_to_pad,
+            shape=padding_shape,
+            padding_symbol=padding_symbol,
+        )
+        return padded_sequence
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         """Add padding to all list elements for the fields we specify."""
