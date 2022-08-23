@@ -23,11 +23,12 @@ class DropFieldTest(unittest.TestCase):
         mapper = TokenizerMapper(
             tokenizer=AutoTokenizer.from_pretrained("bert-base-uncased"),
             input_field="text",
-            return_attention_mask=False
+            return_attention_mask=False,
         )
         processed_dataset = mapper.map(dataset, remove_columns=True)
         self.assertEqual(processed_dataset[0].keys(), {"input_ids"})
 
         processed_dataset = mapper.map(dataset, remove_columns=False)
-        self.assertEqual(processed_dataset[0].keys(),
-                         {"text", "input_ids", "label"})
+        self.assertEqual(
+            processed_dataset[0].keys(), {"text", "input_ids", "label"}
+        )

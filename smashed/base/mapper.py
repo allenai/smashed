@@ -220,8 +220,7 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
                 # with the old fields, while keeping the new ones if there
                 # is a name conflict
                 transformed_dataset = [
-                    {**sample, **self.transform(sample)}
-                    for sample in dataset
+                    {**sample, **self.transform(sample)} for sample in dataset
                 ]
         else:
             raise TypeError(
@@ -230,7 +229,7 @@ class DatasetInterfaceMapper(AbstractBaseMapper, metaclass=ABCMeta):
 
         self.check_dataset_fields(
             provided_fields=self.get_dataset_fields(transformed_dataset),
-            expected_fields=self.output_fields
+            expected_fields=self.output_fields,
         )
 
         return transformed_dataset

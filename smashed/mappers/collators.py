@@ -1,14 +1,6 @@
 from collections import abc
 from itertools import chain
-from typing import (
-    Any,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Union
-)
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
 
 import torch
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -275,9 +267,8 @@ class ListCollatorMapper(CollatorMixIn, SingleBaseMapper):
             pad_to_len = max(map(len, seq_of_seq_to_pad))
 
         return [
-            seq_to_pad + [
-                padding_symbol for _ in range(pad_to_len - len(seq_to_pad))
-            ]
+            seq_to_pad
+            + [padding_symbol for _ in range(pad_to_len - len(seq_to_pad))]
             for seq_to_pad in seq_of_seq_to_pad
         ]
 
@@ -287,7 +278,7 @@ class ListCollatorMapper(CollatorMixIn, SingleBaseMapper):
         return {
             field_name: self._pad(
                 seq_of_seq_to_pad=field_value,
-                padding_symbol=self._get_padding_value(field_name=field_name)
+                padding_symbol=self._get_padding_value(field_name=field_name),
             )
             for field_name, field_value in data.items()
         }

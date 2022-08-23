@@ -189,10 +189,7 @@ class BinarizerMapper(
     HuggingFaceDatasetsInterfaceMapper, shape.BinarizerMapper
 ):
     def map(
-        self,
-        dataset: HfDatasetType,
-        *map_args: Any,
-        **map_kwargs: Any
+        self, dataset: HfDatasetType, *map_args: Any, **map_kwargs: Any
     ) -> HfDatasetType:
         dataset = super().map(dataset, *map_args, **map_kwargs)
 
@@ -230,10 +227,7 @@ class ChangeFieldsMapper(
     HuggingFaceDatasetsInterfaceMapper, fields.ChangeFieldsMapper
 ):
     def map(
-        self,
-        dataset: HfDatasetType,
-        *_,
-        **map_kwargs: Any
+        self, dataset: HfDatasetType, *_, **map_kwargs: Any
     ) -> HfDatasetType:
 
         # mechanism to remove columns in huggingface datasets is
