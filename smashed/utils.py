@@ -1,7 +1,7 @@
 import importlib
 import os
 import warnings
-from typing import Optional, Type, Union
+from typing import Optional, Type, Union, TYPE_CHECKING
 
 from packaging.version import LegacyVersion, Version, parse
 
@@ -10,11 +10,15 @@ def requires(
     module_name: str,
     required_version: Optional[Union[str, Version, LegacyVersion]] = None,
     soft: bool = False,
+    allow_type_checking: bool = True
 ) -> bool:
     """Function to check if a module is installed and optionally check its
     version. If `soft` is True, the function will return False if the module is
     not installed. If `soft` is False, the function will raise an ImportError.
     """
+    if allow_type_checking and TYPE_CHECKING:
+        return True
+
     try:
         module = importlib.import_module(module_name)
     except ModuleNotFoundError:
