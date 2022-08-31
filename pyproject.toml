@@ -97,10 +97,14 @@ allow_redefinition = false
 strict_optional = false
 
 [tool.flake8]
+exclude = [
+    ".venv/",
+    "tmp/"
+]
 per-file-ignores = [
     '*.py:E203',
     '__init__.py:F401',
-    '*.pyi:E302,E305',
+    '*.pyi:E302,E305'
 ]
 
 [tool.setuptools.package-data]
