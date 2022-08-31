@@ -1,15 +1,15 @@
 from typing import Any, Dict, Iterable, List, Mapping, Sequence, Union
 
-from ..utils import requires
+from necessary import necessary
 
-if requires("torchdata", soft=True):
+if necessary("torchdata", soft=True):
     from torchdata.datapipes.iter import IterableWrapper
     from torchdata.datapipes.map import SequenceWrapper
 else:
     SequenceWrapper = Sequence
     IterableWrapper = Iterable
 
-if requires("datasets", soft=True):
+if necessary("datasets", soft=True):
     from datasets.arrow_dataset import Dataset
     from datasets.iterable_dataset import IterableDataset
 else:

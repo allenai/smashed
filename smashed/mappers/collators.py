@@ -49,7 +49,8 @@ class CollatorMixIn:
 
         if self.unk_fields_pad_id is None and self.fields_pad_ids is None:
             raise ValueError(
-                "Either `unk_fields_pad_id` or `fields_to_pad` must be provided"
+                "Either `unk_fields_pad_id` or `fields_to_pad` "
+                "must be provided"
             )
 
         super().__init__()

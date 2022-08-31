@@ -428,7 +428,8 @@ class SingleValueToSequenceMapper(SingleBaseMapper):
             single_value_field: name of the field containing the single
                 label value.
             like_field: name of the field whose shape will be used to repeat
-                the single value to create the sequence. Default is 'input_ids'.
+                the single value to create the sequence. Default is
+                'input_ids'.
             strategy: strategy to use to create the sequence.
                 - If 'first', the single value will be the first element of the
                     new sequence, and all other positions will be filled with

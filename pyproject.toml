@@ -1,8 +1,68 @@
+[project]
+name = "smashed"
+version = "0.1.9"
+description = "Sequential MAppers for Sequences of HEterogeneous Dictionaries is a set of Python interfaces designed to apply transformations to samples in datasets, which are often implemented as sequences of dictionaries."
+authors = [
+    {name = "Allen Institute for Artificial Intelligence", email = "contact@allenai.org" },
+    {name = "Luca Soldaini", email = "luca@soldaini.net"}
+]
+license = {text = "Apache-2.0"}
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "torch >= 1.9",
+    "transformers >= 4.5",
+    "necessary>=0.2.2"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/allenai/smashed"
+"Repository" = "https://github.com/allenai/smashed"
+"Bug Tracker" = "https://github.com/allenai/smashed/issues"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["smashed"]
+namespaces = false
+
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools >= 61.0.0",
+    "wheel"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=22.6.0",
+    "isort>=5.10.1",
+    "mypy>=0.971",
+    "pytest>=5.2",
+    "ipython>=8.4.0",
+    "autopep8>=1.7.0",
+    "flake8>=5.0",
+    "ipdb>=0.13.0",
+    "flake8-pyi>=22.8.1",
+    "Flake8-pyproject>=1.1.0"
+]
+datasets = [
+  "datasets>=2.4.0"
+]
+torchdata = [
+  "torch >= 1.12.0",
+  "torchdata >= 0.4.0"
+]
+all = [
+    "smashed[dev]",
+    "smashed[datasets]",
+    "smashed[torchdata]"
+]
+
 [tool.black]
 line-length = 79
-
 include = '\.pyi?$'
-
 exclude = '''
 (
       __pycache__
@@ -21,6 +81,39 @@ profile = "black"
 line_length = 79
 multi_line_output = 3
 
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+[tool.autopep8]
+max_line_length = 79
+in-place = true
+recursive = true
+aggressive = 3
+
+[tool.mypy]
+python_version = 3.8
+ignore_missing_imports = true
+no_site_packages = true
+allow_redefinition = false
+
+[tool.mypy-tests]
+strict_optional = false
+
+[tool.flake8]
+exclude = [
+    ".venv/",
+    "tmp/"
+]
+per-file-ignores = [
+    '*.py:E203',
+    '__init__.py:F401',
+    '*.pyi:E302,E305'
+]
+
+[tool.setuptools.package-data]
+springs = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/"]
+python_classes = ["Test*", "*Test"]
+log_format = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+log_level = "DEBUG"
+markers = []
+filterwarnings = []

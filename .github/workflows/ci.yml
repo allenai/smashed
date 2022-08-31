@@ -69,7 +69,7 @@ jobs:
         id: virtualenv-cache
         with:
           path: .venv
-          key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('setup.cfg') }}-${{ hashFiles('dev-requirements.txt') }}-${{ hashFiles('pyproject.toml') }}
+          key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-
 
@@ -78,8 +78,7 @@ jobs:
         run: |
           test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
           . .venv/bin/activate
-          pip install -e .
-          pip install -r 'dev-requirements.txt'
+          pip install -e .[all]
 
       - name: Setup virtual environment (cache hit)
         if: steps.virtualenv-cache.outputs.cache-hit == 'true'

@@ -2,6 +2,7 @@ from abc import ABCMeta
 from typing import Any, Dict, Iterable, List, Tuple, TypeVar
 
 import torch
+from necessary import necessary
 
 from ..base.mapper import (
     BatchedBaseMapper,
@@ -19,18 +20,11 @@ from ..mappers import (
     tokenize,
 )
 from ..mappers.contrib import sse
-from ..utils import requires
 
-requires("datasets", "2.4.0")
-
-# we add the noqa bit because datasets is not part of the core requirement.
-# Because we want to fail gracefully, `requires` above checks if `datasets`
-# is installed, raising an helpful error message if it is not.
-# However, that upsets the linter, which thinks that we should import in order
-# instead. Therefore, we slap a bunch of `noqa`s in here to suppress it :)
-from datasets import features  # noqa: E402
-from datasets.arrow_dataset import Dataset  # noqa: E402
-from datasets.iterable_dataset import IterableDataset  # noqa: E402
+with necessary("datasets", soft=True):
+    from datasets import features
+    from datasets.arrow_dataset import Dataset
+    from datasets.iterable_dataset import IterableDataset
 
 HfDatasetType = TypeVar("HfDatasetType", Dataset, IterableDataset)
 
