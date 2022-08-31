@@ -144,7 +144,8 @@ class ValidUnicodeMapper(SingleBaseMapper):
         # self.input_fields = input_fields
         # self.prefix = f'{output_prefix}_' if output_prefix else ''
         # self.output_fields = [
-        #     f'{self.prefix}{input_field}' for input_field in self.input_fields
+        #     f'{self.prefix}{input_field}'
+        #     for input_field in self.input_fields
         # ]
         super().__init__(input_fields=input_fields, output_fields=input_fields)
         self.unicode_categories = unicode_categories
@@ -174,14 +175,14 @@ class ValidUnicodeMapper(SingleBaseMapper):
 class PaddingMapper(SingleBaseMapper):
     """Given input_fields of type List[str], figures out how to pad them
     such that all examples in dataset in those fields have same length.
-    This can be useful because Huggingface padding has really weird behavior for custom
-    keys.  For example,
+    This can be useful because Huggingface padding has really weird behavior
+    for custom keys. For example,
 
     tokenizer.pad([{'input_ids': [0, 1, 2], 'aaa': [3, 3, 3]},
                    {'input_ids': [3, 4], 'aaa': [4, 4]}])
 
-    will correctly pad `input_ids`, but not `aaa`.  This can break collation which often
-    calls `tokenizer.pad`.
+    will correctly pad `input_ids`, but not `aaa`.  This can break collation
+    which often calls `tokenizer.pad`.
     """
 
     def __init__(
@@ -206,8 +207,8 @@ class PaddingMapper(SingleBaseMapper):
                 raise ValueError(
                     f"PaddingMapper expects every input sequence to be less"
                     f"than or equal to the `pad_to_length`. Please handle"
-                    f"any truncation or whatever upstream in a different mapper,"
-                    f"such as TokenizerMapper."
+                    f"any truncation or whatever upstream in a different "
+                    f"mapper, such as TokenizerMapper."
                     f"\t{len(input_elements)} > {self.pad_to_length}"
                     f"\t{input_elements}"
                 )
