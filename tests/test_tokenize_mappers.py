@@ -181,10 +181,10 @@ class TestTokenizerMapper(unittest.TestCase):
             [
                 {
                     "text": [
-                        "This is an instance that will be truncated because it "
-                        "is longer than ten word pieces.",
-                        "This is the subsequent unit in this instance that will "
-                        "be separately truncated.",
+                        "This is an instance that will be truncated because "
+                        "it is longer than ten word pieces.",
+                        "This is the subsequent unit in this instance that "
+                        "will be separately truncated.",
                     ]
                 },
                 {"text": ["This is the next instance."]},
@@ -323,10 +323,10 @@ class TestTokenizerMapper(unittest.TestCase):
             [
                 {
                     "text": [
-                        "This is an instance that will be truncated because it is "
-                        "longer than ten word pieces.",
-                        "This is the subsequent unit in this instance that will be "
-                        "separately truncated.",
+                        "This is an instance that will be truncated because "
+                        "it is longer than ten word pieces.",
+                        "This is the subsequent unit in this instance that "
+                        "will be separately truncated.",
                     ]
                 },
                 {"text": ["This is the next instance."]},

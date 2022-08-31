@@ -65,10 +65,10 @@ class UnpackingMapper(BatchedBaseMapper):
                 duplicated, while the others will be unpacked. Only one between
                 `fields_to_unpack` and `fields_to_ignore` can be set. Defaults
                 to None.
-            ignore_behavior (Optional[str], optional): How to handle fields that
-                are not unpacked. Can be "drop" or "repeat". Defaults to None.
-                Must be set when either `fields_to_unpack` or `fields_to_ignore`
-                is not None.
+            ignore_behavior (Optional[str]b, optional): How to handle fields
+                that are not unpacked. Can be "drop" or "repeat". Defaults to
+                None. Must be set when either `fields_to_unpack` or
+                `fields_to_ignore` is not None.
         """
 
         if fields_to_unpack is not None and fields_to_ignore is not None:

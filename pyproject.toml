@@ -98,6 +98,7 @@ strict_optional = false
 
 [tool.flake8]
 per-file-ignores = [
+    '*.py:E203',
     '__init__.py:F401',
     '*.pyi:E302,E305',
 ]
