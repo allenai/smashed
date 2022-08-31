@@ -154,10 +154,10 @@ class DatasetInterfaceMapper(AbstractBaseMapper):
 
         column_names: Set[str] = {str(e) for e in first_element.keys()}
 
-        dataset_iter: Iterable[TransformElementType] = chain(
+        dataset_iter_chained: Iterable[TransformElementType] = chain(
             (first_element,), dataset_iter
         )
-        return dataset_iter, column_names
+        return dataset_iter_chained, column_names
 
     @overload
     def map(
