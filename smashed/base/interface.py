@@ -5,12 +5,11 @@ from typing import Any, Callable, Dict, Generic, Optional, Tuple, Type, TypeVar
 
 from typing_extensions import Concatenate, ParamSpec
 
-T = TypeVar("T")
 P = ParamSpec("P")
 R = TypeVar("R")
 
 
-class interface(Generic[T, P, R]):
+class interface(Generic[P, R]):
     """An interface is a decorator that select the correct method to call
     based on the types of the arguments. For example, in the class below,
     the method `add_one` is customized for the type `int` and `str`, but
@@ -47,6 +46,7 @@ class interface(Generic[T, P, R]):
         self.interfaces = {}
         self.interfaced_method = interfaced_method
         self.method_signature = inspect.signature(interfaced_method)
+        self._obj = None
 
     def add_interface(
         self, **kwargs: type
@@ -72,9 +72,10 @@ class interface(Generic[T, P, R]):
         self, obj: Any, type: Optional[Type] = None
     ) -> Callable[Concatenate[P], R]:
         """Return a bound method that calls the correct interface."""
-        return partial(self._run_interface, __obj__=obj)
 
-    def _run_interface(self, *args: P.args, **kwargs: P.kwargs) -> R:
+        return partial(self.__call__, __obj__=obj)
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Call the interfaced method with the correct interface."""
 
         if (obj := kwargs.pop("__obj__", MISSING)) is MISSING:
