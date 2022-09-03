@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Author:   Luca Soldaini
+# Email:    luca@soldaini.net
+
 # get script directory
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
@@ -37,7 +40,7 @@ fi
 
 
 # no need to keep all previous builds
-rm -rf dist/* build/*
+rm -rf dist/* build/* *.egg.info
 
 # go back to original dir
 cd ${CURRENT_DIR}
