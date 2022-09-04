@@ -1,12 +1,11 @@
 from itertools import chain
-from necessary import necessary
-from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, TypeVar
 
+from necessary import necessary
 from trouting import trouting
 
 from ..base.mappers import BatchedBaseMapper, SingleBaseMapper
 from ..base.types import TransformElementType
-
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
@@ -52,6 +51,7 @@ class BinarizerMapper(SingleBaseMapper):
         super().map(dataset, **map_kwargs)
 
     if HUGGINGFACE_DATASET_AVAILABLE:
+
         @map.add_interface(dataset=(Dataset, IterableDataset))
         def map_huggingface_dataset(
             self,

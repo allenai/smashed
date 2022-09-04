@@ -1,6 +1,5 @@
+from ..mappers import *  # noqa
 from ..utils import SmashedWarnings
-
-from ..mappers import *     # noqa
 
 SmashedWarnings.deprecation(
     "smashed.interfaces.huggingface is deprecated; "

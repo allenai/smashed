@@ -1,7 +1,7 @@
-from typing import Any, List, Optional, Sequence, TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, TypeVar
 
-from trouting import trouting
 from necessary import necessary
+from trouting import trouting
 
 from ..base.mappers import SingleBaseMapper
 from ..base.types import TransformElementType

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Mapping, Optional, Union, TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, TypeVar, Union
 
 import torch
 from necessary import necessary
@@ -6,7 +6,6 @@ from trouting import trouting
 
 from ..base.mappers import SingleBaseMapper
 from ..base.types import TransformElementType
-
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
