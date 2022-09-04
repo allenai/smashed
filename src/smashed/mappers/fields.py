@@ -46,7 +46,7 @@ class ChangeFieldsMapper(SingleBaseMapper):
         dataset: Any,
         **map_kwargs: Any,
     ) -> Any:
-        super().map(dataset, **map_kwargs)
+        return super().map(dataset, **map_kwargs)
 
     @map.add_interface(dataset=list)
     def map_list_of_dicts(

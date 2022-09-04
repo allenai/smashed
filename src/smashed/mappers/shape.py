@@ -48,7 +48,7 @@ class BinarizerMapper(SingleBaseMapper):
         # we need this map to be able to add the new interface below
         # and handle types for which we don't have a new interface but our
         # parent class has one
-        super().map(dataset, **map_kwargs)
+        return super().map(dataset, **map_kwargs)
 
     if HUGGINGFACE_DATASET_AVAILABLE:
 

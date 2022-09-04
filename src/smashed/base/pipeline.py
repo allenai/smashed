@@ -73,6 +73,13 @@ class Pipeline:
     def map(self: "Pipeline", dataset: Any, **map_kwargs: Any) -> Any:
         """Transform a dataset by applying this pipeline's mappers."""
 
+        # IMPLEMENTATION FOR DEBUG PURPOSES
+        # for mapper in self.mappers:
+        #     dataset = mapper.map(dataset, **map_kwargs)
+        #     if not dataset:
+        #         breakpoint()
+        # return dataset
+
         def _map(dataset: Any, mapper: AbstractBaseMapper) -> Any:
             return mapper.map(dataset, **map_kwargs)
 

@@ -4,7 +4,7 @@ from typing import Optional, Type
 
 
 class SmashedWarnings:
-    _WARNINGS = os.environ.get("SMASHED_WARNINGS", False) is True
+    _WARNINGS = bool(os.environ.get("SMASHED_WARNINGS", True))
 
     @classmethod
     def toggle(cls, value: Optional[bool] = None):
@@ -24,7 +24,7 @@ class SmashedWarnings:
 
     @classmethod
     def deprecation(cls, message: str):
-        cls._warn(message, DeprecationWarning)
+        cls._warn(message, RuntimeWarning)
 
     @classmethod
     def precedence(cls, message: str):

@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, TYPE_CHECKING
 
-from ..pipeline import Pipeline
 from ..types import TransformElementType
 from .abstract import (
     AbstractBaseMapper,
@@ -9,6 +8,10 @@ from .abstract import (
     AbstractSingleBaseMapper,
 )
 from .interfaces import MapMethodInterfaceMixIn
+
+if TYPE_CHECKING:
+    from ..pipeline import Pipeline
+
 
 __all__ = ["SingleBaseMapper", "BatchedBaseMapper"]
 
@@ -35,14 +38,17 @@ class LshiftRshiftMixIn(AbstractBaseMapper):
 
     def __lshift__(
         self,
-        other: Union["LshiftRshiftMixIn", Pipeline],
+        other: Union["LshiftRshiftMixIn", "Pipeline"],
     ) -> "Pipeline":
         """Create a new Pipeline by combining this mapper with another."""
+        # avoid circular import
+        from ..pipeline import Pipeline
+
         return Pipeline(self) << other
 
     def __rshift__(
         self,
-        other: Union["LshiftRshiftMixIn", Pipeline],
+        other: Union["LshiftRshiftMixIn", "Pipeline"],
     ) -> "Pipeline":
         """Create a new Pipeline by combining this mapper with another."""
         return other << self
