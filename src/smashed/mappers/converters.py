@@ -2,7 +2,7 @@ from typing import Any, Dict, Mapping, Optional, Union
 
 import torch
 
-from ..base.mapper import SingleBaseMapper
+from ..base.mappers import SingleBaseMapper
 from ..base.types import TransformElementType
 
 

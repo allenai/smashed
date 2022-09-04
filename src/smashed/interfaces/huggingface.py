@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, List, Tuple, TypeVar
 import torch
 from necessary import necessary
 
-from ..base.mapper import (
+from ..base.mappers import (
     BatchedBaseMapper,
     DatasetInterfaceMapper,
     SingleBaseMapper,

@@ -1,4 +1,4 @@
-from ...base.mapper import SingleBaseMapper
+from ...base.mappers import SingleBaseMapper
 from ...base.types import TransformElementType
 
 

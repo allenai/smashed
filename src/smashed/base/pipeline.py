@@ -2,8 +2,8 @@ from functools import reduce
 from itertools import chain
 from typing import Any, Tuple, Type, Union
 
-from .mapper import AbstractBaseMapper
-from .types import DatasetType
+from .mappers.abstract import AbstractBaseMapper
+from .types import ListOfDictsDatasetType
 
 
 class Pipeline:
@@ -72,15 +72,17 @@ class Pipeline:
         )
 
     def map(
-        self: "Pipeline", dataset: DatasetType, **map_kwargs: Any
-    ) -> DatasetType:
+        self: "Pipeline", dataset: ListOfDictsDatasetType, **map_kwargs: Any
+    ) -> ListOfDictsDatasetType:
         """Transform a dataset by applying this pipeline's mappers."""
 
-        def _map(dataset: DatasetType, mapper: AbstractBaseMapper):
+        def _map(dataset: ListOfDictsDatasetType, mapper: AbstractBaseMapper):
             return mapper.map(dataset, **map_kwargs)
 
         return reduce(_map, self.mappers, dataset)
 
-    def transform(self: "Pipeline", dataset: DatasetType) -> DatasetType:
+    def transform(
+        self: "Pipeline", dataset: ListOfDictsDatasetType
+    ) -> ListOfDictsDatasetType:
         """Transform a dataset by applying this pipeline's mappers."""
         return self.map(dataset)

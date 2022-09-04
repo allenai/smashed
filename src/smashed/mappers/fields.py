@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
-from ..base.mapper import SingleBaseMapper
-from ..base.types import DatasetType, TransformElementType
+from ..base.mappers import SingleBaseMapper
+from ..base.types import ListOfDictsDatasetType, TransformElementType
 
 
 class ChangeFieldsMapper(SingleBaseMapper):
@@ -28,7 +28,7 @@ class ChangeFieldsMapper(SingleBaseMapper):
 
         super().__init__(input_fields=drop_fields, output_fields=keep_fields)
 
-    def map(self, dataset: DatasetType, *_, **map_kwargs: Any) -> DatasetType:
+    def map(self, dataset: ListOfDictsDatasetType, *_, **map_kwargs: Any) -> ListOfDictsDatasetType:
         return super().map(dataset, remove_columns=True, **map_kwargs)
 
     def transform(self, data: TransformElementType) -> TransformElementType:
