@@ -1,9 +1,21 @@
-from typing import Any, Dict, Mapping, Optional, Union
+from typing import Any, Dict, Mapping, Optional, Union, TYPE_CHECKING, TypeVar
 
 import torch
+from necessary import necessary
+from trouting import trouting
 
 from ..base.mappers import SingleBaseMapper
 from ..base.types import TransformElementType
+
+
+with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
+    if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
+        from datasets.arrow_dataset import Dataset
+        from datasets.iterable_dataset import IterableDataset
+
+        HuggingFaceDataset = TypeVar(
+            "HuggingFaceDataset", Dataset, IterableDataset
+        )
 
 
 class Python2TorchMapper(SingleBaseMapper):
@@ -63,6 +75,27 @@ class Python2TorchMapper(SingleBaseMapper):
             for field_name, field_value in data.items()
         }
 
+    @trouting
+    def map(  # type: ignore
+        self,
+        dataset: Any,
+        **map_kwargs: Any,
+    ) -> Any:
+        # we need this map to be able to add the new interface below
+        # and handle types for which we don't have a new interface but our
+        # parent class has one
+        super().map(dataset, **map_kwargs)
+
+    if HUGGINGFACE_DATASET_AVAILABLE:
+
+        @map.add_interface(dataset=(Dataset, IterableDataset))
+        def map_huggingface_dataset(
+            self,
+            dataset: HuggingFaceDataset,
+            **map_kwargs: Any,
+        ) -> HuggingFaceDataset:
+            return dataset.with_format("torch")
+
 
 class Torch2PythonMapper(SingleBaseMapper):
     def __init__(self: "Torch2PythonMapper") -> None:
@@ -79,3 +112,24 @@ class Torch2PythonMapper(SingleBaseMapper):
             field_name: field_value.cpu().tolist()
             for field_name, field_value in data.items()
         }
+
+    @trouting
+    def map(  # type: ignore
+        self,
+        dataset: Any,
+        **map_kwargs: Any,
+    ) -> Any:
+        # we need this map to be able to add the new interface below
+        # and handle types for which we don't have a new interface but our
+        # parent class has one
+        super().map(dataset, **map_kwargs)
+
+    if HUGGINGFACE_DATASET_AVAILABLE:
+
+        @map.add_interface(dataset=(Dataset, IterableDataset))
+        def map_huggingface_dataset(
+            self,
+            dataset: HuggingFaceDataset,
+            **map_kwargs: Any,
+        ) -> HuggingFaceDataset:
+            return dataset.with_format(None)

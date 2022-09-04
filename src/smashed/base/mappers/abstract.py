@@ -1,14 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from typing import (
-    Any,
-    Generic,
-    Iterable,
-    List,
-    TypeVar
-)
+from typing import Any, Generic, Iterable, List, TypeVar
 
-from ..types import TransformElementType    # type: ignore
-
+from ..types import TransformElementType  # type: ignore
 
 D = TypeVar("D")
 S = TypeVar("S")
@@ -16,6 +9,7 @@ S = TypeVar("S")
 
 class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
     """An abstract implementation of a Mapper"""
+
     __slots__: List[str] = ["input_fields", "output_fields"]
     input_fields: List[str]
     output_fields: List[str]
@@ -58,9 +52,7 @@ class AbstractSingleBaseMapper(AbstractBaseMapper):
     element."""
 
     @abstractmethod
-    def transform(
-        self, data: TransformElementType
-    ) -> TransformElementType:
+    def transform(self, data: TransformElementType) -> TransformElementType:
         """Transform a single sample of a dataset. This method should be
         overridden by actual mapper implementations.
 
