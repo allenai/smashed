@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Iterable, List, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable, List, Optional, Union
 
 from ..types import TransformElementType
 from .abstract import (
