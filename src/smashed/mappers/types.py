@@ -91,8 +91,8 @@ class CastMapper(SingleBaseMapper):
                 type_ (type): The type to cast the feature to.
 
             Returns:
-                Union[ features.ClassLabel, features.Sequence, features.Value ]:
-                    The new feature definition.
+                Union[ features.ClassLabel, features.Sequence,
+                    features.Value ]: The new feature definition.
             """
 
             # TODO[soldni]: document better!

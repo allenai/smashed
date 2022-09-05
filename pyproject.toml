@@ -15,7 +15,6 @@ dependencies = [
     "necessary>=0.2.3",
     "trouting>=0.2.2",
     "ftfy>=6.1.1",
-
 ]
 
 [project.urls]
