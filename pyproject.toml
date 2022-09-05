@@ -14,7 +14,8 @@ dependencies = [
     "transformers >= 4.5",
     "necessary>=0.2.3",
     "trouting>=0.2.2",
-    "ftfy>=6.1.1"
+    "ftfy>=6.1.1",
+
 ]
 
 [project.urls]
@@ -50,6 +51,9 @@ dev = [
     "flake8-pyi>=22.8.1",
     "Flake8-pyproject>=1.1.0"
 ]
+remote = [
+    "smart-open>=6.1.0"
+]
 datasets = [
   "datasets>=2.4.0"
 ]
@@ -60,7 +64,8 @@ torchdata = [
 all = [
     "smashed[dev]",
     "smashed[datasets]",
-    "smashed[torchdata]"
+    "smashed[torchdata]",
+    "smashed[remote]"
 ]
 
 [tool.black]
