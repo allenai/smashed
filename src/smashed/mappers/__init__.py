@@ -19,17 +19,25 @@ from .multiseq import (
 )
 from .shape import BinarizerMapper, FlattenMapper, UnpackingMapper
 from .text import FtfyMapper
+from .loaders import (
+    HuggingFaceDatasetLoaderMapper,
+    CsvLoaderMapper,
+    JsonlLoaderMapper,
+)
 from .tokenize import PaddingMapper, TokenizerMapper, ValidUnicodeMapper
 
 __all__ = [
     "AttentionMaskSequencePaddingMapper",
     "BinarizerMapper",
     "ChangeFieldsMapper",
+    "CsvLoaderMapper",
     "FixedBatchSizeMapper",
     "FlattenMapper",
     "FromTokenizerListCollatorMapper",
     "FromTokenizerTensorCollatorMapper",
     "FtfyMapper",
+    "HuggingFaceDatasetLoaderMapper",
+    "JsonlLoaderMapper",
     "LabelsMaskerMapper",
     "ListCollatorMapper",
     "MakeAttentionMaskMapper",
