@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, TypeVar, Union
 
 from necessary import necessary
 from trouting import trouting
@@ -15,6 +15,14 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
             "HuggingFaceDataset", Dataset, IterableDataset
         )
         from datasets.features import features
+
+
+HF_CAST_DICT = {
+    int: "int64",
+    float: "float32",
+    bool: "bool",
+    str: "string",
+}
 
 
 class CastMapper(SingleBaseMapper):
@@ -46,9 +54,21 @@ class CastMapper(SingleBaseMapper):
         # parent class has one
         return super().map(dataset, **map_kwargs)
 
+    def _cast(self, value: Any, type_: Optional[type] = None) -> Any:
+        if type_ is None:
+            return value
+        elif isinstance(value, list):
+            return [self._cast(value=v, type_=type_) for v in value]
+        elif isinstance(value, dict):
+            return {
+                k: self._cast(value=v, type_=type_) for k, v in value.items()
+            }
+        else:
+            return type_(value)
+
     def transform(self, data: TransformElementType) -> TransformElementType:
         return {
-            k: self.cast_map[k](v) if k in self.cast_map else v
+            k: self._cast(value=v, type_=self.cast_map.get(k, None))
             for k, v in data.items()
         }
 
@@ -56,44 +76,58 @@ class CastMapper(SingleBaseMapper):
 
         def _build_feature_definition(
             self,
-            defn: Union[
-                features.ClassLabel, features.Sequence, features.Value
+            def_n: Union[
+                dict, features.ClassLabel, features.Sequence, features.Value
             ],
-            typ_: type,
+            type_: type,
         ) -> Union[features.ClassLabel, features.Sequence, features.Value]:
+            """A helper function to build a new feature definition in case
+            the dataset is a HuggingFace dataset.
 
-            if isinstance(typ_, int):
-                t_str = "int64"
-            elif isinstance(typ_, float):
-                t_str = "float32"
-            elif isinstance(typ_, bool):
-                t_str = "bool"
-            elif isinstance(typ_, str):
-                t_str = "string"
-            else:
+            Args:
+                def_n (Union[ features.ClassLabel, features.Sequence, features.
+                    Value ]): The current feature definition from
+                    datasets.features dictionary.
+                type_ (type): The type to cast the feature to.
+
+            Returns:
+                Union[ features.ClassLabel, features.Sequence, features.Value ]:
+                    The new feature definition.
+            """
+
+            # TODO[soldni]: document better!
+
+            if (
+                t_str := HF_CAST_DICT.get(type_, None)  # pyright: ignore
+            ) is None:
                 raise ValueError(
-                    f"Unsupported type {typ_} for HuggingFace Dataset"
+                    f"Unsupported type {type_} for HuggingFace Dataset"
                 )
 
-            if isinstance(defn, features.Sequence):
-                new_definition = features.Sequence(
-                    feature={
-                        k: self._build_feature_definition(defn=v, typ_=typ_)
-                        for k, v in defn.feature.items()
+            if isinstance(def_n, features.Sequence):
+                if isinstance(def_n.feature, dict):
+                    new_feature = {
+                        k: self._build_feature_definition(v, type_)
+                        for k, v in def_n.feature.items()
                     }
-                )
+                else:
+                    new_feature = self._build_feature_definition(
+                        def_n.feature, type_
+                    )
 
-            elif isinstance(defn, features.ClassLabel):
-                new_names = list(set(typ_([n for n in defn.names])))
+                new_definition = features.Sequence(feature=new_feature)
+
+            elif isinstance(def_n, features.ClassLabel):
+                new_names = list(set(type_([n for n in def_n.names])))
                 new_definition = features.ClassLabel(
                     names=new_names,
                     num_classes=len(new_names),
                 )
 
-            elif isinstance(defn, features.Value):
-                new_definition = features.Value(type=t_str)  # type: ignore
+            elif isinstance(def_n, features.Value):
+                new_definition = features.Value(dtype=t_str)
             else:
-                raise ValueError(f"Unsupported feature definition {defn}")
+                raise ValueError(f"Unsupported feature definition {def_n}")
 
             return new_definition
 
@@ -108,7 +142,7 @@ class CastMapper(SingleBaseMapper):
                 dataset = dataset.cast_column(
                     field_name,
                     self._build_feature_definition(
-                        defn=dataset.features[field_name], typ_=field_type
+                        def_n=dataset.features[field_name], type_=field_type
                     ),
                 )
             return dataset

@@ -23,9 +23,9 @@ from .multiseq import (
     TokenTypeIdsSequencePaddingMapper,
 )
 from .shape import FlattenMapper, UnpackingMapper
-from .types import BinarizerMapper, CastMapper, LookupMapper, OneHotMapper
 from .text import FtfyMapper
 from .tokenize import PaddingMapper, TokenizerMapper, ValidUnicodeMapper
+from .types import BinarizerMapper, CastMapper, LookupMapper, OneHotMapper
 
 __all__ = [
     "AttentionMaskSequencePaddingMapper",
