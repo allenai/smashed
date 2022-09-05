@@ -6,37 +6,44 @@ from .collators import (
     TensorCollatorMapper,
 )
 from .converters import Python2TorchMapper, Torch2PythonMapper
-from .fields import ChangeFieldsMapper
+from .fields import ChangeFieldsMapper, MakeFieldMapper
 from .multiseq import (
+    AttentionMaskSequencePaddingMapper,
     LabelsMaskerMapper,
     MakeAttentionMaskMapper,
     MultiSequenceStriderMapper,
     SequencesConcatenateMapper,
     SingleValueToSequenceMapper,
     TokensSequencesPaddingMapper,
+    TokenTypeIdsSequencePaddingMapper,
 )
 from .shape import BinarizerMapper, FlattenMapper, UnpackingMapper
+from .text import FtfyMapper
 from .tokenize import PaddingMapper, TokenizerMapper, ValidUnicodeMapper
 
 __all__ = [
-    "FixedBatchSizeMapper",
-    "TensorCollatorMapper",
-    "FromTokenizerTensorCollatorMapper",
-    "ListCollatorMapper",
-    "FromTokenizerListCollatorMapper",
-    "Python2TorchMapper",
-    "Torch2PythonMapper",
-    "ChangeFieldsMapper",
-    "TokensSequencesPaddingMapper",
-    "MakeAttentionMaskMapper",
-    "SingleValueToSequenceMapper",
-    "SequencesConcatenateMapper",
-    "LabelsMaskerMapper",
-    "MultiSequenceStriderMapper",
-    "FlattenMapper",
+    "AttentionMaskSequencePaddingMapper",
     "BinarizerMapper",
-    "UnpackingMapper",
-    "TokenizerMapper",
-    "ValidUnicodeMapper",
+    "ChangeFieldsMapper",
+    "FixedBatchSizeMapper",
+    "FlattenMapper",
+    "FromTokenizerListCollatorMapper",
+    "FromTokenizerTensorCollatorMapper",
+    "FtfyMapper",
+    "LabelsMaskerMapper",
+    "ListCollatorMapper",
+    "MakeAttentionMaskMapper",
+    "MakeFieldMapper",
+    "MultiSequenceStriderMapper",
     "PaddingMapper",
+    "Python2TorchMapper",
+    "SequencesConcatenateMapper",
+    "SingleValueToSequenceMapper",
+    "TensorCollatorMapper",
+    "TokenizerMapper",
+    "TokensSequencesPaddingMapper",
+    "TokenTypeIdsSequencePaddingMapper",
+    "Torch2PythonMapper",
+    "UnpackingMapper",
+    "ValidUnicodeMapper",
 ]
