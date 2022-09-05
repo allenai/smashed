@@ -15,7 +15,7 @@ FIXTURES_PATH = Path(__file__).parent / "fixtures"
 class TestHuggingfaceLoader(TestCase):
     def test_huggingface_loader(self):
 
-        necessary("datasets") # make sure datasets is installed
+        necessary("datasets")   # make sure datasets is installed
 
         mapper = HuggingFaceDatasetLoaderMapper(
             path='csv',
