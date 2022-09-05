@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 import torch
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
-from ..base.mapper import SingleBaseMapper
+from ..base.mappers import SingleBaseMapper
 from ..base.types import TransformElementType
 
 __all__ = [

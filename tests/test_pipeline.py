@@ -7,7 +7,7 @@ Email:  lucas@allenai.org
 
 import unittest
 
-from smashed.base.mapper import SingleBaseMapper
+from smashed.base.mappers import SingleBaseMapper
 from smashed.base.pipeline import Pipeline
 
 

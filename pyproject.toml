@@ -1,6 +1,6 @@
 [project]
 name = "smashed"
-version = "0.1.10"
+version = "0.2.0"
 description = "Sequential MAppers for Sequences of HEterogeneous Dictionaries is a set of Python interfaces designed to apply transformations to samples in datasets, which are often implemented as sequences of dictionaries."
 authors = [
     {name = "Allen Institute for Artificial Intelligence", email = "contact@allenai.org" },
@@ -12,7 +12,9 @@ requires-python = ">=3.8"
 dependencies = [
     "torch >= 1.9",
     "transformers >= 4.5",
-    "necessary>=0.2.2"
+    "necessary>=0.2.3",
+    "trouting>=0.2.2",
+    "ftfy>=6.1.1",
 ]
 
 [project.urls]
@@ -21,11 +23,11 @@ dependencies = [
 "Bug Tracker" = "https://github.com/allenai/smashed/issues"
 
 
-
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["smashed*"]
-namespaces = false
+where = ["src"]
+
+[tool.setuptools.package-data]
+smashed = ["py.typed"]
 
 
 [build-system]
@@ -48,17 +50,21 @@ dev = [
     "flake8-pyi>=22.8.1",
     "Flake8-pyproject>=1.1.0"
 ]
+remote = [
+    "smart-open>=6.1.0"
+]
 datasets = [
   "datasets>=2.4.0"
 ]
 torchdata = [
-  "torch >= 1.12.0",
-  "torchdata >= 0.4.0"
+  "torch >= 1.12.1",
+  "torchdata >= 0.4.1"
 ]
 all = [
     "smashed[dev]",
     "smashed[datasets]",
-    "smashed[torchdata]"
+    "smashed[torchdata]",
+    "smashed[remote]"
 ]
 
 [tool.black]
@@ -107,9 +113,6 @@ per-file-ignores = [
     '__init__.py:F401',
     '*.pyi:E302,E305'
 ]
-
-[tool.setuptools.package-data]
-springs = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/"]

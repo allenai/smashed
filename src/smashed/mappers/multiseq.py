@@ -13,7 +13,7 @@ from typing import (
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
-from ..base.mapper import BatchedBaseMapper, SingleBaseMapper
+from ..base.mappers import BatchedBaseMapper, SingleBaseMapper
 from ..base.types import TransformElementType
 
 

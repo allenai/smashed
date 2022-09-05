@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from ..base.mapper import BatchedBaseMapper
+from ..base.mappers import BatchedBaseMapper
 from ..base.types import TransformElementType
 
 

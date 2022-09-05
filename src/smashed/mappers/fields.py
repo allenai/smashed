@@ -1,7 +1,19 @@
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, TypeVar
 
-from ..base.mapper import SingleBaseMapper
-from ..base.types import DatasetType, TransformElementType
+from necessary import necessary
+from trouting import trouting
+
+from ..base.mappers import SingleBaseMapper
+from ..base.types import TransformElementType
+
+with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
+    if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
+        from datasets.arrow_dataset import Dataset
+        from datasets.iterable_dataset import IterableDataset
+
+        HuggingFaceDataset = TypeVar(
+            "HuggingFaceDataset", Dataset, IterableDataset
+        )
 
 
 class ChangeFieldsMapper(SingleBaseMapper):
@@ -28,8 +40,43 @@ class ChangeFieldsMapper(SingleBaseMapper):
 
         super().__init__(input_fields=drop_fields, output_fields=keep_fields)
 
-    def map(self, dataset: DatasetType, *_, **map_kwargs: Any) -> DatasetType:
+    @trouting
+    def map(  # type: ignore
+        self,
+        dataset: Any,
+        **map_kwargs: Any,
+    ) -> Any:
+        return super().map(dataset, **map_kwargs)
+
+    @map.add_interface(dataset=list)
+    def map_list_of_dicts(
+        self,
+        dataset: Sequence[TransformElementType],
+        **map_kwargs: Any,
+    ) -> Sequence[TransformElementType]:
+        """If the dataset is a list of dicts, we need to make sure that
+        all existing columns are removed."""
         return super().map(dataset, remove_columns=True, **map_kwargs)
+
+    if HUGGINGFACE_DATASET_AVAILABLE:
+
+        @map.add_interface(dataset=(Dataset, IterableDataset))
+        def map_huggingface_dataset(
+            self,
+            dataset: HuggingFaceDataset,
+            **map_kwargs: Any,
+        ) -> HuggingFaceDataset:
+            """If the dataset is a HuggingFace dataset, we also need to
+            make sure that existing columns get removed, but in this case
+            the mechanism is different."""
+
+            # mechanism to remove columns in huggingface datasets is
+            # slightly different than in list of dict datasets.
+            map_kwargs = {
+                "remove_columns": list(dataset.features.keys()),
+                **map_kwargs,
+            }
+            return super().map(dataset, **map_kwargs)
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         if self.input_fields:

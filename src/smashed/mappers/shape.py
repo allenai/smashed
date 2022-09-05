@@ -1,7 +1,7 @@
 from itertools import chain
 from typing import Any, Dict, Iterable, List, Optional
 
-from ..base.mapper import BatchedBaseMapper, SingleBaseMapper
+from ..base.mappers import BatchedBaseMapper, SingleBaseMapper
 from ..base.types import TransformElementType
 
 
@@ -19,24 +19,6 @@ class FlattenMapper(SingleBaseMapper):
                 flattened_field = list(chain.from_iterable(flattened_field))
 
         return {field_name: flattened_field}
-
-
-class BinarizerMapper(SingleBaseMapper):
-    def __init__(self, field: str, threshold: float) -> None:
-        super().__init__(input_fields=[field], output_fields=[field])
-        self.threshold = threshold
-
-    def transform(self, data: TransformElementType) -> TransformElementType:
-        field_name, *_ = self.input_fields
-
-        if isinstance(data[field_name], list):
-            return {
-                field_name: [
-                    1 if v > self.threshold else 0 for v in data[field_name]
-                ]
-            }
-        else:
-            return {field_name: 1 if data[field_name] > self.threshold else 0}
 
 
 class UnpackingMapper(BatchedBaseMapper):
