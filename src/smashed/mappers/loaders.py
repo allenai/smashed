@@ -94,11 +94,11 @@ class CsvLoaderMapper(BatchedBaseMapper):
 
         for row in data:
             paths = row[self.paths_field]
-            if not isinstance(paths, abc.Sequence):
+            if not isinstance(paths, abc.Sequence) or isinstance(paths, str):
                 paths = [paths]
 
             for path in paths:
-                with open(path, "r", encoding=self.encoding) as f:
+                with open(path, mode="rt", encoding=self.encoding) as f:
                     if self.headers:
                         yield from DictReader(
                             f, fieldnames=self.headers, **self.dict_reader_args
@@ -123,10 +123,10 @@ class JsonlLoaderMapper(BatchedBaseMapper):
 
         for row in data:
             paths = row[self.paths_field]
-            if not isinstance(paths, abc.Sequence):
+            if not isinstance(paths, abc.Sequence) or isinstance(paths, str):
                 paths = [paths]
 
             for path in paths:
-                with open(path, "r", encoding=self.encoding) as f:
+                with open(path, mode="rt", encoding=self.encoding) as f:
                     for ln in f:
                         yield json.loads(ln)
