@@ -1,21 +1,8 @@
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, TypeVar
-
-from necessary import necessary
-from trouting import trouting
+from typing import Any, Dict, Iterable, List, Optional
 
 from ..base.mappers import BatchedBaseMapper, SingleBaseMapper
 from ..base.types import TransformElementType
-
-with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
-    if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
-        from datasets.arrow_dataset import Dataset
-        from datasets.iterable_dataset import IterableDataset
-
-        HuggingFaceDataset = TypeVar(
-            "HuggingFaceDataset", Dataset, IterableDataset
-        )
-        from datasets.features import features
 
 
 class FlattenMapper(SingleBaseMapper):
@@ -32,56 +19,6 @@ class FlattenMapper(SingleBaseMapper):
                 flattened_field = list(chain.from_iterable(flattened_field))
 
         return {field_name: flattened_field}
-
-
-class BinarizerMapper(SingleBaseMapper):
-    def __init__(self, field: str, threshold: float) -> None:
-        super().__init__(input_fields=[field], output_fields=[field])
-        self.threshold = threshold
-
-    @trouting
-    def map(  # type: ignore
-        self,
-        dataset: Any,
-        **map_kwargs: Any,
-    ) -> Any:
-        # we need this map to be able to add the new interface below
-        # and handle types for which we don't have a new interface but our
-        # parent class has one
-        return super().map(dataset, **map_kwargs)
-
-    if HUGGINGFACE_DATASET_AVAILABLE:
-
-        @map.add_interface(dataset=(Dataset, IterableDataset))
-        def map_huggingface_dataset(
-            self,
-            dataset: HuggingFaceDataset,
-            **map_kwargs: Any,
-        ) -> HuggingFaceDataset:
-
-            dataset = super().map(dataset, **map_kwargs)
-            # we have to do this extra casting operation when dealing with
-            # huggingface datasets because integer values are otherwise
-            # parsed as floats.
-            field_name, *_ = self.input_fields
-            if isinstance(dataset.features[field_name], features.Sequence):
-                new_field = features.Sequence(features.Value("int64"))
-            else:
-                new_field = features.Value("int64")
-            dataset = dataset.cast_column(field_name, new_field)
-            return dataset
-
-    def transform(self, data: TransformElementType) -> TransformElementType:
-        field_name, *_ = self.input_fields
-
-        if isinstance(data[field_name], list):
-            return {
-                field_name: [
-                    1 if v > self.threshold else 0 for v in data[field_name]
-                ]
-            }
-        else:
-            return {field_name: 1 if data[field_name] > self.threshold else 0}
 
 
 class UnpackingMapper(BatchedBaseMapper):

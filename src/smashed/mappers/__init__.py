@@ -7,6 +7,11 @@ from .collators import (
 )
 from .converters import Python2TorchMapper, Torch2PythonMapper
 from .fields import ChangeFieldsMapper, MakeFieldMapper
+from .loaders import (
+    CsvLoaderMapper,
+    HuggingFaceDatasetLoaderMapper,
+    JsonlLoaderMapper,
+)
 from .multiseq import (
     AttentionMaskSequencePaddingMapper,
     LabelsMaskerMapper,
@@ -17,18 +22,15 @@ from .multiseq import (
     TokensSequencesPaddingMapper,
     TokenTypeIdsSequencePaddingMapper,
 )
-from .shape import BinarizerMapper, FlattenMapper, UnpackingMapper
+from .shape import FlattenMapper, UnpackingMapper
+from .types import BinarizerMapper, CastMapper, LookupMapper, OneHotMapper
 from .text import FtfyMapper
-from .loaders import (
-    HuggingFaceDatasetLoaderMapper,
-    CsvLoaderMapper,
-    JsonlLoaderMapper,
-)
 from .tokenize import PaddingMapper, TokenizerMapper, ValidUnicodeMapper
 
 __all__ = [
     "AttentionMaskSequencePaddingMapper",
     "BinarizerMapper",
+    "CastMapper",
     "ChangeFieldsMapper",
     "CsvLoaderMapper",
     "FixedBatchSizeMapper",
@@ -40,9 +42,11 @@ __all__ = [
     "JsonlLoaderMapper",
     "LabelsMaskerMapper",
     "ListCollatorMapper",
+    "LookupMapper",
     "MakeAttentionMaskMapper",
     "MakeFieldMapper",
     "MultiSequenceStriderMapper",
+    "OneHotMapper",
     "PaddingMapper",
     "Python2TorchMapper",
     "SequencesConcatenateMapper",
