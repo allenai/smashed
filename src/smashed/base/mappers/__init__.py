@@ -1,5 +1,6 @@
 import inspect
 from typing import Union
+
 from .base import BatchedBaseMapper, SingleBaseMapper
 
 __all__ = ["SingleBaseMapper", "BatchedBaseMapper"]
@@ -7,9 +8,8 @@ __all__ = ["SingleBaseMapper", "BatchedBaseMapper"]
 
 def is_mapper_cls(cls_: object) -> bool:
     """Check if a class is a mapper."""
-    return (
-        inspect.isclass(cls_) and
-        issubclass(cls_, (SingleBaseMapper, BatchedBaseMapper))
+    return inspect.isclass(cls_) and issubclass(
+        cls_, (SingleBaseMapper, BatchedBaseMapper)
     )
 
 

@@ -1,5 +1,5 @@
-from functools import reduce
 import hashlib
+from functools import reduce
 from itertools import chain
 from typing import Any, Tuple, Type, Union
 
@@ -74,7 +74,7 @@ class Pipeline:
     def get_pipeline_fingerprint(self) -> str:
         h = hashlib.sha1()
         for mapper in self.mappers:
-            h.update(mapper.fingerprint.encode('utf-8'))
+            h.update(mapper.fingerprint.encode("utf-8"))
         return h.hexdigest()
 
     def get_dataset_fingerprint(self, dataset: Any):
