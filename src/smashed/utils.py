@@ -1,7 +1,7 @@
 import importlib.metadata
 import os
-from pathlib import Path
 import warnings
+from pathlib import Path
 from typing import Optional, Type
 
 import platformdirs
@@ -62,9 +62,7 @@ def get_cache_dir() -> Path:
     (
         cache_dir := Path(
             platformdirs.user_cache_dir(
-                appname="smashed",
-                appauthor="allenai",
-                version=get_version()
+                appname="smashed", appauthor="allenai", version=get_version()
             )
         )
     ).mkdir(parents=True, exist_ok=True)

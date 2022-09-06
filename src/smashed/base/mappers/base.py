@@ -1,7 +1,7 @@
-from abc import ABCMeta, abstractmethod
+import hashlib
 import inspect
 import pickle
-import hashlib
+from abc import ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Iterable, List, NamedTuple, Optional, Union
 
 from ..types import TransformElementType
@@ -76,32 +76,32 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         ]
 
         init_calls = [
-            frame for frame in stack_frames
+            frame
+            for frame in stack_frames
             if (
                 # To be a frame associated with the init call, it must...
                 #   1. ...be a method call, i.e. have a 'self' argument
-                'self' in frame.arg_info.args
+                "self" in frame.arg_info.args
                 #   2. ...be an instance or subclass of this class
                 and isinstance(
-                    frame.arg_info.locals['self'],
-                    AbstractBaseMapper
+                    frame.arg_info.locals["self"], AbstractBaseMapper
                 )
                 #   3. ...be the __init__ method
-                and frame.frame_info.function == '__init__'
+                and frame.frame_info.function == "__init__"
             )
         ]
 
         def _get_cls_name_from_frame_info(frame_ext_info: ExtInfo) -> str:
             cls_ = frame_ext_info.arg_info.locals.get(
-                '__class__', PipelineFingerprintMixIn
+                "__class__", PipelineFingerprintMixIn
             )
-            return f'{cls_.__module__}.{cls_.__name__}'
+            return f"{cls_.__module__}.{cls_.__name__}"
 
         signature = {
             _get_cls_name_from_frame_info(frame): {
                 arg: frame.arg_info.locals[arg]
                 for arg in frame.arg_info.args
-                if arg != 'self'
+                if arg != "self"
             }
             for frame in init_calls
         }
