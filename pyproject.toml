@@ -1,6 +1,6 @@
 [project]
 name = "smashed"
-version = "0.2.0"
+version = "0.2.1"
 description = "Sequential MAppers for Sequences of HEterogeneous Dictionaries is a set of Python interfaces designed to apply transformations to samples in datasets, which are often implemented as sequences of dictionaries."
 authors = [
     {name = "Allen Institute for Artificial Intelligence", email = "contact@allenai.org" },
@@ -15,6 +15,7 @@ dependencies = [
     "necessary>=0.2.3",
     "trouting>=0.2.2",
     "ftfy>=6.1.1",
+    "platformdirs>=2.5.0",
 ]
 
 [project.urls]
@@ -51,7 +52,7 @@ dev = [
     "Flake8-pyproject>=1.1.0"
 ]
 remote = [
-    "smart-open>=6.1.0"
+    "smart-open>=5.2.1"
 ]
 datasets = [
   "datasets>=2.4.0"
