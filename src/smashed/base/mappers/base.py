@@ -1,5 +1,8 @@
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Iterable, List, Optional, Union
+import inspect
+import pickle
+import hashlib
+from typing import TYPE_CHECKING, Iterable, List, NamedTuple, Optional, Union
 
 from ..types import TransformElementType
 from .abstract import (
@@ -16,7 +19,7 @@ if TYPE_CHECKING:
 __all__ = ["SingleBaseMapper", "BatchedBaseMapper"]
 
 
-class LshiftRshiftMixIn(AbstractBaseMapper):
+class PipelineFingerprintMixIn(AbstractBaseMapper):
     def __init__(
         self,
         input_fields: Optional[List[str]] = None,
@@ -35,10 +38,11 @@ class LshiftRshiftMixIn(AbstractBaseMapper):
         """
         self.input_fields = input_fields or []
         self.output_fields = output_fields or []
+        self.fingerprint = self._get_mapper_fingerprint()
 
     def __lshift__(
         self,
-        other: Union["LshiftRshiftMixIn", "Pipeline"],
+        other: Union["PipelineFingerprintMixIn", "Pipeline"],
     ) -> "Pipeline":
         """Create a new Pipeline by combining this mapper with another."""
         # avoid circular import
@@ -48,15 +52,68 @@ class LshiftRshiftMixIn(AbstractBaseMapper):
 
     def __rshift__(
         self,
-        other: Union["LshiftRshiftMixIn", "Pipeline"],
+        other: Union["PipelineFingerprintMixIn", "Pipeline"],
     ) -> "Pipeline":
         """Create a new Pipeline by combining this mapper with another."""
         return other << self
 
+    def _get_mapper_fingerprint(self) -> str:
+        """Compute a hash for this mapper; the hash depends of the arguments
+        passed to the constructor, NOT of the data passed to the mapper or
+        the state of the mapper."""
+
+        if hasattr(self, "fingerprint"):
+            # don't recompute the fingerprint if it's already been computed
+            return self.fingerprint
+
+        class ExtInfo(NamedTuple):
+            frame_info: inspect.FrameInfo
+            arg_info: inspect.ArgInfo
+
+        stack_frames = [
+            ExtInfo(arg_info=inspect.getargvalues(fr.frame), frame_info=fr)
+            for fr in inspect.stack()
+        ]
+
+        init_calls = [
+            frame for frame in stack_frames
+            if (
+                # To be a frame associated with the init call, it must...
+                #   1. ...be a method call, i.e. have a 'self' argument
+                'self' in frame.arg_info.args
+                #   2. ...be an instance or subclass of this class
+                and isinstance(
+                    frame.arg_info.locals['self'],
+                    AbstractBaseMapper
+                )
+                #   3. ...be the __init__ method
+                and frame.frame_info.function == '__init__'
+            )
+        ]
+
+        def _get_cls_name_from_frame_info(frame_ext_info: ExtInfo) -> str:
+            cls_ = frame_ext_info.arg_info.locals.get(
+                '__class__', PipelineFingerprintMixIn
+            )
+            return f'{cls_.__module__}.{cls_.__name__}'
+
+        signature = {
+            _get_cls_name_from_frame_info(frame): {
+                arg: frame.arg_info.locals[arg]
+                for arg in frame.arg_info.args
+                if arg != 'self'
+            }
+            for frame in init_calls
+        }
+
+        # get sha1 hash of the signature
+        (sha1 := hashlib.sha1()).update(pickle.dumps(signature))
+        return sha1.hexdigest()
+
 
 class SingleBaseMapper(
     MapMethodInterfaceMixIn,
-    LshiftRshiftMixIn,
+    PipelineFingerprintMixIn,
     AbstractSingleBaseMapper,
     metaclass=ABCMeta,
 ):
@@ -89,7 +146,7 @@ class SingleBaseMapper(
 
 class BatchedBaseMapper(
     MapMethodInterfaceMixIn,
-    LshiftRshiftMixIn,
+    PipelineFingerprintMixIn,
     AbstractBatchedBaseMapper,
     metaclass=ABCMeta,
 ):

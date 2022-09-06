@@ -13,7 +13,7 @@ class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
     __slots__: List[str] = ["input_fields", "output_fields"]
     input_fields: List[str]
     output_fields: List[str]
-    ...
+    fingerprint: str
 
     @abstractmethod
     def map(self, dataset: D, **map_kwargs: Any) -> D:
@@ -31,18 +31,20 @@ class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
 
     @abstractmethod
     def transform(self, data: S) -> S:
-        """Transform a single sample of a dataset. This method should be
+        """Apply the transformation for this mapper. This method should be
         overridden by actual mapper implementations.
 
         Args:
-            self (BaseMapper): _description_
-            data (Any): _description_
-
-        Raises:
-            NotImplementedError: _description_
+            data (TransformElementType): The sample to transform. This is
+                a single sample dictionary with string keys and values of
+                any type, or an iterable of such dictionaries.
 
         Returns:
-            Any: _description_
+            TransformElementType: The transformed sample. This is a single
+                sample dictionary with string keys and values of any type,
+                or an iterable of such dictionaries. It should have the
+                same type as the input.
+
         """
         ...
 

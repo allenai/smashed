@@ -1,4 +1,5 @@
 from functools import reduce
+import hashlib
 from itertools import chain
 from typing import Any, Tuple, Type, Union
 
@@ -57,7 +58,7 @@ class Pipeline:
     ) -> "Pipeline":
         """Create a new pipeline by chaining two mappers/pipelines together."""
 
-        def _to_pip(
+        def _to_pipeline(
             mapper_or_pipeline: Union[AbstractBaseMapper, "Pipeline"]
         ) -> "Pipeline":
             if isinstance(mapper_or_pipeline, AbstractBaseMapper):
@@ -66,9 +67,18 @@ class Pipeline:
 
         return Pipeline(
             *chain.from_iterable(
-                _to_pip(m_or_p).mappers for m_or_p in mappers_or_pipelines
+                _to_pipeline(m_or_p).mappers for m_or_p in mappers_or_pipelines
             )
         )
+
+    def get_pipeline_fingerprint(self) -> str:
+        h = hashlib.sha1()
+        for mapper in self.mappers:
+            h.update(mapper.fingerprint.encode('utf-8'))
+        return h.hexdigest()
+
+    def get_dataset_fingerprint(self, dataset: Any):
+        ...
 
     def map(self: "Pipeline", dataset: Any, **map_kwargs: Any) -> Any:
         """Transform a dataset by applying this pipeline's mappers."""
