@@ -10,7 +10,6 @@ import unittest
 
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
-from smashed.interfaces.simple import Dataset
 from smashed.mappers.tokenize import TokenizerMapper, ValidUnicodeMapper
 
 
@@ -78,26 +77,24 @@ class TestTokenizerMapper(unittest.TestCase):
         """Test that TokenizationMapper returns the right fields
         and is doing something right"""
         mapper = TokenizerMapper(input_field="text", tokenizer=self.tokenizer)
-        dataset = Dataset(
-            [
-                {
-                    "text": [
-                        "This is a sentence.",
-                        "This is two sentences. Here is the second one.",
-                    ]
-                },
-                {
-                    "text": [
-                        "This is a separate instance.",
-                        "This",
-                        "is",
-                        "some",
-                        "tokens",
-                        ".",
-                    ]
-                },
-            ]
-        )
+        dataset = [
+            {
+                "text": [
+                    "This is a sentence.",
+                    "This is two sentences. Here is the second one.",
+                ]
+            },
+            {
+                "text": [
+                    "This is a separate instance.",
+                    "This",
+                    "is",
+                    "some",
+                    "tokens",
+                    ".",
+                ]
+            },
+        ]
         new_dataset = mapper.map(dataset)
 
         # same num dicts
@@ -135,19 +132,18 @@ class TestTokenizerMapper(unittest.TestCase):
             truncation=True,
             max_length=10,
         )
-        dataset = Dataset(
-            [
-                {
-                    "text": [
-                        "This is an instance that will be truncated "
-                        "because it is longer than ten word pieces.",
-                        "This is the subsequent unit in this instance "
-                        "that will be separately truncated.",
-                    ]
-                },
-                {"text": ["This is the next instance."]},
-            ]
-        )
+        dataset = [
+            {
+                "text": [
+                    "This is an instance that will be truncated "
+                    "because it is longer than ten word pieces.",
+                    "This is the subsequent unit in this instance "
+                    "that will be separately truncated.",
+                ]
+            },
+            {"text": ["This is the next instance."]},
+        ]
+
         new_dataset = mapper.map(dataset)
         assert len(dataset) == len(new_dataset)  # same num dicts
         assert (
@@ -177,19 +173,17 @@ class TestTokenizerMapper(unittest.TestCase):
             max_length=10,
             return_overflowing_tokens=True,
         )
-        dataset = Dataset(
-            [
-                {
-                    "text": [
-                        "This is an instance that will be truncated because "
-                        "it is longer than ten word pieces.",
-                        "This is the subsequent unit in this instance that "
-                        "will be separately truncated.",
-                    ]
-                },
-                {"text": ["This is the next instance."]},
-            ]
-        )
+        dataset = [
+            {
+                "text": [
+                    "This is an instance that will be truncated because "
+                    "it is longer than ten word pieces.",
+                    "This is the subsequent unit in this instance that "
+                    "will be separately truncated.",
+                ]
+            },
+            {"text": ["This is the next instance."]},
+        ]
         new_dataset = mapper.map(dataset)
         assert len(dataset) == len(new_dataset)  # same num dicts
         assert "overflow_to_sample_mapping" in new_dataset[0]
@@ -225,7 +219,7 @@ class TestTokenizerMapper(unittest.TestCase):
             tokenizer=self.tokenizer,
             return_offsets_mapping=True,
         )
-        dataset = Dataset([{"text": ["This is a Pterodactyl."]}])
+        dataset = [{"text": ["This is a Pterodactyl."]}]
         new_dataset = mapper.map(dataset)
         assert [
             dataset[0]["text"][0][start:end]
@@ -270,7 +264,7 @@ class TestTokenizerMapper(unittest.TestCase):
             is_split_into_words=True,
         )
 
-        dataset = Dataset([{"text": ["This is a Pterodactyl."]}])
+        dataset = [{"text": ["This is a Pterodactyl."]}]
         new_dataset = mapper.map(dataset)
         assert [
             dataset[0]["text"][0][start:end]
@@ -279,26 +273,24 @@ class TestTokenizerMapper(unittest.TestCase):
 
         # now try with a larger dataset to test things like
         # truncation and all that
-        dataset = Dataset(
-            [
-                {
-                    "text": [
-                        "This is a sentence.",
-                        "This is two sentences. Here is the second one.",
-                    ]
-                },
-                {
-                    "text": [
-                        "This is a separate instance.",
-                        "This",
-                        "is",
-                        "some",
-                        "tokens",
-                        ".",
-                    ]
-                },
-            ]
-        )
+        dataset = [
+            {
+                "text": [
+                    "This is a sentence.",
+                    "This is two sentences. Here is the second one.",
+                ]
+            },
+            {
+                "text": [
+                    "This is a separate instance.",
+                    "This",
+                    "is",
+                    "some",
+                    "tokens",
+                    ".",
+                ]
+            },
+        ]
         new_dataset = mapper.map(dataset)
         assert (
             self.tokenizer.decode(new_dataset[0]["input_ids"])
@@ -319,19 +311,17 @@ class TestTokenizerMapper(unittest.TestCase):
             is_split_into_words=True,
             return_overflowing_tokens=True,
         )
-        dataset = Dataset(
-            [
-                {
-                    "text": [
-                        "This is an instance that will be truncated because "
-                        "it is longer than ten word pieces.",
-                        "This is the subsequent unit in this instance that "
-                        "will be separately truncated.",
-                    ]
-                },
-                {"text": ["This is the next instance."]},
-            ]
-        )
+        dataset = [
+            {
+                "text": [
+                    "This is an instance that will be truncated because "
+                    "it is longer than ten word pieces.",
+                    "This is the subsequent unit in this instance that "
+                    "will be separately truncated.",
+                ]
+            },
+            {"text": ["This is the next instance."]},
+        ]
         new_dataset = mapper.map(dataset)
         assert (
             self.tokenizer.decode(new_dataset[0]["input_ids"][0])
@@ -375,45 +365,43 @@ class TestTokenizerMapper(unittest.TestCase):
             return_word_ids=True,
             return_words=True,
         )
-        dataset = Dataset(
-            [
-                {
-                    "text": [
-                        "This",
-                        "is",
-                        "a",
-                        "Pterodactyl",
-                        "that",
-                        "will",
-                        "be",
-                        "truncated",
-                        "because",
-                        "it",
-                        "is",
-                        "longer",
-                        "than",
-                        "ten",
-                        "word",
-                        "pieces",
-                        ".",
-                        "This",
-                        "is",
-                        "the",
-                        "subsequent",
-                        "Pterodactyl",
-                        "in",
-                        "this",
-                        "instance",
-                        "that",
-                        "will",
-                        "be",
-                        "separately",
-                        "truncated",
-                        ".",
-                    ]
-                }
-            ]
-        )
+        dataset = [
+            {
+                "text": [
+                    "This",
+                    "is",
+                    "a",
+                    "Pterodactyl",
+                    "that",
+                    "will",
+                    "be",
+                    "truncated",
+                    "because",
+                    "it",
+                    "is",
+                    "longer",
+                    "than",
+                    "ten",
+                    "word",
+                    "pieces",
+                    ".",
+                    "This",
+                    "is",
+                    "the",
+                    "subsequent",
+                    "Pterodactyl",
+                    "in",
+                    "this",
+                    "instance",
+                    "that",
+                    "will",
+                    "be",
+                    "separately",
+                    "truncated",
+                    ".",
+                ]
+            }
+        ]
         new_dataset = mapper.map(dataset)
         assert "words" in new_dataset[0]
         assert "word_ids" in new_dataset[0]

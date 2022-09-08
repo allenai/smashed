@@ -1,12 +1,12 @@
 import unittest
 
-from smashed.interfaces.simple import Dataset, UnpackingMapper
+from smashed.mappers import UnpackingMapper
 
 
 class TestUnpackingMapper(unittest.TestCase):
     def test_unpack_single(self):
         mapper = UnpackingMapper()
-        dataset = Dataset([{"a": [0, 1, 2, 3]}, {"a": [4, 5]}])
+        dataset = [{"a": [0, 1, 2, 3]}, {"a": [4, 5]}]
         dataset = mapper.map(dataset)
 
         self.assertEqual(len(dataset), 6)
@@ -15,12 +15,10 @@ class TestUnpackingMapper(unittest.TestCase):
 
     def test_unpack_multiple(self):
         mapper = UnpackingMapper()
-        dataset = Dataset(
-            [
-                {"a": [0.1, 1.1, 2.1, 3.1], "b": [0.2, 1.2, 2.2, 3.2]},
-                {"a": [4.1, 5.1], "b": [4.2, 5.2]},
-            ]
-        )
+        dataset = [
+            {"a": [0.1, 1.1, 2.1, 3.1], "b": [0.2, 1.2, 2.2, 3.2]},
+            {"a": [4.1, 5.1], "b": [4.2, 5.2]},
+        ]
         dataset = mapper.map(dataset)
 
         self.assertEqual(len(dataset), 6)
@@ -33,9 +31,10 @@ class TestUnpackingMapper(unittest.TestCase):
         mapper = UnpackingMapper(
             fields_to_unpack=["a"], ignored_behavior="drop"
         )
-        dataset = Dataset(
-            [{"a": [0, 1, 2, 3], "b": "hello"}, {"a": [4, 5], "b": "hello"}]
-        )
+        dataset = [
+            {"a": [0, 1, 2, 3], "b": "hello"},
+            {"a": [4, 5], "b": "hello"},
+        ]
 
         dropped_dataset = mapper.map(dataset)
         self.assertEqual(len(dropped_dataset), 6)

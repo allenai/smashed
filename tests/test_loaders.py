@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from unittest import TestCase
 
@@ -15,6 +16,10 @@ class TestHuggingfaceLoader(TestCase):
     def test_huggingface_loader(self):
 
         necessary("datasets")  # make sure datasets is installed
+
+        # need to sent this env var to make sure we don't we don't
+        # raise an error when using tokenizers
+        os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
         mapper = HuggingFaceDatasetLoaderMapper(
             path="csv",
