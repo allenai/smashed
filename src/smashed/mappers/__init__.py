@@ -7,6 +7,7 @@ from .collators import (
 )
 from .converters import Python2TorchMapper, Torch2PythonMapper
 from .fields import ChangeFieldsMapper, MakeFieldMapper
+from .filters import FilterMapper
 from .loaders import (
     CsvLoaderMapper,
     HuggingFaceDatasetLoaderMapper,
@@ -33,6 +34,7 @@ __all__ = [
     "CastMapper",
     "ChangeFieldsMapper",
     "CsvLoaderMapper",
+    "FilterMapper",
     "FixedBatchSizeMapper",
     "FlattenMapper",
     "FromTokenizerListCollatorMapper",

@@ -7,6 +7,7 @@ import torch
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from ..base.mappers import SingleBaseMapper
+from ..base.mappers.abstract import AbstractBaseMapper
 from ..base.types import TransformElementType
 
 __all__ = [
@@ -17,11 +18,10 @@ __all__ = [
 ]
 
 
-class CollatorMixIn:
+class BaseCollator(AbstractBaseMapper):
     def __init__(
         self,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
-        pad_to_length_dim: Optional[int] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
     ):
@@ -67,8 +67,20 @@ class CollatorMixIn:
                 "the mapper to handle unrecognized fields"
             )
 
+    def collate(
+        self, batch: Sequence[TransformElementType]
+    ) -> TransformElementType:
+        """This method complies with PyTorch's DataLoader interface."""
+        return self.transform(
+            {k: [d[k] for d in batch] for k in batch[0].keys()}
+        )
 
-class FromTokenizerMixIn(CollatorMixIn):
+
+# Alias for backwards compatibility
+CollatorMixIn = BaseCollator
+
+
+class FromTokenizerMixIn(BaseCollator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerBase,
@@ -114,7 +126,7 @@ class FromTokenizerMixIn(CollatorMixIn):
         )
 
 
-class TensorCollatorMapper(CollatorMixIn, SingleBaseMapper):
+class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
     """
     A collator mapper that collates sequences of n tensors into a single
     tensor of shape (n, ...) where ... is the maximum size of the
@@ -232,7 +244,7 @@ class FromTokenizerTensorCollatorMapper(
     """
 
 
-class ListCollatorMapper(CollatorMixIn, SingleBaseMapper):
+class ListCollatorMapper(BaseCollator, SingleBaseMapper):
     """Given a `sequence_to_pad` dict of comprised of <field names, value to
     pad field with>, figures out how much to pad them such that all examples in
     dataset in those fields have same length. This mapper can be useful for
