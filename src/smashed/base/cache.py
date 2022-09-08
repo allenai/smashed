@@ -1,10 +1,17 @@
-from contextlib import _GeneratorContextManager, AbstractContextManager, contextmanager
 import hashlib
-from pathlib import Path
 import pickle
+from contextlib import contextmanager
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Callable, Iterator, List, Optional, Union
-
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterator,
+    List,
+    Optional,
+    Union,
+)
 
 from necessary import necessary
 from trouting import trouting
@@ -25,7 +32,7 @@ if TYPE_CHECKING:
 
 class PipelineCacheUtils:
     @staticmethod
-    def get_pipeline_fingerprint(pipeline: 'Pipeline') -> str:
+    def get_pipeline_fingerprint(pipeline: "Pipeline") -> str:
         h = hashlib.sha1()
         for mapper in pipeline:
             h.update(mapper.fingerprint.encode("utf-8"))
@@ -33,12 +40,7 @@ class PipelineCacheUtils:
 
     @trouting
     @classmethod
-    def no_cache_ctx(
-        cls,
-        dataset: Any,
-        no_caching: bool = False
-    ) -> Callable:
-
+    def no_cache_ctx(cls, dataset: Any, no_caching: bool = False) -> Callable:
         @contextmanager
         def _no_cache_ctx() -> Iterator[None]:
             try:
@@ -50,12 +52,7 @@ class PipelineCacheUtils:
 
     @no_cache_ctx.add_interface(dataset=Dataset)
     @classmethod
-    def _no_cache_hf(
-        cls,
-        dataset: Any,
-        no_caching: bool = False
-    ) -> Callable:
-
+    def _no_cache_hf(cls, dataset: Any, no_caching: bool = False) -> Callable:
         @contextmanager
         def _no_cache_ctx() -> Iterator[None]:
             try:
@@ -68,7 +65,6 @@ class PipelineCacheUtils:
 
         return _no_cache_ctx
 
-
     @trouting
     @classmethod
     def get_dataset_fingerprint(cls, dataset: Any) -> str:
@@ -80,8 +76,7 @@ class PipelineCacheUtils:
     @get_dataset_fingerprint.add_interface(dataset=list)
     @classmethod
     def get_dataset_fingerprint_list(
-        cls,
-        dataset: List[TransformElementType]
+        cls, dataset: List[TransformElementType]
     ) -> str:
         """The hash of a list of TransformElementTypes is the hash of the
         each single element in the list."""
@@ -93,6 +88,7 @@ class PipelineCacheUtils:
         return reduce(_get_sample_hash, dataset, hashlib.sha1()).hexdigest()
 
     if HUGGINGFACE_DATASET_AVAILABLE:
+
         @get_dataset_fingerprint.add_interface(dataset=Dataset)
         @classmethod
         def get_dataset_fingerprint_hf_dataset(cls, dataset: Dataset) -> str:
@@ -102,27 +98,28 @@ class PipelineCacheUtils:
         @get_dataset_fingerprint.add_interface(dataset=IterableDataset)
         @classmethod
         def get_dataset_fingerprint_hf_iterable(
-            cls,
-            dataset: IterableDataset
+            cls, dataset: IterableDataset
         ) -> str:
             """For iterable dataset, the fingerprint derived from info, split
             names, and a sample of the top 5 elements."""
             h = hashlib.sha1()
-            h.update(pickle.dumps(
-                {
-                    'info': dataset.info,
-                    'split': dataset.split,
-                    'features': dataset.features,
-                    'sample': dataset._head(n=5),
-                }
-            ))
+            h.update(
+                pickle.dumps(
+                    {
+                        "info": dataset.info,
+                        "split": dataset.split,
+                        "features": dataset.features,
+                        "sample": dataset._head(n=5),
+                    }
+                )
+            )
             return h.hexdigest()
 
     @classmethod
     def get_cache_path(
         cls,
         dataset: Any,
-        pipeline: 'Pipeline',
+        pipeline: "Pipeline",
         use_cache: Optional[Union[str, Path, bool]] = None,
     ) -> Union[Path, None]:
         if use_cache is None or use_cache is False:
@@ -131,10 +128,12 @@ class PipelineCacheUtils:
             cache_dir = (
                 get_cache_dir(
                     # if it is a boolean, we use the default cache dir
-                    use_cache if not isinstance(use_cache, bool) else None
-                ) /
-                cls.get_dataset_fingerprint(dataset) /
-                cls.get_pipeline_fingerprint(pipeline)
+                    use_cache
+                    if not isinstance(use_cache, bool)
+                    else None
+                )
+                / cls.get_dataset_fingerprint(dataset)
+                / cls.get_pipeline_fingerprint(pipeline)
             )
             cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir
@@ -142,9 +141,7 @@ class PipelineCacheUtils:
     @trouting
     @classmethod
     def save_transformed_dataset(
-        cls,
-        transformed_dataset: Any,
-        cache_path: Path
+        cls, transformed_dataset: Any, cache_path: Path
     ) -> None:
         raise ValueError(
             "I do not how to save a dataset of type "
@@ -154,18 +151,15 @@ class PipelineCacheUtils:
     @save_transformed_dataset.add_interface(transformed_dataset=list)
     @classmethod
     def _save_list(
-        cls,
-        transformed_dataset: List[TransformElementType],
-        cache_path: Path
+        cls, transformed_dataset: List[TransformElementType], cache_path: Path
     ) -> None:
         with open(cache_path, "wb") as f:
             pickle.dump(
-                transformed_dataset,
-                f,
-                protocol=pickle.HIGHEST_PROTOCOL
+                transformed_dataset, f, protocol=pickle.HIGHEST_PROTOCOL
             )
 
     if HUGGINGFACE_DATASET_AVAILABLE:
+
         @save_transformed_dataset.add_interface(transformed_dataset=Dataset)
         @classmethod
         def _save_hf(cls, transformed_dataset: Dataset, cache_path: Path):
@@ -176,20 +170,16 @@ class PipelineCacheUtils:
         )
         @classmethod
         def _save_hf_it(
-            cls,
-            transformed_dataset: IterableDataset,
-            cache_path: Path
+            cls, transformed_dataset: IterableDataset, cache_path: Path
         ):
             raise NotImplementedError(
-                'Saving an IterableDataset is not implemented yet'
+                "Saving an IterableDataset is not implemented yet"
             )
 
     @trouting
     @classmethod
     def load_transformed_dataset(
-        cls,
-        cache_path: Path,
-        source_dataset: Any
+        cls, cache_path: Path, source_dataset: Any
     ) -> Any:
         raise ValueError(
             f"I do not how to load a dataset of type {type(source_dataset)}; "
@@ -199,14 +189,13 @@ class PipelineCacheUtils:
     @load_transformed_dataset.add_interface(source_dataset=list)
     @classmethod
     def _load_list(
-        cls,
-        cache_path: Path,
-        source_dataset: List[TransformElementType]
+        cls, cache_path: Path, source_dataset: List[TransformElementType]
     ) -> List:
         with open(cache_path, "rb") as f:
             return pickle.load(f)
 
     if HUGGINGFACE_DATASET_AVAILABLE:
+
         @load_transformed_dataset.add_interface(
             source_dataset=(IterableDataset, Dataset)
         )
@@ -214,6 +203,6 @@ class PipelineCacheUtils:
         def _load_hf(
             cls,
             cache_path: Path,
-            source_dataset: Union[Dataset, IterableDataset]
+            source_dataset: Union[Dataset, IterableDataset],
         ) -> Dataset:
             return Dataset.load_from_disk(str(cache_path))

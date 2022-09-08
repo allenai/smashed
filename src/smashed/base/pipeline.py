@@ -1,9 +1,9 @@
-from pathlib import Path
 from functools import reduce
+from pathlib import Path
 from typing import Any, Iterator, Optional, Sequence, Tuple, Union
 
-from .mappers.abstract import AbstractBaseMapper
 from .cache import PipelineCacheUtils
+from .mappers.abstract import AbstractBaseMapper
 
 
 class Pipeline:
@@ -96,7 +96,7 @@ class Pipeline:
         self: "Pipeline",
         dataset: Any,
         use_cache: Optional[Union[str, Path, bool]] = False,
-        **map_kwargs: Any
+        **map_kwargs: Any,
     ) -> Any:
         """Transform a dataset by applying this pipeline's mappers."""
 
@@ -107,16 +107,13 @@ class Pipeline:
 
         # cache path will be None if use_cache is False
         cache_path = PipelineCacheUtils.get_cache_path(
-            dataset=dataset,
-            pipeline=self,
-            use_cache=use_cache
+            dataset=dataset, pipeline=self, use_cache=use_cache
         )
 
         if cache_path and cache_path.exists():
             # load from cache
             transformed_dataset = PipelineCacheUtils.load_transformed_dataset(
-                cache_path=cache_path,
-                source_dataset=dataset
+                cache_path=cache_path, source_dataset=dataset
             )
         else:
             # compute from scratch
