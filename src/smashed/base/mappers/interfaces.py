@@ -107,7 +107,8 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         **map_kwargs: Any,
     ) -> Any:
         raise ValueError(
-            f"I don't know how to a dataset of type {type(dataset)}"
+            f"I don't know how to map a dataset of type {type(dataset)}; "
+            "interface not implemented."
         )
 
     @map.add_interface(dataset=list)

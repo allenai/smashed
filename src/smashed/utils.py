@@ -1,8 +1,10 @@
+from contextlib import contextmanager
 import importlib.metadata
 import os
 import warnings
 from pathlib import Path
-from typing import Optional, Type
+from typing import Iterator, Optional, Type, Union
+from necessary import necessary
 
 import platformdirs
 
@@ -57,13 +59,33 @@ class SmashedWarnings:
         cls._warn(message, RuntimeWarning)
 
 
-def get_cache_dir() -> Path:
+def get_cache_dir(custom_cache_dir: Optional[Union[Path, str]] = None) -> Path:
     """Get the path to the cache directory."""
-    (
-        cache_dir := Path(
+
+    if custom_cache_dir is not None:
+        cache_dir = (
+            Path(custom_cache_dir) / "allenai" / "smashed" / get_version()
+        )
+    else:
+        cache_dir = Path(
             platformdirs.user_cache_dir(
                 appname="smashed", appauthor="allenai", version=get_version()
             )
         )
-    ).mkdir(parents=True, exist_ok=True)
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir
+
+
+@contextmanager
+def hf_cache_disabled() -> Iterator[None]:
+    if necessary("datasets", soft=True):
+        from datasets.fingerprint import disable_caching, enable_caching
+    else:
+        disable_caching = lambda: None  # noqa: E731
+        enable_caching = lambda: None   # noqa: E731
+    try:
+        disable_caching()
+        yield None
+    finally:
+        enable_caching()

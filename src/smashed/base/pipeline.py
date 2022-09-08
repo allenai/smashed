@@ -1,9 +1,9 @@
-import hashlib
+from pathlib import Path
 from functools import reduce
-from itertools import chain
-from typing import Any, Tuple, Type, Union
+from typing import Any, Iterator, Optional, Sequence, Tuple, Union
 
 from .mappers.abstract import AbstractBaseMapper
+from .cache import PipelineCacheUtils
 
 
 class Pipeline:
@@ -20,8 +20,33 @@ class Pipeline:
 
     mappers: Tuple[AbstractBaseMapper, ...]
 
-    def __init__(self, *mappers: AbstractBaseMapper) -> None:
-        self.mappers = mappers
+    def __init__(
+        self,
+        *mappers_or_pipelines: Union[
+            AbstractBaseMapper,
+            Sequence[AbstractBaseMapper],
+            "Pipeline",
+        ],
+    ) -> None:
+        """
+        Create a pipeline from a sequence of mappers.
+
+        Args:
+            mappers (Union[AbstractBaseMapper, Sequence[AbstractBaseMapper],
+                "Pipeline"]): A combination of single mappers, sequences of
+                mappers, and pipelines. Nested iterables are flattened.
+        """
+        self.mappers = tuple(
+            m
+            for m_or_p in mappers_or_pipelines
+            for m in (
+                # if it is a single mapper, we need to wrap it in a single
+                # element list; otherwise, we can just iterate over it
+                [m_or_p]
+                if isinstance(m_or_p, AbstractBaseMapper)
+                else iter(m_or_p)
+            )
+        )
 
     def __repr__(self: "Pipeline") -> str:
         mappers_it = (repr(m) for m in self.mappers)
@@ -34,12 +59,28 @@ class Pipeline:
     def __lshift__(
         self: "Pipeline", other: Union[AbstractBaseMapper, "Pipeline"]
     ) -> "Pipeline":
-        return self.chain(other, self)
+        return type(self)(other, self)
 
     def __rshift__(
         self: "Pipeline", other: Union[AbstractBaseMapper, "Pipeline"]
     ) -> "Pipeline":
-        return self.chain(self, other)
+        return type(self)(self, other)
+
+    def __len__(self: "Pipeline") -> int:
+        return len(self.mappers)
+
+    def __getitem__(self: "Pipeline", index: int) -> AbstractBaseMapper:
+        return self.mappers[index]
+
+    def __iter__(self: "Pipeline") -> Iterator[AbstractBaseMapper]:
+        # This is not strictly necessary, but mypy fails to recognize an
+        # object as iterable if it only implements __getitem__. This is a
+        # long-standing issue: https://github.com/python/mypy/issues/2220
+        # but no one seems to be wanting to fix it.
+        #
+        # Returning an iterator here is a workaround, and should have no
+        # to very little performance impact.
+        return iter(self)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Pipeline):
@@ -51,46 +92,35 @@ class Pipeline:
                 return False
         return True
 
-    @classmethod
-    def chain(
-        cls: Type["Pipeline"],
-        *mappers_or_pipelines: Union[AbstractBaseMapper, "Pipeline"],
-    ) -> "Pipeline":
-        """Create a new pipeline by chaining two mappers/pipelines together."""
-
-        def _to_pipeline(
-            mapper_or_pipeline: Union[AbstractBaseMapper, "Pipeline"]
-        ) -> "Pipeline":
-            if isinstance(mapper_or_pipeline, AbstractBaseMapper):
-                mapper_or_pipeline = Pipeline(mapper_or_pipeline)
-            return mapper_or_pipeline
-
-        return Pipeline(
-            *chain.from_iterable(
-                _to_pipeline(m_or_p).mappers for m_or_p in mappers_or_pipelines
-            )
-        )
-
-    def get_pipeline_fingerprint(self) -> str:
-        h = hashlib.sha1()
-        for mapper in self.mappers:
-            h.update(mapper.fingerprint.encode("utf-8"))
-        return h.hexdigest()
-
-    def get_dataset_fingerprint(self, dataset: Any):
-        ...
-
-    def map(self: "Pipeline", dataset: Any, **map_kwargs: Any) -> Any:
+    def map(
+        self: "Pipeline",
+        dataset: Any,
+        use_cache: Optional[Union[str, Path, bool]] = False,
+        **map_kwargs: Any
+    ) -> Any:
         """Transform a dataset by applying this pipeline's mappers."""
-
-        # IMPLEMENTATION FOR DEBUG PURPOSES
-        # for mapper in self.mappers:
-        #     dataset = mapper.map(dataset, **map_kwargs)
-        #     if not dataset:
-        #         breakpoint()
-        # return dataset
 
         def _map(dataset: Any, mapper: AbstractBaseMapper) -> Any:
             return mapper.map(dataset, **map_kwargs)
 
-        return reduce(_map, self.mappers, dataset)
+        cache_path = PipelineCacheUtils.get_cache_path(
+            dataset=dataset,
+            pipeline=self,
+            use_cache=use_cache
+        )
+
+        if cache_path and cache_path.exists():
+            # load
+            transformed_dataset = PipelineCacheUtils.load_transformed_dataset(
+                cache_path=cache_path,
+                source_dataset=dataset
+            )
+        else:
+            transformed_dataset = reduce(_map, self.mappers, dataset)
+            if cache_path:
+                PipelineCacheUtils.save_transformed_dataset(
+                    transformed_dataset=transformed_dataset,
+                    cache_path=cache_path,
+                )
+
+        return transformed_dataset
