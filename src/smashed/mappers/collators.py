@@ -68,6 +68,15 @@ class BaseCollator(AbstractBaseMapper):
                 "the mapper to handle unrecognized fields"
             )
 
+    def collate(
+        self, batch: Sequence[TransformElementType]
+    ) -> TransformElementType:
+        """This method complies with PyTorch's DataLoader interface."""
+        return self.transform({
+            k: [d[k] for d in batch]
+            for k in batch[0].keys()
+        })
+
 
 # Alias for backwards compatibility
 CollatorMixIn = BaseCollator

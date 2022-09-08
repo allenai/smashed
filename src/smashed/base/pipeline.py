@@ -80,7 +80,7 @@ class Pipeline:
         #
         # Returning an iterator here is a workaround, and should have no
         # to very little performance impact.
-        return iter(self)
+        return (self[i] for i in range(len(self)))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Pipeline):
