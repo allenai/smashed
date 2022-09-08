@@ -58,9 +58,7 @@ class CastMapper(SingleBaseMapper):
         try:
             return type_(value)
         except ValueError:
-            raise ValueError(
-                f"Could not cast value {value} to type {type_}"
-            )
+            raise ValueError(f"Could not cast value {value} to type {type_}")
 
     def _cast_recursive(self, value: Any, type_: type) -> Any:
         if isinstance(value, list):
@@ -77,7 +75,8 @@ class CastMapper(SingleBaseMapper):
         return {
             k: (
                 self._cast_recursive(value=v, type_=self.cast_map[k])
-                if k in self.cast_map else v
+                if k in self.cast_map
+                else v
             )
             for k, v in data.items()
         }

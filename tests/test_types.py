@@ -30,10 +30,10 @@ class TestBinarizer(TestCase):
 
     def test_lookup_mapper(self):
         dataset = [
-            {"menu": ['apple', 'pie']},
-            {"menu": ['key lime', 'pie']},
-            {"menu": ['fudge', 'pie']},
-            {"menu": []}
+            {"menu": ["apple", "pie"]},
+            {"menu": ["key lime", "pie"]},
+            {"menu": ["fudge", "pie"]},
+            {"menu": []},
         ]
         mapper = LookupMapper(
             field_name="menu",
@@ -41,8 +41,8 @@ class TestBinarizer(TestCase):
                 "apple": "fruit",
                 "key lime": "fruit",
                 "pie": "dessert",
-                "fudge": "chocolate"
-            }
+                "fudge": "chocolate",
+            },
         )
         mapped_dataset = mapper.map(dataset)
         self.assertEqual(mapped_dataset[0]["menu"], ["fruit", "dessert"])
