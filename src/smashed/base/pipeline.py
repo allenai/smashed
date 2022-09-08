@@ -100,9 +100,12 @@ class Pipeline:
     ) -> Any:
         """Transform a dataset by applying this pipeline's mappers."""
 
-        def _map(dataset: Any, mapper: AbstractBaseMapper) -> Any:
+        # this function is to be used in the reduce operation below
+        # to apply each mapper in the pipeline to the dataset
+        def _apply_mapper(dataset: Any, mapper: AbstractBaseMapper) -> Any:
             return mapper.map(dataset, **map_kwargs)
 
+        # cache path will be None if use_cache is False
         cache_path = PipelineCacheUtils.get_cache_path(
             dataset=dataset,
             pipeline=self,
@@ -110,14 +113,24 @@ class Pipeline:
         )
 
         if cache_path and cache_path.exists():
-            # load
+            # load from cache
             transformed_dataset = PipelineCacheUtils.load_transformed_dataset(
                 cache_path=cache_path,
                 source_dataset=dataset
             )
         else:
-            transformed_dataset = reduce(_map, self.mappers, dataset)
+            # compute from scratch
+            with PipelineCacheUtils.no_cache_ctx(
+                dataset=dataset, no_caching=bool(use_cache)
+            )():
+                # disable intermediate caching if we are using an end-to-end
+                # cache and are dealing with huggingface datasets
+                transformed_dataset = reduce(
+                    _apply_mapper, self.mappers, dataset
+                )
+
             if cache_path:
+                # save if we need to
                 PipelineCacheUtils.save_transformed_dataset(
                     transformed_dataset=transformed_dataset,
                     cache_path=cache_path,

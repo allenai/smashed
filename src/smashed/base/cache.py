@@ -1,8 +1,10 @@
+from contextlib import _GeneratorContextManager, AbstractContextManager, contextmanager
 import hashlib
 from pathlib import Path
 import pickle
 from functools import reduce
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Iterator, List, Optional, Union
+
 
 from necessary import necessary
 from trouting import trouting
@@ -13,7 +15,7 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
         from datasets.arrow_dataset import Dataset
         from datasets.iterable_dataset import IterableDataset
-        from datasets.fingerprint import disable_caching
+        from datasets.fingerprint import disable_caching, enable_caching
 
 from .types import TransformElementType
 
@@ -31,15 +33,41 @@ class PipelineCacheUtils:
 
     @trouting
     @classmethod
-    def disable_intermediate_caching(cls, dataset: Any) -> None:
-        # by default there's no intermediate caching
-        # so we do nothing here
-        ...
+    def no_cache_ctx(
+        cls,
+        dataset: Any,
+        no_caching: bool = False
+    ) -> Callable:
 
-    @disable_intermediate_caching.add_interface(dataset=Dataset)
+        @contextmanager
+        def _no_cache_ctx() -> Iterator[None]:
+            try:
+                yield
+            finally:
+                pass
+
+        return _no_cache_ctx
+
+    @no_cache_ctx.add_interface(dataset=Dataset)
     @classmethod
-    def _disable_hf(cls, dataset: Dataset) -> None:
-        disable_caching()
+    def _no_cache_hf(
+        cls,
+        dataset: Any,
+        no_caching: bool = False
+    ) -> Callable:
+
+        @contextmanager
+        def _no_cache_ctx() -> Iterator[None]:
+            try:
+                if no_caching:
+                    disable_caching()
+                yield
+            finally:
+                if no_caching:
+                    enable_caching()
+
+        return _no_cache_ctx
+
 
     @trouting
     @classmethod
