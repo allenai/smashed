@@ -25,7 +25,23 @@ HF_CAST_DICT = {
 }
 
 
-class CastMapper(SingleBaseMapper):
+class RecurseOpMixIn:
+    def _single_op(self, value: Any, **_: Any) -> Any:
+        raise NotImplementedError
+
+    def _recursive_op(self, value: Any, **kwargs: Any) -> Any:
+        if isinstance(value, list):
+            return [self._recursive_op(value=v, **kwargs) for v in value]
+        elif isinstance(value, dict):
+            return {
+                k: self._recursive_op(value=v, **kwargs)
+                for k, v in value.items()
+            }
+        else:
+            return self._single_op(value=value, **kwargs)
+
+
+class CastMapper(SingleBaseMapper, RecurseOpMixIn):
     """Casts one or more fields in a dataset to a new type."""
 
     def __init__(self, cast_map: Dict[str, type]):
@@ -54,27 +70,16 @@ class CastMapper(SingleBaseMapper):
         # parent class has one
         return super().map(dataset, **map_kwargs)
 
-    def _cast_single(self, value: Any, type_: type):
+    def _single_op(self, value: Any, type_: type) -> Any:  # type: ignore
         try:
             return type_(value)
         except ValueError:
             raise ValueError(f"Could not cast value {value} to type {type_}")
 
-    def _cast_recursive(self, value: Any, type_: type) -> Any:
-        if isinstance(value, list):
-            return [self._cast_recursive(value=v, type_=type_) for v in value]
-        elif isinstance(value, dict):
-            return {
-                k: self._cast_recursive(value=v, type_=type_)
-                for k, v in value.items()
-            }
-        else:
-            return self._cast_single(value=value, type_=type_)
-
     def transform(self, data: TransformElementType) -> TransformElementType:
         return {
             k: (
-                self._cast_recursive(value=v, type_=self.cast_map[k])
+                self._recursive_op(value=v, type_=self.cast_map[k])
                 if k in self.cast_map
                 else v
             )
@@ -171,7 +176,7 @@ class BinarizerMapper(CastMapper):
         super().__init__(cast_map={field: int})
         self.threshold = threshold
 
-    def _cast_single(self, value: Any, type_: type):
+    def _single_op(self, value: Any, **_: Any) -> Any:  # type: ignore
         return int(value > self.threshold)
 
 
@@ -196,7 +201,7 @@ class LookupMapper(CastMapper):
         self.field_name = field_name
         self.lookup_table = lookup_table
 
-    def _cast_single(self, value: Any, type_: type):
+    def _single_op(self, value: Any, **_: Any) -> Any:  # type: ignore
         return self.lookup_table[value]
 
 
@@ -215,5 +220,5 @@ class OneHotMapper(CastMapper):
         self.field_name = field_name
         self.num_classes = num_classes
 
-    def _cast_single(self, value: Any, type_: type):
+    def _single_op(self, value: Any, **_: Any) -> Any:  # type: ignore
         return [1 if i == value else 0 for i in range(self.num_classes)]

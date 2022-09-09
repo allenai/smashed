@@ -1,6 +1,6 @@
 [project]
 name = "smashed"
-version = "0.2.3"
+version = "0.2.4"
 description = "Sequential MAppers for Sequences of HEterogeneous Dictionaries is a set of Python interfaces designed to apply transformations to samples in datasets, which are often implemented as sequences of dictionaries."
 authors = [
     {name = "Allen Institute for Artificial Intelligence", email = "contact@allenai.org" },
