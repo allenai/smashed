@@ -1,6 +1,5 @@
-from collections import abc
 import operator
-from typing import Any, Callable, Dict, Iterable, NamedTuple, Tuple
+from typing import Any, Callable, Iterable, NamedTuple
 
 from ..base.mappers import BatchedBaseMapper
 from ..base.types import TransformElementType
@@ -39,42 +38,31 @@ class FuncVal(NamedTuple):
 class FilterMapper(BatchedBaseMapper, RecurseOpMixIn):
     """A mapper that filters elements from a batch."""
 
-    def __init__(self, fields_filters: Dict[str, Tuple[str, Any]]):
+    def __init__(self, field_name: str, operator: str, value: Any):
         f"""
         Args:
-            fields_filters (Dict[str, Tuple[str, Any]]): A dictionary of fields
-                and their filters. Filters are a (operator, value) tuple.
-                The operator is a string from {','.join(VALID_OPERATIONS)}
-                and the value is the value to compare against.
+            field_name (str): The name of the field to filter on.
+            operator (str): The operator to use for filtering. Valid operators
+                are {", ".join(VALID_OPERATIONS.keys())}
+            value (Any): The value to compare against.
         """
-
-        assert isinstance(fields_filters, dict) and all(
-            # we are actually ok with sequence as long as has a length of 2,
-            # but asking for tuple makes type annotation more concise
-            isinstance(v, abc.Sequence) and len(v) == 2
-            for v in fields_filters.values()
-        ), "fields_filters must be a Dict[str, Tuple[str, Any]]"
-
-        try:
-            self.fields_filters = {
-                k: FuncVal(func_=VALID_OPERATIONS[v[0]], value=v[1])
-                for k, v in fields_filters.items()
-            }
-        except KeyError:
+        if operator not in VALID_OPERATIONS:
             raise ValueError(
-                "Invalid operator in filter. Valid operators are "
-                f"{','.join(VALID_OPERATIONS)}"
+                f"Invalid operator {operator}. Valid operators are "
+                f"{', '.join(VALID_OPERATIONS.keys())}"
             )
 
+        self.field_name = field_name
+        self.operator = VALID_OPERATIONS[operator]
+        self.value = value
+
         super().__init__(
-            input_fields=list(fields_filters.keys()),
-            output_fields=list(fields_filters.keys()),
+            input_fields=[field_name],
+            output_fields=[field_name],
         )
 
-    def _single_op(  # type: ignore
-        self, value: Any, func_val: FuncVal
-    ) -> bool:
-        return bool(func_val.func_(value, func_val.value))
+    def _single_op(self, value: Any, **_: Any) -> Any:
+        return self.operator(value, self.value)
 
     def _recursive_op(self, value: Any, **kwargs: Any) -> Any:
         recursed = super()._recursive_op(value, **kwargs)
@@ -89,9 +77,6 @@ class FilterMapper(BatchedBaseMapper, RecurseOpMixIn):
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
         for batch in data:
-            filter_pass = all(
-                self._recursive_op(value=batch[field], func_val=func_val)
-                for field, func_val in self.fields_filters.items()
-            )
-            if filter_pass:
+
+            if self._recursive_op(batch[self.field_name]):
                 yield batch
