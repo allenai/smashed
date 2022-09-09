@@ -1,3 +1,4 @@
+from collections import abc
 import operator
 from typing import Any, Callable, Dict, Iterable, NamedTuple, Tuple
 
@@ -48,7 +49,9 @@ class FilterMapper(BatchedBaseMapper, RecurseOpMixIn):
         """
 
         assert isinstance(fields_filters, dict) and all(
-            isinstance(v, tuple) and len(v) == 2
+            # we are actually ok with sequence as long as has a length of 2,
+            # but asking for tuple makes type annotation more concise
+            isinstance(v, abc.Sequence) and len(v) == 2
             for v in fields_filters.values()
         ), "fields_filters must be a Dict[str, Tuple[str, Any]]"
 
