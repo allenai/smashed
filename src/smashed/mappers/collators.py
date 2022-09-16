@@ -22,7 +22,6 @@ class BaseCollator(AbstractBaseMapper):
     def __init__(
         self,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
-        pad_to_length_dim: Optional[int] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
     ):
@@ -72,10 +71,9 @@ class BaseCollator(AbstractBaseMapper):
         self, batch: Sequence[TransformElementType]
     ) -> TransformElementType:
         """This method complies with PyTorch's DataLoader interface."""
-        return self.transform({
-            k: [d[k] for d in batch]
-            for k in batch[0].keys()
-        })
+        return self.transform(
+            {k: [d[k] for d in batch] for k in batch[0].keys()}
+        )
 
 
 # Alias for backwards compatibility
