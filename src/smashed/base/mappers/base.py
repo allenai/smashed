@@ -70,11 +70,16 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
             frame_info: inspect.FrameInfo
             arg_info: inspect.ArgInfo
 
+        # we need to inspect all frames in the frames where the various
+        # __init__ methods in the MRO are called. This way we can get **all**
+        # the arguments passed to the constructor, including those passed
+        # through to super().__init__.
         stack_frames = [
             ExtInfo(arg_info=inspect.getargvalues(fr.frame), frame_info=fr)
             for fr in inspect.stack()
         ]
 
+        # filter out the frames that are not __init__ methods here
         init_calls = [
             frame
             for frame in stack_frames
@@ -92,11 +97,14 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         ]
 
         def _get_cls_name_from_frame_info(frame_ext_info: ExtInfo) -> str:
+            """Small helper function to get the name of the class from
+            the frame info."""
             cls_ = frame_ext_info.arg_info.locals.get(
                 "__class__", PipelineFingerprintMixIn
             )
             return f"{cls_.__module__}.{cls_.__name__}"
 
+        # putting together the full init signature here
         signature = {
             _get_cls_name_from_frame_info(frame): {
                 arg: frame.arg_info.locals[arg]
