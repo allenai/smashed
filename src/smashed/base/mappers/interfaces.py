@@ -38,15 +38,24 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         self,
         provided_fields: Union[Iterable[str], None],
         expected_fields: Sequence[str],
+        reverse_membership_check: bool = False,
     ) -> None:
         if provided_fields is None:
             return
 
         provided_fields_set = set(provided_fields)
 
-        for field in expected_fields:
-            if field not in provided_fields_set:
-                raise ValueError(f"Field {field} not found in dataset")
+        if not reverse_membership_check:
+            for field in expected_fields:
+                if field not in provided_fields_set:
+                    raise ValueError(f"Field '{field}' not found in dataset")
+        else:
+            for field in provided_fields_set:
+                if field not in expected_fields:
+                    raise ValueError(
+                        f"Field '{field}' not supported by mapper "
+                        f"{type(self).__name__}"
+                    )
 
     def _get_iterator_and_column_names_list_dataset(
         self,
