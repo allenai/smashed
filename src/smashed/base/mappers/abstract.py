@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, Generic, Iterable, List, TypeVar
+from typing import Any, Generic, Iterable, List, TypeVar, Union
 
 from ..types import TransformElementType  # type: ignore
 
@@ -10,10 +10,10 @@ S = TypeVar("S")
 class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
     """An abstract implementation of a Mapper"""
 
-    __slots__: List[str] = ["input_fields", "output_fields"]
     input_fields: List[str]
     output_fields: List[str]
     fingerprint: str
+    pipeline: Union["AbstractBaseMapper", None]
 
     @abstractmethod
     def map(self, dataset: D, **map_kwargs: Any) -> D:

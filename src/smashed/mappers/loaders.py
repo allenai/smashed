@@ -3,7 +3,15 @@ import json
 from collections import abc
 from csv import DictReader
 from typing import (
-    TYPE_CHECKING, Any, Iterable, List, Literal, Optional, TypeVar, Union, cast
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
 )
 
 from necessary import necessary
@@ -14,9 +22,9 @@ from ..base.types import TransformElementType
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
         from datasets.arrow_dataset import Dataset
+        from datasets.combine import concatenate_datasets, interleave_datasets
         from datasets.iterable_dataset import IterableDataset
         from datasets.load import load_dataset
-        from datasets.combine import interleave_datasets, concatenate_datasets
 
         HuggingFaceDataset = TypeVar(
             "HuggingFaceDataset", Dataset, IterableDataset
@@ -31,7 +39,7 @@ class HuggingFaceDatasetLoaderMapper(BatchedBaseMapper):
     def __init__(
         self,
         combine_strategy: Union[
-            Literal['concatenate'], Literal['interleave']
+            Literal["concatenate"], Literal["interleave"]
         ] = "concatenate",
         fields_to_keep: Optional[List[str]] = None,
         **kwargs,
@@ -75,8 +83,7 @@ class HuggingFaceDatasetLoaderMapper(BatchedBaseMapper):
     if HUGGINGFACE_DATASET_AVAILABLE:
 
         def transform(
-            self,
-            data: Iterable[TransformElementType]
+            self, data: Iterable[TransformElementType]
         ) -> Union[Dataset, IterableDataset]:
 
             datasets_accumulator = []
@@ -88,8 +95,8 @@ class HuggingFaceDatasetLoaderMapper(BatchedBaseMapper):
                 # if the user has provided some output fields, we need to check
                 # if (1) they are
                 if (
-                    self.output_fields and
-                    getattr(dataset, "features", None) is not None
+                    self.output_fields
+                    and getattr(dataset, "features", None) is not None
                 ):
                     features = cast(dict, dataset.features)  # pyright: ignore
 
@@ -99,9 +106,9 @@ class HuggingFaceDatasetLoaderMapper(BatchedBaseMapper):
                             "following fields:  {self.output_fields}"
                         )
 
-                    dataset = dataset.remove_columns([
-                            f for f in features if f not in self.output_fields
-                    ])
+                    dataset = dataset.remove_columns(
+                        [f for f in features if f not in self.output_fields]
+                    )
 
                 datasets_accumulator.append(dataset)
 

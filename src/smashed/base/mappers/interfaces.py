@@ -187,7 +187,10 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 expected_fields=self.output_fields,
             )
 
-        return transformed_dataset
+        if self.pipeline:
+            return self.pipeline.map(transformed_dataset, **map_kwargs)
+        else:
+            return transformed_dataset
 
     if HUGGINGFACE_DATASET_AVAILABLE:
 
@@ -220,4 +223,9 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 expected_fields=self.output_fields,
             )
 
-            return transformed_dataset
+            if self.pipeline:
+                return self.pipeline.map(transformed_dataset, **map_kwargs)
+            else:
+                return transformed_dataset
+
+            # return transformed_dataset

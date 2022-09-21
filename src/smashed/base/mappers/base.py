@@ -1,8 +1,10 @@
+import copy
 import hashlib
 import inspect
 import pickle
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Iterable, List, NamedTuple, Optional, Union
+from itertools import chain
+from typing import Iterable, List, NamedTuple, Optional, TypeVar, Union
 
 from ..types import TransformElementType
 from .abstract import (
@@ -12,14 +14,16 @@ from .abstract import (
 )
 from .interfaces import MapMethodInterfaceMixIn
 
-if TYPE_CHECKING:
-    from ..pipeline import Pipeline
-
-
 __all__ = ["SingleBaseMapper", "BatchedBaseMapper"]
 
 
+P = TypeVar("P", bound="PipelineFingerprintMixIn")
+
+
 class PipelineFingerprintMixIn(AbstractBaseMapper):
+
+    pipeline: Union["PipelineFingerprintMixIn", None]
+
     def __init__(
         self,
         input_fields: Optional[List[str]] = None,
@@ -39,23 +43,86 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         self.input_fields = input_fields or []
         self.output_fields = output_fields or []
         self.fingerprint = self._get_mapper_fingerprint()
+        self.pipeline = None
 
-    def __lshift__(
-        self,
-        other: Union["PipelineFingerprintMixIn", "Pipeline"],
-    ) -> "Pipeline":
-        """Create a new Pipeline by combining this mapper with another."""
-        # avoid circular import
-        from ..pipeline import Pipeline
+    def __lshift__(self, other: P) -> P:
+        """Create a pipeline by combining this mapper with another."""
 
-        return Pipeline(self) << other
+        # create a copy of the other mapper before attaching it to the
+        # current mapper
+        to_return = copy.deepcopy(other)
 
-    def __rshift__(
-        self,
-        other: Union["PipelineFingerprintMixIn", "Pipeline"],
-    ) -> "Pipeline":
+        # if the other mapper is already attached to a pipeline, we need
+        # to recursively merge the pipelines; otherwise, we can just attach
+        # self to it.
+        if other.pipeline is not None:
+            to_merge = self << other.pipeline
+        else:
+            to_merge = self
+
+        to_return.pipeline = to_merge
+
+        return to_return
+
+    def __rshift__(self: P, other: "PipelineFingerprintMixIn") -> P:
         """Create a new Pipeline by combining this mapper with another."""
         return other << self
+
+    def __repr__(self) -> str:
+        """Return a string representation of this mapper."""
+        r = f"{self.__class__.__name__}({self.fingerprint})"
+        if self.pipeline is not None:
+            r += f" >> {self.pipeline}"
+        return r
+
+    def __deepcopy__(
+        self, memo: Optional[dict] = None
+    ) -> "PipelineFingerprintMixIn":
+        """Create a deep copy of this mapper, excluding the pipeline
+        From: https://stackoverflow.com/a/15774013/938048"""
+
+        memo = memo or {}
+
+        # create a new empty class
+        cls = self.__class__
+        result = cls.__new__(cls)
+
+        # this dict helps with memoization in case of circular references
+        memo[id(self)] = result
+
+        for key in self.__dict__:
+            if key == "pipeline":
+                # don't copy the pipeline
+                setattr(result, key, None)
+            else:
+                # copy the rest of the attributes
+                setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
+
+        for slot in chain.from_iterable(
+            getattr(s, "__slots__", []) for s in self.__class__.__mro__
+        ):
+            # copy the slots
+            setattr(result, slot, copy.deepcopy(getattr(self, slot), memo))
+
+        return result
+
+    def detach(self) -> "PipelineFingerprintMixIn":
+        return copy.deepcopy(self)
+
+    def __eq__(self, other: object) -> bool:
+        """Check if this mapper is equal to another."""
+        if not isinstance(other, type(self)):
+            return False
+
+        if self.pipeline is not None and other.pipeline is not None:
+            return (
+                self.fingerprint == other.fingerprint
+                and self.pipeline == other.pipeline
+            )
+        elif self.pipeline is None and other.pipeline is None:
+            return self.fingerprint == other.fingerprint
+        else:
+            return False
 
     def _get_mapper_fingerprint(self) -> str:
         """Compute a hash for this mapper; the hash depends of the arguments

@@ -23,23 +23,25 @@ class TestHuggingfaceLoader(TestCase):
 
         mapper = HuggingFaceDatasetLoaderMapper()
 
-        dataset = [{
-            'path': "csv",
-            'delimiter': "\t",
-            'column_names': ["label", "question", "answer"],
-            'data_files': {
-                "train": str(FIXTURES_PATH / "TrecQA" / "train.tsv.gz"),
-                "test": str(FIXTURES_PATH / "TrecQA" / "test.tsv.gz"),
-                "dev": str(FIXTURES_PATH / "TrecQA" / "dev.tsv.gz"),
-            },
-            'split': "train",
-        }]
+        dataset = [
+            {
+                "path": "csv",
+                "delimiter": "\t",
+                "column_names": ["label", "question", "answer"],
+                "data_files": {
+                    "train": str(FIXTURES_PATH / "TrecQA" / "train.tsv.gz"),
+                    "test": str(FIXTURES_PATH / "TrecQA" / "test.tsv.gz"),
+                    "dev": str(FIXTURES_PATH / "TrecQA" / "dev.tsv.gz"),
+                },
+                "split": "train",
+            }
+        ]
 
         transformed_dataset = mapper.map(dataset)
         self.assertEqual(len(transformed_dataset.features), 3)
         self.assertEqual(
             sorted(transformed_dataset.features.keys()),
-            ["answer", "label", "question"]
+            ["answer", "label", "question"],
         )
         self.assertEqual(len(transformed_dataset), 53417)
 
