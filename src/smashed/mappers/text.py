@@ -3,8 +3,7 @@ from typing import Any, List, Union
 
 from ftfy import TextFixerConfig, fix_text
 
-from ..base.mappers import SingleBaseMapper
-from ..base.types import TransformElementType
+from ..base import SingleBaseMapper, TransformElementType
 
 
 class FtfyMapper(SingleBaseMapper):

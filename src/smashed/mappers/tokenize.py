@@ -10,8 +10,7 @@ from typing import Any, List, Optional
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
-from ..base.mappers import SingleBaseMapper
-from ..base.types import TransformElementType
+from ..base import SingleBaseMapper, TransformElementType
 
 
 class TokenizerMapper(SingleBaseMapper):

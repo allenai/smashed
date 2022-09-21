@@ -1,8 +1,7 @@
 from itertools import chain
 from typing import Any, Dict, Iterable, List, Optional
 
-from ..base.mappers import BatchedBaseMapper, SingleBaseMapper
-from ..base.types import TransformElementType
+from ..base import BatchedBaseMapper, SingleBaseMapper, TransformElementType
 
 
 class FlattenMapper(SingleBaseMapper):

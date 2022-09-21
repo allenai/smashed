@@ -16,7 +16,7 @@ from typing import (
 from necessary import necessary
 from trouting import trouting
 
-from ..types import TransformBatchType, TransformElementType
+from .types import TransformBatchType, TransformElementType
 from .abstract import (
     AbstractBaseMapper,
     AbstractBatchedBaseMapper,

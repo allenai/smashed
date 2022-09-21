@@ -6,9 +6,8 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 import torch
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
-from ..base.mappers import SingleBaseMapper
-from ..base.mappers.abstract import AbstractBaseMapper
-from ..base.types import TransformElementType
+from ..base import SingleBaseMapper, TransformElementType
+from ..base.abstract import AbstractBaseMapper
 
 __all__ = [
     "ListCollatorMapper",

@@ -3,8 +3,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Sequence, TypeVar
 from necessary import necessary
 from trouting import trouting
 
-from ..base.mappers import SingleBaseMapper
-from ..base.types import TransformElementType
+from ..base import SingleBaseMapper, TransformElementType
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:

@@ -16,8 +16,7 @@ from typing import (
 
 from necessary import necessary
 
-from ..base.mappers import BatchedBaseMapper
-from ..base.types import TransformElementType
+from ..base import BatchedBaseMapper, TransformElementType
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:

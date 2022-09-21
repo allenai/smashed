@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Any, Generic, Iterable, List, TypeVar, Union
 
-from ..types import TransformElementType  # type: ignore
+from .types import TransformElementType
 
 D = TypeVar("D")
 S = TypeVar("S")
