@@ -63,3 +63,27 @@ class TestCaching(unittest.TestCase):
             out2 = pipeline.map(dt)
 
             self.assertEqual([e for e in out1], [e for e in out2])
+
+    def test_fails(self):
+        """Test if caching fails when it should"""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pipeline = (
+                StartCachingMapper(tmpdir)
+                >> MockMapper()
+                >> MockMapper()
+            )
+
+            with self.assertRaises(ValueError):
+                # This should fail because we didn't end the caching
+                pipeline.map([{"a": 1, "b": 2}])
+
+            pipeline = (
+                MockMapper()
+                >> MockMapper()
+                >> EndCachingMapper()
+            )
+
+            with self.assertRaises(ValueError):
+                # This should fail because we didn't start the caching
+                pipeline.map([{"a": 1, "b": 2}])

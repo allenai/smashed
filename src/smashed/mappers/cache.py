@@ -143,6 +143,10 @@ class CachePathContext:
 
 
 class EndCachingMapper(SingleBaseMapper):
+    """A mapper that indicates the end of a caching pipeline. Dataset
+    received by this mapper will be cached to disk. Must be paired with a
+    StartCachingMapper."""
+
     __slots__ = ("cache_path",)
 
     cache_path: Union[Path, None]
@@ -198,7 +202,17 @@ class EndCachingMapper(SingleBaseMapper):
 
 
 class StartCachingMapper(SingleBaseMapper):
+    """A mapper to indicate the position from which caching should start.
+    Must be paired with an EndCachingMapper."""
+
     def __init__(self, cache_dir: Optional[Union[str, Path]] = None):
+        """
+        Args:
+            cache_dir (Optional[Union[str, Path]], optional): The directory
+                where the cache should be stored. If not provided, library
+                `platformdirs` will be used to determine the cache directory.
+
+        """
         self.logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
         self.cache_dir = get_cache_dir(cache_dir)
         super().__init__()
