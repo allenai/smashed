@@ -16,12 +16,12 @@ from typing import (
 from necessary import necessary
 from trouting import trouting
 
-from ..types import TransformBatchType, TransformElementType
 from .abstract import (
     AbstractBaseMapper,
     AbstractBatchedBaseMapper,
     AbstractSingleBaseMapper,
 )
+from .types import TransformBatchType, TransformElementType
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
@@ -38,15 +38,24 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         self,
         provided_fields: Union[Iterable[str], None],
         expected_fields: Sequence[str],
+        reverse_membership_check: bool = False,
     ) -> None:
         if provided_fields is None:
             return
 
         provided_fields_set = set(provided_fields)
 
-        for field in expected_fields:
-            if field not in provided_fields_set:
-                raise ValueError(f"Field {field} not found in dataset")
+        if not reverse_membership_check:
+            for field in expected_fields:
+                if field not in provided_fields_set:
+                    raise ValueError(f"Field '{field}' not found in dataset")
+        else:
+            for field in provided_fields_set:
+                if field not in expected_fields:
+                    raise ValueError(
+                        f"Field '{field}' not supported by mapper "
+                        f"{type(self).__name__}"
+                    )
 
     def _get_iterator_and_column_names_list_dataset(
         self,
@@ -107,7 +116,8 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         **map_kwargs: Any,
     ) -> Any:
         raise ValueError(
-            f"I don't know how to a dataset of type {type(dataset)}"
+            f"I don't know how to map a dataset of type {type(dataset)}; "
+            "interface not implemented."
         )
 
     @map.add_interface(dataset=list)
@@ -177,7 +187,10 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 expected_fields=self.output_fields,
             )
 
-        return transformed_dataset
+        if self.pipeline:
+            return self.pipeline.map(transformed_dataset, **map_kwargs)
+        else:
+            return transformed_dataset
 
     if HUGGINGFACE_DATASET_AVAILABLE:
 
@@ -210,4 +223,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 expected_fields=self.output_fields,
             )
 
-            return transformed_dataset
+            if self.pipeline:
+                return self.pipeline.map(transformed_dataset, **map_kwargs)
+            else:
+                return transformed_dataset

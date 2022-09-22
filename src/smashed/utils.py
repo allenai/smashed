@@ -2,7 +2,7 @@ import importlib.metadata
 import os
 import warnings
 from pathlib import Path
-from typing import Optional, Type
+from typing import Optional, Type, Union
 
 import platformdirs
 
@@ -57,13 +57,29 @@ class SmashedWarnings:
         cls._warn(message, RuntimeWarning)
 
 
-def get_cache_dir() -> Path:
+def get_cache_dir(custom_cache_dir: Optional[Union[Path, str]] = None) -> Path:
     """Get the path to the cache directory."""
-    (
-        cache_dir := Path(
+
+    if custom_cache_dir is not None:
+        cache_dir = (
+            Path(custom_cache_dir) / "allenai" / "smashed" / get_version()
+        )
+    else:
+        cache_dir = Path(
             platformdirs.user_cache_dir(
                 appname="smashed", appauthor="allenai", version=get_version()
             )
         )
-    ).mkdir(parents=True, exist_ok=True)
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir
+
+
+def int_from_bytes(b: bytes) -> int:
+    """Convert a byte string to an integer."""
+    return int.from_bytes(b, byteorder="big")
+
+
+def bytes_from_int(i: int) -> bytes:
+    """Convert an integer to a byte string."""
+    return i.to_bytes((i.bit_length() + 7) // 8, byteorder="big")

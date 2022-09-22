@@ -1,25 +1,26 @@
+import copy
 import hashlib
 import inspect
 import pickle
-from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Iterable, List, NamedTuple, Optional, Union
+from itertools import chain
+from typing import Iterable, List, NamedTuple, Optional, TypeVar, Union
 
-from ..types import TransformElementType
+from ..utils import bytes_from_int, int_from_bytes
 from .abstract import (
     AbstractBaseMapper,
     AbstractBatchedBaseMapper,
     AbstractSingleBaseMapper,
 )
 from .interfaces import MapMethodInterfaceMixIn
+from .types import TransformElementType
 
-if TYPE_CHECKING:
-    from ..pipeline import Pipeline
-
-
-__all__ = ["SingleBaseMapper", "BatchedBaseMapper"]
+P = TypeVar("P", bound="PipelineFingerprintMixIn")
 
 
 class PipelineFingerprintMixIn(AbstractBaseMapper):
+
+    pipeline: Union["PipelineFingerprintMixIn", None]
+
     def __init__(
         self,
         input_fields: Optional[List[str]] = None,
@@ -39,23 +40,109 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         self.input_fields = input_fields or []
         self.output_fields = output_fields or []
         self.fingerprint = self._get_mapper_fingerprint()
+        self.pipeline = None
 
-    def __lshift__(
-        self,
-        other: Union["PipelineFingerprintMixIn", "Pipeline"],
-    ) -> "Pipeline":
-        """Create a new Pipeline by combining this mapper with another."""
-        # avoid circular import
-        from ..pipeline import Pipeline
+    def __lshift__(self, other: P) -> P:
+        """Create a pipeline by combining this mapper with another."""
 
-        return Pipeline(self) << other
+        # create a copy of the other mapper before attaching it to the
+        # current mapper
+        to_return = other.detach()
 
-    def __rshift__(
-        self,
-        other: Union["PipelineFingerprintMixIn", "Pipeline"],
-    ) -> "Pipeline":
+        # if the other mapper is already attached to a pipeline, we need
+        # to recursively merge the pipelines; otherwise, we can just attach
+        # self to it.
+        if other.pipeline is not None:
+            to_merge = self << other.pipeline
+        else:
+            to_merge = self
+
+        to_return.pipeline = to_merge
+
+        return to_return
+
+    def __rshift__(self: P, other: "PipelineFingerprintMixIn") -> P:
         """Create a new Pipeline by combining this mapper with another."""
         return other << self
+
+    def __repr__(self) -> str:
+        """Return a string representation of this mapper."""
+        r = f"{self.__class__.__name__}({self.fingerprint})"
+        if self.pipeline is not None:
+            r += f" >> {self.pipeline}"
+        return r
+
+    def __deepcopy__(
+        self, memo: Optional[dict] = None
+    ) -> "PipelineFingerprintMixIn":
+        result = self.detach(memo)
+        if self.pipeline is not None:
+            result.pipeline = copy.deepcopy(self.pipeline, memo)
+
+        return result
+
+    def __getstate__(self) -> dict:
+        """Return the state of this mapper for pickling."""
+        state = {
+            "__dict__": {
+                k: v for k, v in self.__dict__.items() if k != "pipeline"
+            },
+            "__slots__": {
+                k: getattr(self, k) for k in getattr(self, "__slots__", [])
+            },
+            # pipeline gets its own special treatment, which
+            # is really just recursive pickling
+            "pipeline": pickle.dumps(self.pipeline),
+        }
+        # if self.pipeline is not None:
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        """Set the state of this mapper after unpickling."""
+        self.__dict__.update(state.get("__dict__", {}))
+        for k, v in state.get("__slots__", {}).items():
+            setattr(self, k, v)
+        self.pipeline = pickle.loads(state["pipeline"])
+
+    def detach(self: P, memo: Optional[dict] = None) -> P:
+        memo = memo or {}
+
+        # create a new empty class
+        cls = self.__class__
+        result = cls.__new__(cls)
+
+        # this dict helps with memoization in case of circular references
+        memo[id(self)] = result
+
+        for key in self.__dict__:
+            if key == "pipeline":
+                # don't copy the pipeline
+                setattr(result, key, None)
+            else:
+                # copy the rest of the attributes
+                setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
+
+        for slot in chain.from_iterable(
+            getattr(s, "__slots__", []) for s in self.__class__.__mro__
+        ):
+            # copy the slots
+            setattr(result, slot, copy.deepcopy(getattr(self, slot), memo))
+
+        return result
+
+    def __hash__(self) -> int:
+        h = hashlib.md5()
+        h.update(self.fingerprint.encode())
+        if self.pipeline is not None:
+            h.update(bytes_from_int(hash(self.pipeline)))
+        return int_from_bytes(h.hexdigest().encode())
+
+    def __eq__(self, other: object) -> bool:
+        """Check if this mapper is equal to another."""
+        if not isinstance(other, type(self)):
+            return False
+
+        return hash(self) == hash(other)
 
     def _get_mapper_fingerprint(self) -> str:
         """Compute a hash for this mapper; the hash depends of the arguments
@@ -70,11 +157,16 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
             frame_info: inspect.FrameInfo
             arg_info: inspect.ArgInfo
 
+        # we need to inspect all frames in the frames where the various
+        # __init__ methods in the MRO are called. This way we can get **all**
+        # the arguments passed to the constructor, including those passed
+        # through to super().__init__.
         stack_frames = [
             ExtInfo(arg_info=inspect.getargvalues(fr.frame), frame_info=fr)
             for fr in inspect.stack()
         ]
 
+        # filter out the frames that are not __init__ methods here
         init_calls = [
             frame
             for frame in stack_frames
@@ -92,11 +184,14 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         ]
 
         def _get_cls_name_from_frame_info(frame_ext_info: ExtInfo) -> str:
+            """Small helper function to get the name of the class from
+            the frame info."""
             cls_ = frame_ext_info.arg_info.locals.get(
                 "__class__", PipelineFingerprintMixIn
             )
             return f"{cls_.__module__}.{cls_.__name__}"
 
+        # putting together the full init signature here
         signature = {
             _get_cls_name_from_frame_info(frame): {
                 arg: frame.arg_info.locals[arg]
@@ -115,7 +210,6 @@ class SingleBaseMapper(
     MapMethodInterfaceMixIn,
     PipelineFingerprintMixIn,
     AbstractSingleBaseMapper,
-    metaclass=ABCMeta,
 ):
     """An abstract implementation of a Mapper that operates on a single
     element. All mappers that operate on a single element should subclass
@@ -126,7 +220,6 @@ class SingleBaseMapper(
     and return a single sample dictionary as output.
     """
 
-    @abstractmethod
     def transform(self, data: TransformElementType) -> TransformElementType:
         """Transform a single sample of a dataset. This method should be
         overridden by actual mapper implementations.
@@ -141,14 +234,15 @@ class SingleBaseMapper(
                 sample dictionary with string keys and values of any type.
                 The keys can be different from the input keys.
         """
-        raise NotImplementedError("Mapper subclass must implement transform")
+        raise NotImplementedError(
+            f"Subclasses {self.__class__.__name__} must implement transform"
+        )
 
 
 class BatchedBaseMapper(
     MapMethodInterfaceMixIn,
     PipelineFingerprintMixIn,
     AbstractBatchedBaseMapper,
-    metaclass=ABCMeta,
 ):
     """An abstract implementation of a Mapper that operates on a batch of
     elements. All mappers that operate on a batch should subclass this
@@ -160,7 +254,6 @@ class BatchedBaseMapper(
     returned may be different from the number of samples in the input.
     """
 
-    @abstractmethod
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
@@ -179,4 +272,6 @@ class BatchedBaseMapper(
                 iterable may be different from the number of samples in the
                 input.
         """
-        raise NotImplementedError("Mapper subclass must implement transform")
+        raise NotImplementedError(
+            f"Subclasses {self.__class__.__name__} must implement transform"
+        )

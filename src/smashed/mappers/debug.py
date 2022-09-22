@@ -1,7 +1,6 @@
 from typing import Iterable
 
-from ..base.mappers import BatchedBaseMapper, SingleBaseMapper
-from ..base.types import TransformElementType
+from ..base import BatchedBaseMapper, SingleBaseMapper, TransformElementType
 
 
 class DebugSingleMapper(SingleBaseMapper):

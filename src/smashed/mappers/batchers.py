@@ -1,7 +1,6 @@
 from typing import Iterable
 
-from ..base.mappers import BatchedBaseMapper
-from ..base.types import TransformElementType
+from ..base import BatchedBaseMapper, TransformElementType
 
 
 class FixedBatchSizeMapper(BatchedBaseMapper):

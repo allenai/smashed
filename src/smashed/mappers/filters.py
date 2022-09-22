@@ -1,8 +1,7 @@
 import operator
 from typing import Any, Callable, Iterable, NamedTuple
 
-from ..base.mappers import BatchedBaseMapper
-from ..base.types import TransformElementType
+from ..base import BatchedBaseMapper, TransformElementType
 from .types import RecurseOpMixIn
 
 VALID_OPERATIONS = {

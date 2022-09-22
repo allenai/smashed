@@ -1,18 +1,27 @@
+import inspect
 import json
 from collections import abc
 from csv import DictReader
-from typing import TYPE_CHECKING, Any, Iterable, List, Optional, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from necessary import necessary
-from trouting import trouting
 
-from ..base.mappers import BatchedBaseMapper
-from ..base.types import TransformElementType
+from ..base import BatchedBaseMapper, TransformElementType
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
         from datasets.arrow_dataset import Dataset
-        from datasets.dataset_dict import DatasetDict, IterableDatasetDict
+        from datasets.combine import concatenate_datasets, interleave_datasets
         from datasets.iterable_dataset import IterableDataset
         from datasets.load import load_dataset
 
@@ -28,50 +37,90 @@ with necessary("smart_open", soft=True) as SMART_OPEN_AVAILABLE:
 class HuggingFaceDatasetLoaderMapper(BatchedBaseMapper):
     def __init__(
         self,
-        **load_datasets_args: Any,
+        combine_strategy: Union[
+            Literal["concatenate"], Literal["interleave"]
+        ] = "concatenate",
+        fields_to_keep: Optional[List[str]] = None,
+        **kwargs,
     ):
-        if "path" not in load_datasets_args:
-            raise ValueError(
-                "datasets.load_dataset requires a path to a dataset."
+        if not HUGGINGFACE_DATASET_AVAILABLE:
+            raise ImportError(
+                "HuggingFace datasets is not installed. To use this mapper, "
+                "please install it with `pip install datasets`."
             )
 
-        self.load_datasets_args = load_datasets_args
+        valid_strategies = {"concatenate", "interleave"}
+        if combine_strategy not in valid_strategies:
+            raise ValueError(
+                "combine_strategy must be one of "
+                f"['concatenate', 'interleave'], got {combine_strategy}"
+            )
 
-    @trouting
-    def map(  # type: ignore
+        self.combine_strategy = combine_strategy
+
+        super().__init__(
+            input_fields=inspect.getfullargspec(load_dataset).args,
+            output_fields=fields_to_keep,
+        )
+
+    def map(
         self,
         dataset: Any,
         **map_kwargs: Any,
     ) -> Any:
-        # we need this map to be able to add the new interface below
-        # and handle types for which we don't have a new interface but our
-        # parent class has one
-        super().map(dataset, **map_kwargs)
+        transformed_dataset = self.transform(dataset)
 
-    @map.add_interface(dataset=type(None))
-    def map_none(  # type: ignore
-        self,
-        dataset: None,
-        **map_kwargs: Any,
-    ) -> Any:
-        # this loader
-        return self.transform([])
+        self._check_fields_datasets(
+            provided_fields=transformed_dataset.features.keys(),
+            expected_fields=self.output_fields,
+        )
 
+        return transformed_dataset
+
+    # wrapping this in if statement to avoid errors that get raised
+    # in case Datasets library is not available.
     if HUGGINGFACE_DATASET_AVAILABLE:
 
         def transform(
             self, data: Iterable[TransformElementType]
         ) -> Union[Dataset, IterableDataset]:
-            dataset = load_dataset(**self.load_datasets_args)
 
-            if isinstance(dataset, (DatasetDict, IterableDatasetDict)):
-                raise ValueError(
-                    "HuggingFaceDatasetLoader only supports loading a single "
-                    f"dataset, but the provided dataset is a {type(dataset)}. "
-                    "Please provide a `split` to this mapper."
+            datasets_accumulator = []
+            for dataset_spec in data:
+
+                # load this specific dataset
+                dataset = load_dataset(**dataset_spec)
+
+                # if the user has provided some output fields, we need to check
+                # if (1) they are
+                if (
+                    self.output_fields
+                    and getattr(dataset, "features", None) is not None
+                ):
+                    features = cast(dict, dataset.features)  # pyright: ignore
+
+                    if all(f in features for f in self.output_fields):
+                        raise ValueError(
+                            f"Dataset {dataset_spec} does not have the "
+                            "following fields:  {self.output_fields}"
+                        )
+
+                    dataset = dataset.remove_columns(
+                        [f for f in features if f not in self.output_fields]
+                    )
+
+                datasets_accumulator.append(dataset)
+
+            if len(datasets_accumulator) == 1:
+                return datasets_accumulator[0]
+            elif self.combine_strategy == "concatenate":
+                return concatenate_datasets(datasets_accumulator)
+            elif self.combine_strategy == "interleave":
+                return interleave_datasets(datasets_accumulator)
+            else:
+                raise RuntimeError(
+                    "This should never happen. Please report this bug."
                 )
-
-            return dataset
 
 
 class CsvLoaderMapper(BatchedBaseMapper):

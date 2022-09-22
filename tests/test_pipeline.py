@@ -5,15 +5,17 @@ Author: Luca Soldaini
 Email:  lucas@allenai.org
 """
 
+import copy
 import unittest
 
 from smashed.base.mappers import SingleBaseMapper
-from smashed.base.pipeline import Pipeline
 
 
 class MockMapper(SingleBaseMapper):
     """A mock mapper that returns the same data it receives.
     Used for testing."""
+
+    __slots__ = ("stage",)
 
     def __init__(self, stage: int):
         super().__init__()
@@ -22,29 +24,37 @@ class MockMapper(SingleBaseMapper):
     def transform(self, data: dict) -> dict:
         return {"stage": (data.get("stage", []) + [self.stage])}
 
-    def __eq__(self, __o: object) -> bool:
-        """Check if two mappers are equal; useful to
-        check if pipelines are equal."""
-
-        return isinstance(__o, MockMapper) and self.stage == __o.stage
-
 
 class TestPipeline(unittest.TestCase):
     """Test if pipelines compose correctly"""
+
+    def test_equality(self):
+        """Test if mappers can be detached from a pipeline"""
+        mapper1 = MockMapper(1)
+        pipeline = mapper1 >> MockMapper(2)
+
+        self.assertNotEqual(mapper1, pipeline)
+        self.assertEqual(mapper1, pipeline.detach())
 
     def test_rshift_lshift_implementations(self):
         """Test if two mappers compose correctly"""
         mapper1 = MockMapper(1)
         mapper2 = MockMapper(2)
-        pipeline = Pipeline(mapper1) >> Pipeline(mapper2)
-        self.assertEqual(pipeline, Pipeline(mapper1, mapper2))
+        pipeline = mapper1 >> mapper2
+        self.assertEqual(pipeline.detach(), mapper1)
+        self.assertEqual(
+            pipeline.pipeline.detach(), mapper2  # pyright: ignore
+        )
 
     def test_mappers_to_pipeline(self):
         """Test if mappers can be used as pipelines"""
         mapper1 = MockMapper(1)
         mapper2 = MockMapper(2)
-        pipeline = mapper1 >> mapper2
-        self.assertEqual(pipeline, Pipeline(mapper1, mapper2))
+        pipeline = mapper2 << mapper1
+        self.assertEqual(pipeline.detach(), mapper1)
+        self.assertEqual(
+            pipeline.pipeline.detach(), mapper2  # pyright: ignore
+        )
 
     def test_multiple_mappers_to_pipeline(self):
         """Test if multiple mappers can be used as pipelines"""
@@ -52,16 +62,23 @@ class TestPipeline(unittest.TestCase):
         mapper2 = MockMapper(2)
         mapper3 = MockMapper(3)
         pipeline = mapper1 >> mapper2 >> mapper3
-        self.assertEqual(pipeline, Pipeline(mapper1, mapper2, mapper3))
 
-    def test_pipeline_order(self):
-        """Test if the order of the mappers in a pipeline is respected"""
-        mapper1 = MockMapper(1)
-        mapper2 = MockMapper(2)
-        pipeline1 = mapper1 >> mapper2
-        pipeline2 = mapper1 << mapper2
-        self.assertNotEqual(pipeline1, pipeline2)
-        self.assertEqual(pipeline1.mappers, pipeline2.mappers[::-1])
+        self.assertIsInstance(pipeline, MockMapper)
+        self.assertEqual(pipeline.stage, 1)
+
+        self.assertIsInstance(pipeline.pipeline, MockMapper)
+        self.assertEqual(pipeline.pipeline.stage, 2)  # pyright: ignore
+
+        self.assertIsInstance(
+            pipeline.pipeline.pipeline, MockMapper  # pyright: ignore
+        )
+        self.assertEqual(
+            pipeline.pipeline.pipeline.stage, 3  # pyright: ignore
+        )
+
+        self.assertEqual(
+            pipeline.pipeline.pipeline.pipeline, None  # pyright: ignore
+        )
 
     def test_run_pipeline(self):
         """Test a full pipeline"""
@@ -71,3 +88,21 @@ class TestPipeline(unittest.TestCase):
         dataset = pipeline.map(dataset)
 
         self.assertEqual(dataset[0]["stage"], [0, 1, 2, 3])
+
+    def test_reconstruction_pipeline(self):
+        p1 = MockMapper(1) >> MockMapper(2) >> MockMapper(3)
+        p2 = (
+            p1.detach()
+            >> p1.pipeline.detach()  # pyright: ignore
+            >> p1.pipeline.pipeline.detach()  # pyright: ignore
+        )
+        p3 = copy.deepcopy(p1)
+        self.assertEqual(p1, p2)
+        self.assertEqual(p1, p3)
+
+        dataset = [{"stage": [0]}]
+        d1 = p1.map(dataset)
+        d2 = p2.map(dataset)
+        d3 = p3.map(dataset)
+        self.assertEqual(d1, d2)
+        self.assertEqual(d1, d3)
