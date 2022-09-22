@@ -2,10 +2,10 @@ import copy
 import hashlib
 import inspect
 import pickle
-from abc import ABCMeta, abstractmethod
 from itertools import chain
 from typing import Iterable, List, NamedTuple, Optional, TypeVar, Union
 
+from ..utils import bytes_from_int, int_from_bytes
 from .abstract import (
     AbstractBaseMapper,
     AbstractBatchedBaseMapper,
@@ -47,7 +47,7 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
 
         # create a copy of the other mapper before attaching it to the
         # current mapper
-        to_return = copy.deepcopy(other)
+        to_return = other.detach()
 
         # if the other mapper is already attached to a pipeline, we need
         # to recursively merge the pipelines; otherwise, we can just attach
@@ -75,9 +75,36 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
     def __deepcopy__(
         self, memo: Optional[dict] = None
     ) -> "PipelineFingerprintMixIn":
-        """Create a deep copy of this mapper, excluding the pipeline
-        From: https://stackoverflow.com/a/15774013/938048"""
+        result = self.detach(memo)
+        if self.pipeline is not None:
+            result.pipeline = copy.deepcopy(self.pipeline, memo)
 
+        return result
+
+    def __getstate__(self) -> dict:
+        """Return the state of this mapper for pickling."""
+        state = {
+            "__dict__": {
+                k: v for k, v in self.__dict__.items() if k != "pipeline"
+            },
+            "__slots__": {
+                k: getattr(self, k) for k in getattr(self, "__slots__", [])
+            },
+            # pipeline gets its own special treatment, which
+            # is really just recursive pickling
+            "pipeline": pickle.dumps(self.pipeline),
+        }
+        # if self.pipeline is not None:
+        return state
+
+    def __setstate__(self, state: dict) -> None:
+        """Set the state of this mapper after unpickling."""
+        self.__dict__.update(state.get("__dict__", {}))
+        for k, v in state.get("__slots__", {}).items():
+            setattr(self, k, v)
+        self.pipeline = pickle.loads(state["pipeline"])
+
+    def detach(self: P, memo: Optional[dict] = None) -> P:
         memo = memo or {}
 
         # create a new empty class
@@ -103,23 +130,19 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
 
         return result
 
-    def detach(self) -> "PipelineFingerprintMixIn":
-        return copy.deepcopy(self)
+    def __hash__(self) -> int:
+        h = hashlib.md5()
+        h.update(self.fingerprint.encode())
+        if self.pipeline is not None:
+            h.update(bytes_from_int(hash(self.pipeline)))
+        return int_from_bytes(h.hexdigest().encode())
 
     def __eq__(self, other: object) -> bool:
         """Check if this mapper is equal to another."""
         if not isinstance(other, type(self)):
             return False
 
-        if self.pipeline is not None and other.pipeline is not None:
-            return (
-                self.fingerprint == other.fingerprint
-                and self.pipeline == other.pipeline
-            )
-        elif self.pipeline is None and other.pipeline is None:
-            return self.fingerprint == other.fingerprint
-        else:
-            return False
+        return hash(self) == hash(other)
 
     def _get_mapper_fingerprint(self) -> str:
         """Compute a hash for this mapper; the hash depends of the arguments
@@ -187,7 +210,6 @@ class SingleBaseMapper(
     MapMethodInterfaceMixIn,
     PipelineFingerprintMixIn,
     AbstractSingleBaseMapper,
-    metaclass=ABCMeta,
 ):
     """An abstract implementation of a Mapper that operates on a single
     element. All mappers that operate on a single element should subclass
@@ -198,7 +220,6 @@ class SingleBaseMapper(
     and return a single sample dictionary as output.
     """
 
-    @abstractmethod
     def transform(self, data: TransformElementType) -> TransformElementType:
         """Transform a single sample of a dataset. This method should be
         overridden by actual mapper implementations.
@@ -213,14 +234,15 @@ class SingleBaseMapper(
                 sample dictionary with string keys and values of any type.
                 The keys can be different from the input keys.
         """
-        raise NotImplementedError("Mapper subclass must implement transform")
+        raise NotImplementedError(
+            f"Subclasses {self.__class__.__name__} must implement transform"
+        )
 
 
 class BatchedBaseMapper(
     MapMethodInterfaceMixIn,
     PipelineFingerprintMixIn,
     AbstractBatchedBaseMapper,
-    metaclass=ABCMeta,
 ):
     """An abstract implementation of a Mapper that operates on a batch of
     elements. All mappers that operate on a batch should subclass this
@@ -232,7 +254,6 @@ class BatchedBaseMapper(
     returned may be different from the number of samples in the input.
     """
 
-    @abstractmethod
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
@@ -251,4 +272,6 @@ class BatchedBaseMapper(
                 iterable may be different from the number of samples in the
                 input.
         """
-        raise NotImplementedError("Mapper subclass must implement transform")
+        raise NotImplementedError(
+            f"Subclasses {self.__class__.__name__} must implement transform"
+        )

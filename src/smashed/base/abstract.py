@@ -1,4 +1,3 @@
-from abc import ABCMeta, abstractmethod
 from typing import Any, Generic, Iterable, List, TypeVar, Union
 
 from .types import TransformElementType
@@ -7,7 +6,7 @@ D = TypeVar("D")
 S = TypeVar("S")
 
 
-class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
+class AbstractBaseMapper(Generic[D, S]):
     """An abstract implementation of a Mapper"""
 
     input_fields: List[str]
@@ -15,7 +14,6 @@ class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
     fingerprint: str
     pipeline: Union["AbstractBaseMapper", None]
 
-    @abstractmethod
     def map(self, dataset: D, **map_kwargs: Any) -> D:
         """Transform a dataset by applying this mapper's transform method.
 
@@ -27,9 +25,10 @@ class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
         Returns:
             dataset (DatasetType): The transformed dataset.
         """
-        ...
+        raise NotImplementedError(
+            f"Subclasses {self.__class__.__name__} must implement map"
+        )
 
-    @abstractmethod
     def transform(self, data: S) -> S:
         """Apply the transformation for this mapper. This method should be
         overridden by actual mapper implementations.
@@ -46,14 +45,15 @@ class AbstractBaseMapper(Generic[D, S], metaclass=ABCMeta):
                 same type as the input.
 
         """
-        ...
+        raise NotImplementedError(
+            f"Subclasses {self.__class__.__name__} must implement transform"
+        )
 
 
 class AbstractSingleBaseMapper(AbstractBaseMapper):
     """An abstract implementation of a Mapper that operates on a single
     element."""
 
-    @abstractmethod
     def transform(self, data: TransformElementType) -> TransformElementType:
         """Transform a single sample of a dataset. This method should be
         overridden by actual mapper implementations.
@@ -68,14 +68,15 @@ class AbstractSingleBaseMapper(AbstractBaseMapper):
                 sample dictionary with string keys and values of any type.
                 The keys can be different from the input keys.
         """
-        ...
+        raise NotImplementedError(
+            f"Subclasses {self.__class__.__name__} must implement transform"
+        )
 
 
-class AbstractBatchedBaseMapper(AbstractBaseMapper, metaclass=ABCMeta):
+class AbstractBatchedBaseMapper(AbstractBaseMapper):
     """An abstract implementation of a Mapper that operates on a batch of
     elements."""
 
-    @abstractmethod
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
@@ -94,4 +95,6 @@ class AbstractBatchedBaseMapper(AbstractBaseMapper, metaclass=ABCMeta):
                 iterable may be different from the number of samples in the
                 input.
         """
-        ...
+        raise NotImplementedError(
+            f"Subclasses {self.__class__.__name__} must implement transform"
+        )

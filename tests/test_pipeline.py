@@ -5,6 +5,7 @@ Author: Luca Soldaini
 Email:  lucas@allenai.org
 """
 
+import copy
 import unittest
 
 from smashed.base.mappers import SingleBaseMapper
@@ -87,3 +88,21 @@ class TestPipeline(unittest.TestCase):
         dataset = pipeline.map(dataset)
 
         self.assertEqual(dataset[0]["stage"], [0, 1, 2, 3])
+
+    def test_reconstruction_pipeline(self):
+        p1 = MockMapper(1) >> MockMapper(2) >> MockMapper(3)
+        p2 = (
+            p1.detach()
+            >> p1.pipeline.detach()
+            >> p1.pipeline.pipeline.detach()  # pyright: ignore  # pyright: ignore
+        )
+        p3 = copy.deepcopy(p1)
+        self.assertEqual(p1, p2)
+        self.assertEqual(p1, p3)
+
+        dataset = [{"stage": [0]}]
+        d1 = p1.map(dataset)
+        d2 = p2.map(dataset)
+        d3 = p3.map(dataset)
+        self.assertEqual(d1, d2)
+        self.assertEqual(d1, d3)

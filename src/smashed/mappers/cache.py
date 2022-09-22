@@ -1,18 +1,10 @@
 import hashlib
 import logging
 import pickle
+import shutil
 from functools import reduce
 from pathlib import Path
-import shutil
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    List,
-    Optional,
-    Sequence,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Union, cast
 
 from necessary import necessary
 from trouting import trouting
@@ -28,9 +20,6 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
 from ..base import SingleBaseMapper
 from ..base.mappers import PipelineFingerprintMixIn
 from .types import TransformElementType
-
-
-LOGGER = logging.getLogger(__name__)
 
 
 class DisableIntermediateCachingContext:
@@ -57,11 +46,12 @@ class DisableIntermediateCachingContext:
         def _enable_caching_hf(self, dataset: Any) -> None:
             enable_caching()
 
-    def __enter__(self):
-        self.enable_caching(self.dataset)
+    def __enter__(self) -> "DisableIntermediateCachingContext":
+        # self.disable_caching(self.dataset)
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.disable_caching(self.dataset)
+        self.enable_caching(self.dataset)
 
 
 class CachePathContext:
@@ -158,6 +148,7 @@ class EndCachingMapper(SingleBaseMapper):
     cache_path: Union[Path, None]
 
     def __init__(self):
+        self.logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
         self.cache_path = None
         super().__init__()
 
@@ -194,7 +185,7 @@ class EndCachingMapper(SingleBaseMapper):
                 "the StartCachingMapper to the pipeline?"
             )
 
-        LOGGER.warning(f"Saving cache to {self.cache_path}")
+        self.logger.warning(f"Saving cache to {self.cache_path}")
         self.save_cache(dataset, self.cache_path)
         return (
             self.pipeline.map(dataset, **map_kwargs)
@@ -208,6 +199,7 @@ class EndCachingMapper(SingleBaseMapper):
 
 class StartCachingMapper(SingleBaseMapper):
     def __init__(self, cache_dir: Optional[Union[str, Path]] = None):
+        self.logger = logging.getLogger(f"{__name__}.{type(self).__name__}")
         self.cache_dir = get_cache_dir(cache_dir)
         super().__init__()
 
@@ -263,13 +255,13 @@ class StartCachingMapper(SingleBaseMapper):
 
         with CachePathContext(
             base_dir=self.cache_dir, dataset=dataset, pipeline=pipeline
-        ) as cache_path:
+        ) as cache_path, DisableIntermediateCachingContext(dataset):
 
             # we add the path to the cache in case we need to save the output
             end_cache_mapper.cache_path = cache_path
 
             if cache_path.exists():
-                LOGGER.warning(f"Loading cache from {cache_path}")
+                self.logger.warning(f"Loading cache from {cache_path}")
 
                 # load the cache
                 dataset = self.load_cache(path=cache_path, dataset=dataset)

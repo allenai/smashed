@@ -5,17 +5,13 @@ Author: Luca Soldaini
 Email:  lucas@allenai.org
 """
 
+import tempfile
+import unittest
+
 from necessary import necessary
-from smashed.mappers import (
-    StartCachingMapper,
-    EndCachingMapper,
-)
 
 from smashed.base.mappers import SingleBaseMapper
-
-import tempfile
-
-import unittest
+from smashed.mappers import EndCachingMapper, StartCachingMapper
 
 with necessary("datasets"):
     from datasets.arrow_dataset import Dataset
@@ -51,10 +47,9 @@ class TestCaching(unittest.TestCase):
             self.assertEqual(out1, out2)
 
     def test_datasets_cache(self):
-        data = Dataset.from_dict({
-            "a": [i for i in range(5)],
-            "b": [i ** 2 for i in range(5)]
-        })
+        dt = Dataset.from_dict(
+            {"a": [i for i in range(5)], "b": [i**2 for i in range(5)]}
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             pipeline = (
@@ -64,7 +59,7 @@ class TestCaching(unittest.TestCase):
                 >> EndCachingMapper()
             )
 
-            out1 = pipeline.map(data)
-            out2 = pipeline.map(data)
+            out1 = pipeline.map(dt)
+            out2 = pipeline.map(dt)
 
             self.assertEqual([e for e in out1], [e for e in out2])
