@@ -93,8 +93,8 @@ class TestPipeline(unittest.TestCase):
         p1 = MockMapper(1) >> MockMapper(2) >> MockMapper(3)
         p2 = (
             p1.detach()
-            >> p1.pipeline.detach()
-            >> p1.pipeline.pipeline.detach()  # pyright: ignore  # pyright: ignore
+            >> p1.pipeline.detach()     # pyright: ignore
+            >> p1.pipeline.pipeline.detach()    # pyright: ignore
         )
         p3 = copy.deepcopy(p1)
         self.assertEqual(p1, p2)

@@ -47,7 +47,7 @@ class DisableIntermediateCachingContext:
             enable_caching()
 
     def __enter__(self) -> "DisableIntermediateCachingContext":
-        # self.disable_caching(self.dataset)
+        self.disable_caching(self.dataset)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
