@@ -69,20 +69,14 @@ class TestCaching(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             pipeline = (
-                StartCachingMapper(tmpdir)
-                >> MockMapper()
-                >> MockMapper()
+                StartCachingMapper(tmpdir) >> MockMapper() >> MockMapper()
             )
 
             with self.assertRaises(ValueError):
                 # This should fail because we didn't end the caching
                 pipeline.map([{"a": 1, "b": 2}])
 
-            pipeline = (
-                MockMapper()
-                >> MockMapper()
-                >> EndCachingMapper()
-            )
+            pipeline = MockMapper() >> MockMapper() >> EndCachingMapper()
 
             with self.assertRaises(ValueError):
                 # This should fail because we didn't start the caching
