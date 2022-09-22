@@ -16,12 +16,12 @@ from typing import (
 from necessary import necessary
 from trouting import trouting
 
-from .types import TransformBatchType, TransformElementType
 from .abstract import (
     AbstractBaseMapper,
     AbstractBatchedBaseMapper,
     AbstractSingleBaseMapper,
 )
+from .types import TransformBatchType, TransformElementType
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
@@ -227,5 +227,3 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 return self.pipeline.map(transformed_dataset, **map_kwargs)
             else:
                 return transformed_dataset
-
-            # return transformed_dataset

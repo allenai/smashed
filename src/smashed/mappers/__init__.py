@@ -1,4 +1,5 @@
 from .batchers import FixedBatchSizeMapper
+from .cache import EndCachingMapper, StartCachingMapper
 from .collators import (
     FromTokenizerListCollatorMapper,
     FromTokenizerTensorCollatorMapper,
@@ -37,6 +38,7 @@ __all__ = [
     "CsvLoaderMapper",
     "DebugBatchedMapper",
     "DebugSingleMapper",
+    "EndCachingMapper",
     "FilterMapper",
     "FixedBatchSizeMapper",
     "FlattenMapper",
@@ -56,6 +58,7 @@ __all__ = [
     "Python2TorchMapper",
     "SequencesConcatenateMapper",
     "SingleValueToSequenceMapper",
+    "StartCachingMapper",
     "TensorCollatorMapper",
     "TokenizerMapper",
     "TokensSequencesPaddingMapper",

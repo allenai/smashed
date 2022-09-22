@@ -6,14 +6,13 @@ from abc import ABCMeta, abstractmethod
 from itertools import chain
 from typing import Iterable, List, NamedTuple, Optional, TypeVar, Union
 
-from .types import TransformElementType
 from .abstract import (
     AbstractBaseMapper,
     AbstractBatchedBaseMapper,
     AbstractSingleBaseMapper,
 )
 from .interfaces import MapMethodInterfaceMixIn
-
+from .types import TransformElementType
 
 P = TypeVar("P", bound="PipelineFingerprintMixIn")
 

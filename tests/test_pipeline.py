@@ -9,8 +9,6 @@ import unittest
 
 from smashed.base.mappers import SingleBaseMapper
 
-# from smashed.base.pipeline import Pipeline
-
 
 class MockMapper(SingleBaseMapper):
     """A mock mapper that returns the same data it receives.
