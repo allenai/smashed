@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-from functools import reduce
 from math import floor
-import operator
-from typing import Dict, List, Literal, Optional, Union
 from string import Formatter
+from typing import Dict, List, Literal, Optional, Union
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
@@ -34,14 +32,16 @@ class EncodeFieldsMapper(SingleBaseMapper):
                     add_special_tokens=False,
                     return_attention_mask=False,
                     return_token_type_ids=False,
-                ).input_ids if name in self.fields_to_encode else field
+                ).input_ids
+                if name in self.fields_to_encode
+                else field
             )
             for name, field in data.items()
         }
         return tokenized
 
 
-class TruncateFieldsMapper(SingleBaseMapper):
+class TruncateNFieldsMapper(SingleBaseMapper):
     """Truncate n encoded sequences (a.k.a. list of integers)
     to a maximum length."""
 
@@ -52,7 +52,7 @@ class TruncateFieldsMapper(SingleBaseMapper):
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
         max_length: Optional[int] = None,
         length_penalty: int = 0,
-        strategy: Union[Literal['longest'], Literal['uniform']] = 'longest',
+        strategy: Union[Literal["longest"], Literal["uniform"]] = "longest",
     ):
         """
         Args:
@@ -80,7 +80,7 @@ class TruncateFieldsMapper(SingleBaseMapper):
         if tokenizer is None and max_length is None:
             raise ValueError("Tokenizer or max_length must be provided.")
         elif max_length is None:
-            max_length = getattr(tokenizer, 'model_max_length', None)
+            max_length = getattr(tokenizer, "model_max_length", None)
 
         if not isinstance(max_length, int):
             raise ValueError(
@@ -88,7 +88,7 @@ class TruncateFieldsMapper(SingleBaseMapper):
                 f"({type(max_length)})."
             )
 
-        if strategy not in ('longest', 'uniform'):
+        if strategy not in ("longest", "uniform"):
             raise ValueError(
                 "strategy must be one of 'longest' or 'uniform', "
                 f"not {strategy}"
@@ -139,12 +139,12 @@ class TruncateFieldsMapper(SingleBaseMapper):
         # the length from (a) sequences that are below the target length
         # and (b) any rounding errors from // above.
         longer_than_average = [
-            ls - target_length if ls > target_length else 0
-            for ls in lens
+            ls - target_length if ls > target_length else 0 for ls in lens
         ]
         extra_len_to_redistribute = (
             # we need to redistribute what we have lost in rounding...
-            max_len - target_length * len(lens)
+            max_len
+            - target_length * len(lens)
             # ... plus the extra saving
             + sum(target_length - ls for ls in lens if ls < target_length)
         )
@@ -175,11 +175,11 @@ class TruncateFieldsMapper(SingleBaseMapper):
         max_len = self.max_length - sum(
             len(data[field]) for field in self.fields_to_preserve
         )
-        if self.strategy == 'uniform':
+        if self.strategy == "uniform":
             truncated_lens = self._find_truncated_lens_uniform(
                 lens=lens_to_truncate, max_len=max_len
             )
-        elif self.strategy == 'longest':
+        elif self.strategy == "longest":
             truncated_lens = self._find_truncated_lens_longest(
                 lens=lens_to_truncate, max_len=max_len
             )
@@ -247,7 +247,7 @@ class PromptSegment:
         return cls(
             prompt_text=literal_text,
             field_name=field_name,
-            prompt_token_ids=token_ids
+            prompt_token_ids=token_ids,
         )
 
     @classmethod
@@ -255,10 +255,12 @@ class PromptSegment:
         cls,
         template: str,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
-    ) -> List['PromptSegment']:
+    ) -> List["PromptSegment"]:
         return [
             cls._from_template_single(
-                literal_text=lt, field_name=fn, tokenizer=tokenizer,
+                literal_text=lt,
+                field_name=fn,
+                tokenizer=tokenizer,
             )
             for lt, fn, _, _ in Formatter().parse(template)
         ]
@@ -290,13 +292,14 @@ class PromptSegment:
 
 class FillTextPromptMapper(SingleBaseMapper):
     """Fills a prompt template with text fields."""
+
     def __init__(self, prompt_template: str, output_field_name: str):
         self.prompt = PromptSegment.from_template(template=prompt_template)
         self.output_field_name = output_field_name
 
         super().__init__(
             input_fields=[p.field_name for p in self.prompt if p.field_name],
-            output_fields=[output_field_name]
+            output_fields=[output_field_name],
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
@@ -313,7 +316,7 @@ class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         tokenizer: PreTrainedTokenizerBase,
         output_prefix: Optional[str] = None,
         return_attention_mask: bool = True,
-        return_token_type_ids: bool = False
+        return_token_type_ids: bool = False,
     ) -> None:
         self.tokenizer = tokenizer
         self._prefix = output_prefix
@@ -335,22 +338,24 @@ class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         super().__init__(
             input_fields=[p.field_name for p in self.prompt if p.field_name],
             output_fields=[
-                self.prefix(field_name) for field_name in
-                self.output_fields_from_tokenizer_kwargs(
+                self.prefix(field_name)
+                for field_name in self.output_fields_from_tokenizer_kwargs(
                     tokenizer_kwargs={
                         "return_attention_mask": return_attention_mask,
                         "return_token_type_ids": return_token_type_ids,
                     }
                 )
-            ]
+            ],
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        encoded_prompt = self.bos_token_ids + sum(
-            (segment.fill_encoded(data) for segment in self.prompt), []
-        ) + self.eos_token_ids
+        encoded_prompt = (
+            self.bos_token_ids
+            + sum((segment.fill_encoded(data) for segment in self.prompt), [])
+            + self.eos_token_ids
+        )
 
-        output = {self.prefix("input_ids") : encoded_prompt}
+        output = {self.prefix("input_ids"): encoded_prompt}
         if self.return_attention_mask:
             output[self.prefix("attention_mask")] = [1] * len(encoded_prompt)
         if self.return_token_type_ids:

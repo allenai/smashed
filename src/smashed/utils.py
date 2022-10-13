@@ -2,13 +2,12 @@ import importlib.metadata
 import os
 import warnings
 from pathlib import Path
-from typing import Optional, Type, TypeVar, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Type, TypeVar, Union
 
 import platformdirs
 
-
 if TYPE_CHECKING:
-    from .base import (SingleBaseMapper, BatchedBaseMapper)
+    from .base import BatchedBaseMapper, SingleBaseMapper
 
 
 M = TypeVar("M", "SingleBaseMapper", "BatchedBaseMapper")

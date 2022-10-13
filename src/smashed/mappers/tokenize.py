@@ -20,25 +20,24 @@ class GetTokenizerOutputFieldsMixin:
     _prefix: Optional[str]
 
     def output_fields_from_tokenizer_kwargs(
-        self,
-        tokenizer_kwargs: Optional[dict] = None
+        self, tokenizer_kwargs: Optional[dict] = None
     ) -> List[str]:
 
         tokenizer_kwargs = tokenizer_kwargs or {}
 
-        output_fields = ['input_ids']
+        output_fields = ["input_ids"]
 
-        if tokenizer_kwargs.get('return_attention_mask', False):
+        if tokenizer_kwargs.get("return_attention_mask", False):
             output_fields.append("attention_mask")
-        if tokenizer_kwargs.get('return_token_type_ids', False):
+        if tokenizer_kwargs.get("return_token_type_ids", False):
             output_fields.append("token_type_ids")
-        if tokenizer_kwargs.get('return_overflowing_tokens', False):
+        if tokenizer_kwargs.get("return_overflowing_tokens", False):
             output_fields.append("overflow_to_sample_mapping")
-        if tokenizer_kwargs.get('return_special_tokens_mask', False):
+        if tokenizer_kwargs.get("return_special_tokens_mask", False):
             output_fields.append("special_tokens_mask")
-        if tokenizer_kwargs.get('return_offsets_mapping', False):
+        if tokenizer_kwargs.get("return_offsets_mapping", False):
             output_fields.append("offset_mapping")
-        if tokenizer_kwargs.get('return_length', False):
+        if tokenizer_kwargs.get("return_length", False):
             output_fields.append("length")
 
         return output_fields
@@ -112,7 +111,7 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
     def transform(self, data: TransformElementType) -> TransformElementType:
         batch_encoding = self.tokenizer(
             (to_tok_field := data[self.to_tokenize_filed]),
-            **self.tokenize_kwargs
+            **self.tokenize_kwargs,
         )
 
         # token_to_word mappings are unfortunately not natively returned by

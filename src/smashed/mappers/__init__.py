@@ -25,6 +25,12 @@ from .multiseq import (
     TokensSequencesPaddingMapper,
     TokenTypeIdsSequencePaddingMapper,
 )
+from .prompting import (
+    EncodeFieldsMapper,
+    FillEncodedPromptMapper,
+    FillTextPromptMapper,
+    TruncateNFieldsMapper,
+)
 from .shape import FlattenMapper, UnpackingMapper
 from .text import FtfyMapper
 from .tokenize import PaddingMapper, TokenizerMapper, ValidUnicodeMapper
@@ -38,7 +44,10 @@ __all__ = [
     "CsvLoaderMapper",
     "DebugBatchedMapper",
     "DebugSingleMapper",
+    "EncodeFieldsMapper",
     "EndCachingMapper",
+    "FillEncodedPromptMapper",
+    "FillTextPromptMapper",
     "FilterMapper",
     "FixedBatchSizeMapper",
     "FlattenMapper",
@@ -64,6 +73,7 @@ __all__ = [
     "TokensSequencesPaddingMapper",
     "TokenTypeIdsSequencePaddingMapper",
     "Torch2PythonMapper",
+    "TruncateNFieldsMapper",
     "UnpackingMapper",
     "ValidUnicodeMapper",
 ]
