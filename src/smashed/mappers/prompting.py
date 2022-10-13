@@ -1,64 +1,17 @@
-from bisect import bisect_right
 from dataclasses import dataclass
-from enum import Enum
 from math import floor
-import random
-import unicodedata
-from typing import Any, List, Literal, Optional, Sequence, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Union
 from string import Formatter
-
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from ..base import SingleBaseMapper, TransformElementType
-
-
-
-@dataclass
-class PromptSegment:
-    __slots__ = ("prompt_text", "field_name", "prompt_token_ids",)
-
-    prompt_text: str
-    field_name: Union[str, None]
-    prompt_token_ids: List[int]
-    truncate: bool
-
-    @classmethod
-    def _from_template_single(
-        cls,
-        literal_text: str,
-        field_name: Union[str, None],
-        format_spec: Union[str, None],
-        tokenizer: PreTrainedTokenizerBase,
-    ) -> "PromptSegment":
-        token_ids = tokenizer.encode(literal_text, add_special_tokens=False)
-        return cls(
-            prompt_text=literal_text,
-            field_name=field_name,
-            prompt_token_ids=token_ids,
-            truncate=bool(format_spec),
-        )
-
-    @classmethod
-    def from_template(
-        cls, template: str, tokenizer: PreTrainedTokenizerBase,
-    ) -> List['PromptSegment']:
-        return [
-            cls._from_template_single(
-                literal_text=literal_text,
-                field_name=field_name,
-                tokenizer=tokenizer,
-                format_spec=format_spec,
-            )
-            for literal_text, field_name, format_spec, _
-            in Formatter().parse(template)
-        ]
-
-    def __len__(self):
-        return len(self.prompt_token_ids)
+from .tokenize import GetTokenizerOutputFieldsMixin
 
 
 class EncodeFieldsMapper(SingleBaseMapper):
+    """Simply encodes the fields in the input data using the tokenizer."""
+
     def __init__(
         self,
         fields_to_encode: List[str],
@@ -87,21 +40,50 @@ class EncodeFieldsMapper(SingleBaseMapper):
 
 
 class TruncateFieldsMapper(SingleBaseMapper):
+    """Truncate n encoded sequences (a.k.a. list of integers)
+    to a maximum length."""
+
     def __init__(
         self,
         fields_to_truncate: List[str],
-        tokenizer: PreTrainedTokenizerBase,
+        fields_to_preserve: List[str],
+        tokenizer: Optional[PreTrainedTokenizerBase] = None,
         max_length: Optional[int] = None,
-        penalty: int = 0,
-        strategy: Union[
-            Literal['longest'],
-            Literal['uniform'],
-         ] = 'longest',
+        length_penalty: int = 0,
+        strategy: Union[Literal['longest'], Literal['uniform']] = 'longest',
     ):
-        max_length = max_length or tokenizer.model_max_length
+        """
+        Args:
+            fields_to_truncate (List[str]): list of fields to truncate;
+                these fields must be a sequence of tokens or token ids.
+            fields_to_preserve (List[str]): list of fields to preserve;
+                these are fields that are not truncated, but are used to
+                compute the length to truncate fields to.
+            tokenizer (PreTrainedTokenizerBase, optional): tokenizer to use
+                to compute the maximum length; if not provided, max_length
+                must be provided. Defaults to None.
+            max_length (int, optional): maximum length to truncate to; if not
+                provided, tokenizer must be provided. Defaults to None.
+            length_penalty (int, optional): additional length penalty to apply
+                to the maximum length. This is useful in cases when truncation
+                is being done for prompting, so the length of the prompt itself
+                must be taken into account. Defaults to 0.
+            strategy (Union[Literal['longest'], Literal['uniform']], optional):
+                strategy to use to compute the maximum length. If 'longest',
+                longer sequences are truncated first to stay within the maximum
+                length. If 'uniform', all sequences are truncated by the same
+                amount. Defaults to 'longest'.
+        """
+
+        if tokenizer is None and max_length is None:
+            raise ValueError("Tokenizer or max_length must be provided.")
+        elif max_length is None:
+            max_length = getattr(tokenizer, 'model_max_length', None)
+
         if not isinstance(max_length, int):
             raise ValueError(
-                f"max_length must be an integer, not {type(max_length)}"
+                f"max_length must be an integer, not {max_length} "
+                f"({type(max_length)})."
             )
 
         if strategy not in ('longest', 'uniform'):
@@ -111,18 +93,21 @@ class TruncateFieldsMapper(SingleBaseMapper):
             )
 
         self.tokenizer = tokenizer
-        self.fields_to_truncate = set(fields_to_truncate)
-        self.max_length = max_length - penalty
+        self.fields_to_truncate = sorted(set(fields_to_truncate))
+        self.fields_to_preserve = sorted(set(fields_to_preserve))
+        self.max_length = max_length - length_penalty
         self.strategy = strategy
         super().__init__(
-            input_fields=fields_to_truncate,
-            output_fields=fields_to_truncate,
+            input_fields=self.fields_to_truncate + self.fields_to_preserve,
+            output_fields=self.fields_to_truncate + self.fields_to_preserve,
         )
 
     @classmethod
     def _find_truncated_lens_uniform(
         cls, lens: List[int], max_len: int
     ) -> List[int]:
+        """Truncate all sequences by the same proportion to stay within the
+        maximum length."""
 
         reduction_fraction = max_len / sum(lens)
 
@@ -179,39 +164,160 @@ class TruncateFieldsMapper(SingleBaseMapper):
         ]
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        sequences_to_truncate = [
-            field for name, field in data.items()
-            if name in self.fields_to_truncate
+        # these are the lengths of the fields that we are maybe truncating
+        lens_to_truncate = [
+            len(data[field]) for field in self.fields_to_truncate
         ]
 
-        # total_original_len = sum(lens)
+        # adjust max length to account for the length of the preserved fields
+        max_len = self.max_length - sum(
+            len(data[field]) for field in self.fields_to_preserve
+        )
+        if self.strategy == 'uniform':
+            truncated_lens = self._find_truncated_lens_uniform(
+                lens=lens_to_truncate, max_len=max_len
+            )
+        elif self.strategy == 'longest':
+            truncated_lens = self._find_truncated_lens_longest(
+                lens=lens_to_truncate, max_len=max_len
+            )
+        else:
+            raise ValueError(f"Unknown strategy {self.strategy}")
+
+        for field, length in zip(self.fields_to_truncate, truncated_lens):
+            data[field] = data[field][:length]
+
+        return data
 
 
+@dataclass
+class PromptSegment:
+    __slots__ = ("prompt_text", "field_name", "prompt_token_ids",)
 
-# class TruncateFieldsInPrompt(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
-#     def __init__(
-#         self,
-#         template: str,
-#         tokenizer: PreTrainedTokenizerBase,
-#         max_length: Optional[int] = None,
-#         truncation_strategy: str = "longest",
-#         **tk_kwargs: Any,
-#     ) -> None:
-#         self.tokenizer = tokenizer
+    prompt_text: str
+    field_name: Union[str, None]
+    prompt_token_ids: Optional[List[int]]
 
-#         self.prompt = PromptSegment.from_template(
-#             template=template,
-#             tokenizer=tokenizer
-#         )
-#         self.max_length = (
-#             max_length or tokenizer.model_max_length
-#         ) - sum(len(p) for p in self.prompt)
+    @classmethod
+    def _from_template_single(
+        cls,
+        literal_text: str,
+        field_name: Union[str, None],
+        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+    ) -> "PromptSegment":
+        if tokenizer is not None:
+            token_ids = tokenizer.encode(
+                literal_text, add_special_tokens=False
+            )
+        else:
+            token_ids = None
+        return cls(
+            prompt_text=literal_text,
+            field_name=field_name,
+            prompt_token_ids=token_ids
+        )
 
-#         output_fields = self.get_tokenizer_output_fields(**tk_kwargs)
-#         super().__init__(
-#             input_fields=[ps.field_name for ps in self.prompt if ps.field_name],
-#             output_fields=output_fields
-#         )
+    @classmethod
+    def from_template(
+        cls,
+        template: str,
+        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+    ) -> List['PromptSegment']:
+        return [
+            cls._from_template_single(
+                literal_text=lt, field_name=fn, tokenizer=tokenizer,
+            )
+            for lt, fn, _, _ in Formatter().parse(template)
+        ]
 
-#     def transform(self, data: TransformElementType) -> TransformElementType:
-#         ...
+    def __len__(self):
+        if self.prompt_token_ids is None:
+            return len(self.prompt_text)
+        else:
+            return len(self.prompt_token_ids)
+
+    def fill_encoded(self, data: Dict[str, List[int]]) -> List[int]:
+        if self.prompt_token_ids is None:
+            raise ValueError(
+                "Cannot fill encoded prompt segment that was initialized"
+                " without a tokenizer."
+            )
+
+        if self.field_name:
+            return self.prompt_token_ids + data[self.field_name]
+        else:
+            return self.prompt_token_ids
+
+    def fill_text(self, data: Dict[str, str]) -> str:
+        if self.field_name:
+            return self.prompt_text + data[self.field_name]
+        else:
+            return self.prompt_text
+
+
+class FillTextPrompt(SingleBaseMapper):
+    """Fills a prompt template with text fields."""
+    def __init__(self, prompt_template: str, output_field_name: str):
+        self.prompt = PromptSegment.from_template(template=prompt_template)
+        self.output_field_name = output_field_name
+
+        super().__init__(
+            input_fields=[p.field_name for p in self.prompt if p.field_name],
+            output_fields=[output_field_name]
+        )
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        data[self.output_field_name] = "".join(
+            segment.fill_text(data) for segment in self.prompt
+        )
+        return data
+
+
+class FillEncodedPrompt(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
+    def __init__(
+        self,
+        template: str,
+        tokenizer: PreTrainedTokenizerBase,
+        output_prefix: Optional[str] = None,
+        **tokenizer_kwargs: Any,
+    ) -> None:
+        self.tokenizer = tokenizer
+        self._prefix = output_prefix
+
+        self.bos_token_ids = (
+            [] if tokenizer.bos_token_id is None else [bos_token_id]
+        )
+        self.eos_token_ids = (
+            [] if tokenizer.eos_token_id is None else [eos_token_id]
+        )
+
+        self.prompt = PromptSegment.from_template(
+            template=template, tokenizer=tokenizer
+        )
+
+        super().__init__(
+            input_fields=[p.field_name for p in self.prompt if p.field_name],
+            output_fields=[
+                self.prefix(field_name) for field_name in
+                self.output_fields_from_tokenizer_kwargs(
+                    tokenizer_kwargs=tokenizer_kwargs
+                )
+            ]
+        )
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        encoded_prompt = self.bos_token_ids + [
+            segment.fill_encoded(data) for segment in self.prompt
+        ] + self.eos_token_ids
+
+        data.update(
+            self.tokenizer(
+                encoded_prompt,
+                return_tensors="pt",
+                padding="max_length",
+                truncation=True,
+                max_length=self.tokenizer.model_max_length,
+            )
+        )
+
+        return data
