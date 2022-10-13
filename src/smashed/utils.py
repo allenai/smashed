@@ -2,9 +2,16 @@ import importlib.metadata
 import os
 import warnings
 from pathlib import Path
-from typing import Optional, Type, Union
+from typing import Optional, Type, TypeVar, Union, TYPE_CHECKING
 
 import platformdirs
+
+
+if TYPE_CHECKING:
+    from .base import (SingleBaseMapper, BatchedBaseMapper)
+
+
+M = TypeVar("M", "SingleBaseMapper", "BatchedBaseMapper")
 
 
 def get_version() -> str:
@@ -83,3 +90,13 @@ def int_from_bytes(b: bytes) -> int:
 def bytes_from_int(i: int) -> bytes:
     """Convert an integer to a byte string."""
     return i.to_bytes((i.bit_length() + 7) // 8, byteorder="big")
+
+
+def make_pipeline(
+    first_mapper: M,
+    *rest_mappers: Union["SingleBaseMapper", "BatchedBaseMapper"]
+) -> M:
+    """Make a pipeline of mappers."""
+    for mapper in rest_mappers:
+        first_mapper = first_mapper.chain(mapper)
+    return first_mapper
