@@ -5,15 +5,47 @@
 
 """
 
+from dataclasses import dataclass
+from enum import Enum
 import unicodedata
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Sequence, Union
+from string import Formatter
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from ..base import SingleBaseMapper, TransformElementType
 
 
-class TokenizerMapper(SingleBaseMapper):
+
+class GetTokenizerOutputFieldsMixin:
+    tokenizer: PreTrainedTokenizerBase
+
+    def get_tokenizer_output_fields(
+        self,
+        tokenizer_kwargs: Optional[dict] = None
+    ) -> List[str]:
+
+        tokenizer_kwargs = tokenizer_kwargs or {}
+
+        output_fields = ['input_ids']
+
+        if 'return_attention_mask' in tokenizer_kwargs:
+            output_fields.append("attention_mask")
+        if 'return_token_type_ids' in tokenizer_kwargs:
+            output_fields.append("token_type_ids")
+        if 'return_overflowing_tokens' in tokenizer_kwargs:
+            output_fields.append("overflow_to_sample_mapping")
+        if 'return_special_tokens_mask' in tokenizer_kwargs:
+            output_fields.append("special_tokens_mask")
+        if 'return_offsets_mapping' in tokenizer_kwargs:
+            output_fields.append("offset_mapping")
+        if 'return_length' in tokenizer_kwargs:
+            output_fields.append("length")
+
+        return output_fields
+
+
+class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerBase,
@@ -41,35 +73,16 @@ class TokenizerMapper(SingleBaseMapper):
             "add_special_tokens": add_special_tokens,
             "max_length": max_length,
             "is_split_into_words": is_split_into_words,
+            "return_attention_mask": return_attention_mask,
+            "return_token_type_ids": return_token_type_ids,
+            "return_overflowing_tokens": return_overflowing_tokens,
+            "return_special_tokens_mask": return_special_tokens_mask,
+            "return_offsets_mapping": return_offsets_mapping,
+            "return_length": return_length,
             **(tk_kwargs or {}),
         }
 
-        output_fields = ["input_ids"]
-
-        # various options for the tokenizer affect which fields are returned
-        tk_kwargs["return_attention_mask"] = return_attention_mask
-        if return_attention_mask:
-            output_fields.append("attention_mask")
-
-        tk_kwargs["return_token_type_ids"] = return_token_type_ids
-        if return_token_type_ids:
-            output_fields.append("token_type_ids")
-
-        tk_kwargs["return_overflowing_tokens"] = return_overflowing_tokens
-        if return_overflowing_tokens:
-            output_fields.append("overflow_to_sample_mapping")
-
-        tk_kwargs["return_special_tokens_mask"] = return_special_tokens_mask
-        if return_special_tokens_mask:
-            output_fields.append("special_tokens_mask")
-
-        tk_kwargs["return_offsets_mapping"] = return_offsets_mapping
-        if return_offsets_mapping:
-            output_fields.append("offset_mapping")
-
-        tk_kwargs["return_length"] = return_length
-        if return_length:
-            output_fields.append("length")
+        output_fields = self.get_tokenizer_output_fields(tk_kwargs)
 
         self.return_word_ids = self.return_words = False
         if "is_split_into_words" in tk_kwargs and return_word_ids:
