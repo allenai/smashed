@@ -1,5 +1,5 @@
 """
-
+Bunch of tokenization mappers for the smashed library.
 
 @lucas, @kylel
 
@@ -10,6 +10,12 @@ from typing import Any, List, Optional
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from ..base import SingleBaseMapper, TransformElementType
+
+__all__ = [
+    "PaddingMapper",
+    "TokenizerMapper",
+    "ValidUnicodeMapper",
+]
 
 
 class GetTokenizerOutputFieldsMixin:
@@ -50,6 +56,8 @@ class GetTokenizerOutputFieldsMixin:
 
 
 class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
+    """Tokenize a field using a tokenizer."""
+
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerBase,
@@ -68,6 +76,40 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         return_words: Optional[bool] = False,
         **tokenizer_kwargs: Any,
     ) -> None:
+        """
+        Args:
+            tokenizer (PreTrainedTokenizerBase): A tokenizer from the
+                huggingface/transformers library.
+            input_field (str): The field to tokenize.
+            output_prefix (Optional[str], optional): A prefix to add to all
+                output fields. Defaults to None.
+            add_special_tokens (Optional[bool], optional): Whether or not to
+                add special tokens to the input. Defaults to True.
+            max_length (Optional[int], optional): The maximum length of the
+                input. If not provided, tokenizer.model_max_length will be
+                used. Defaults to None.
+            is_split_into_words (bool, optional): Whether or not the input
+                is already split into words. Defaults to False.
+            return_token_type_ids (bool, optional): Whether or not to return
+                token type ids. Defaults to False.
+            return_attention_mask (bool, optional): Whether or not to return
+                attention masks. Defaults to True.
+            return_overflowing_tokens (bool, optional): Whether or not to
+                return overflowing tokens. Defaults to False.
+            return_special_tokens_mask (bool, optional): Whether or not to
+                return special tokens masks. Defaults to False.
+            return_offsets_mapping (bool, optional): Whether or not to return
+                offsets mappings. Defaults to False.
+            return_length (bool, optional): Whether or not to return the
+                length of the input. Defaults to False.
+            return_word_ids (bool, optional): Whether or not to return the
+                word ids. Defaults to False.
+            return_words (bool, optional): Whether or not to return the
+                words. Defaults to False.
+            tokenizer_kwargs (Any): Additional keyword arguments to pass
+                to the tokenizer; these will override the above arguments.
+        """
+
         self.to_tokenize_filed = input_field
         self.tokenizer = tokenizer
         self._prefix = output_prefix

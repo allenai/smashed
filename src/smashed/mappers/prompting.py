@@ -8,6 +8,13 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from ..base import SingleBaseMapper, TransformElementType
 from .tokenize import GetTokenizerOutputFieldsMixin
 
+__all__ = [
+    "EncodeFieldsMapper",
+    "FillEncodedPromptMapper",
+    "FillTextPromptMapper",
+    "TruncateNFieldsMapper",
+]
+
 
 class EncodeFieldsMapper(SingleBaseMapper):
     """Simply encodes the fields in the input data using the tokenizer."""
@@ -16,8 +23,19 @@ class EncodeFieldsMapper(SingleBaseMapper):
         self,
         fields_to_encode: List[str],
         tokenizer: PreTrainedTokenizerBase,
+        is_split_into_words: Optional[bool] = False,
     ):
+        """
+        Args:
+            fields_to_encode (List[str]): The name of the fields to encode.
+            tokenizer (PreTrainedTokenizerBase): A huggingface/tokenizer
+                to use for encoding.
+            is_split_into_words (bool, optional): Whether the input fields
+                are already split into words. Defaults to False.
+        """
+
         self.tokenizer = tokenizer
+        self.is_split_into_words = is_split_into_words
         self.fields_to_encode = set(fields_to_encode)
         super().__init__(
             input_fields=fields_to_encode,
@@ -32,6 +50,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
                     add_special_tokens=False,
                     return_attention_mask=False,
                     return_token_type_ids=False,
+                    is_split_into_words=self.is_split_into_words,
                 ).input_ids
                 if name in self.fields_to_encode
                 else field
