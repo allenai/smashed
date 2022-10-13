@@ -285,10 +285,10 @@ class FillEncodedPrompt(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         self._prefix = output_prefix
 
         self.bos_token_ids = (
-            [] if tokenizer.bos_token_id is None else [bos_token_id]
+            [] if tokenizer.bos_token_id is None else [tokenizer.bos_token_id]
         )
         self.eos_token_ids = (
-            [] if tokenizer.eos_token_id is None else [eos_token_id]
+            [] if tokenizer.eos_token_id is None else [tokenizer.eos_token_id]
         )
 
         self.prompt = PromptSegment.from_template(
