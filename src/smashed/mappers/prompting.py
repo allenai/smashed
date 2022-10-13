@@ -192,11 +192,34 @@ class TruncateFieldsMapper(SingleBaseMapper):
 
 @dataclass
 class PromptSegment:
-    __slots__ = ("prompt_text", "field_name", "prompt_token_ids",)
+    """Class to represent a segment of a prompt. Not meant to be used
+    directly by smashed users.
+
+    A segment of a prompt is a text prefix and optionally field where
+    to insert data. For example, the following template:
+
+        "{a} is a {b} with {c}."
+
+    will result in the following segments:
+
+        PromptSegment(prompt_text="", field_name="a")
+        PromptSegment(prompt_text=" is a ", field_name="b")
+        PromptSegment(prompt_text=" with ", field_name="c")
+        PromptSegment(prompt_text=" .", field_name=None)
+
+    To parse a full template into segments, use the `from_template`
+    class method.
+
+    Prompts can be filled with text using the `fill_text` method. If a
+    tokenized is provided to `from_template`, one can also fill with token
+    ids using the `fill_encoded` method.
+    """
+
+    __slots__ = ("prompt_text", "field_name", "prompt_token_ids")
 
     prompt_text: str
     field_name: Union[str, None]
-    prompt_token_ids: Optional[List[int]]
+    prompt_token_ids: Optional[List[int]] = None
 
     @classmethod
     def _from_template_single(
@@ -279,10 +302,14 @@ class FillEncodedPrompt(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         template: str,
         tokenizer: PreTrainedTokenizerBase,
         output_prefix: Optional[str] = None,
-        **tokenizer_kwargs: Any,
+        return_attention_mask: bool = True,
+        return_token_type_ids: bool = True
     ) -> None:
         self.tokenizer = tokenizer
         self._prefix = output_prefix
+
+        self.return_attention_mask = return_attention_mask
+        self.return_token_type_ids = return_token_type_ids
 
         self.bos_token_ids = (
             [] if tokenizer.bos_token_id is None else [tokenizer.bos_token_id]
@@ -300,7 +327,10 @@ class FillEncodedPrompt(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
             output_fields=[
                 self.prefix(field_name) for field_name in
                 self.output_fields_from_tokenizer_kwargs(
-                    tokenizer_kwargs=tokenizer_kwargs
+                    tokenizer_kwargs={
+                        "return_attention_mask": return_attention_mask,
+                        "return_token_type_ids": return_token_type_ids,
+                    }
                 )
             ]
         )
@@ -310,14 +340,12 @@ class FillEncodedPrompt(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
             segment.fill_encoded(data) for segment in self.prompt
         ] + self.eos_token_ids
 
-        data.update(
-            self.tokenizer(
-                encoded_prompt,
-                return_tensors="pt",
-                padding="max_length",
-                truncation=True,
-                max_length=self.tokenizer.model_max_length,
+        data[self.prefix("input_ids")] = encoded_prompt
+        if self.return_attention_mask:
+            data[self.prefix("attention_mask")] = (
+                [self.tokenizer.mask_token_id] * len(encoded_prompt)
             )
-        )
+        if self.return_token_type_ids:
+            data[self.prefix("token_type_ids")] = [0] * len(encoded_prompt)
 
         return data
