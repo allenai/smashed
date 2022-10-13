@@ -17,6 +17,7 @@ class GetTokenizerOutputFieldsMixin:
     that will be passed a to tokenizer.__call__ method."""
 
     tokenizer: PreTrainedTokenizerBase
+    _prefix: Optional[str]
 
     def output_fields_from_tokenizer_kwargs(
         self,
@@ -27,20 +28,26 @@ class GetTokenizerOutputFieldsMixin:
 
         output_fields = ['input_ids']
 
-        if 'return_attention_mask' in tokenizer_kwargs:
+        if tokenizer_kwargs.get('return_attention_mask', False):
             output_fields.append("attention_mask")
-        if 'return_token_type_ids' in tokenizer_kwargs:
+        if tokenizer_kwargs.get('return_token_type_ids', False):
             output_fields.append("token_type_ids")
-        if 'return_overflowing_tokens' in tokenizer_kwargs:
+        if tokenizer_kwargs.get('return_overflowing_tokens', False):
             output_fields.append("overflow_to_sample_mapping")
-        if 'return_special_tokens_mask' in tokenizer_kwargs:
+        if tokenizer_kwargs.get('return_special_tokens_mask', False):
             output_fields.append("special_tokens_mask")
-        if 'return_offsets_mapping' in tokenizer_kwargs:
+        if tokenizer_kwargs.get('return_offsets_mapping', False):
             output_fields.append("offset_mapping")
-        if 'return_length' in tokenizer_kwargs:
+        if tokenizer_kwargs.get('return_length', False):
             output_fields.append("length")
 
         return output_fields
+
+    def prefix(self, field_or_dict: str) -> str:
+        if self._prefix:
+            return f"{self.prefix}{field_or_dict}"
+        else:
+            return field_or_dict
 
 
 class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
@@ -62,9 +69,9 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         return_words: Optional[bool] = False,
         **tokenizer_kwargs: Any,
     ) -> None:
-        self.prefix = f"{output_prefix}_" if output_prefix else ""
         self.to_tokenize_filed = input_field
         self.tokenizer = tokenizer
+        self._prefix = output_prefix
 
         # arguments to be passed to the tokenizer __call__ function go here
         tokenizer_kwargs = {
@@ -99,11 +106,8 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
 
         super().__init__(
             input_fields=[self.to_tokenize_filed],
-            output_fields=list(map(self._prefixify, output_fields)),
+            output_fields=list(map(self.prefix, output_fields)),
         )
-
-    def _prefixify(self, field_or_dict: str) -> str:
-        return f"{self.prefix}{field_or_dict}"
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         batch_encoding = self.tokenizer(
@@ -139,7 +143,7 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
                 ]
 
         return {
-            self._prefixify(field_name): field_value
+            self.prefix(field_name): field_value
             for field_name, field_value in batch_encoding.items()
         }
 
