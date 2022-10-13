@@ -42,28 +42,36 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         self.fingerprint = self._get_mapper_fingerprint()
         self.pipeline = None
 
-    def __lshift__(self, other: P) -> P:
+    def chain(self: P, next_mapper: "PipelineFingerprintMixIn") -> P:
         """Create a pipeline by combining this mapper with another."""
 
-        # create a copy of the other mapper before attaching it to the
-        # current mapper
-        to_return = other.detach()
+        # create a copy of this mapper before attaching it to the next mapper
+        to_return = self.detach()
 
-        # if the other mapper is already attached to a pipeline, we need
+        # if the current mapper is already attached to a pipeline, we need
         # to recursively merge the pipelines; otherwise, we can just attach
-        # self to it.
-        if other.pipeline is not None:
-            to_merge = self << other.pipeline
+        # the next mapper to it.
+        if self.pipeline is not None:
+            to_merge = self.pipeline.chain(next_mapper)
         else:
-            to_merge = self
+            to_merge = next_mapper
 
+        # here's the part where we actually attach the next mapper!
         to_return.pipeline = to_merge
 
         return to_return
 
-    def __rshift__(self: P, other: "PipelineFingerprintMixIn") -> P:
-        """Create a new Pipeline by combining this mapper with another."""
-        return other << self
+    def __lshift__(self, prev_mapper: P) -> P:
+        """Create a pipeline by combining this mapper with another.
+        This is equivalent to other.chain(self), but with notation
+        self << other."""
+        return prev_mapper.chain(self)
+
+    def __rshift__(self: P, next_mapper: "PipelineFingerprintMixIn") -> P:
+        """Create a pipeline by combining this mapper with another.
+        This is equivalent to self.chain(other), but with notation
+        self >> other."""
+        return self.chain(next_mapper)
 
     def __repr__(self) -> str:
         """Return a string representation of this mapper."""
