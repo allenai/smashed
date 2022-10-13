@@ -1,6 +1,13 @@
+from tempfile import NamedTemporaryFile
 import unittest
 
-from smashed.mappers.prompting import TruncateFieldsMapper
+from smashed.mappers.prompting import (
+    TruncateFieldsMapper,
+    EncodeFieldsMapper,
+    FillEncodedPromptMapper,
+)
+
+from transformers.models.bert import BertTokenizer
 
 
 class TestTruncate(unittest.TestCase):
@@ -44,4 +51,102 @@ class TestTruncate(unittest.TestCase):
                 lens=lens, max_len=max_len
             ),
             truncated,
+        )
+
+    def _make_tokenizer(self) -> BertTokenizer:
+        with NamedTemporaryFile(mode="r+") as f:
+            vocab = [
+                "[PAD]", "[UNK]", "[CLS]", "[SEP]", "hello", "world",
+                "this", "is", "a", "test", "hi", "there", "many", "##i",
+                "with", "the", "of"
+            ]
+            f.write('\n'.join(vocab))
+            f.flush()
+            tokenizer = BertTokenizer(f.name, do_lower_case=True)
+
+        tokenizer.model_max_length = 32
+        return tokenizer
+
+    def test_encode(self):
+        tokenizer = self._make_tokenizer()
+
+        mapper = EncodeFieldsMapper(
+            fields_to_encode=["a", "b", "c"], tokenizer=tokenizer,
+        ) >> TruncateFieldsMapper(
+            fields_to_truncate=["a", "b"],
+            fields_to_preserve=["c"],
+            max_length=16,
+            strategy="longest",
+        )
+        data = [{
+            "a": "many " * 30 + " hello world",
+            "b": "hi" + "i" * 10 + " there",
+            "c": "this is a test",
+        }]
+
+        predicted = mapper.map(data)
+        reference = [{
+            "a": [12, 12, 12, 12, 12, 12],
+            "b": [10, 13, 13, 13, 13, 13],
+            'c': [6, 7, 8, 9]
+        }]
+        self.assertEqual(predicted, reference)
+
+        mapper.pipeline.strategy = "uniform"    # pyright: ignore
+        predicted = mapper.map(data)
+        reference = [{
+            "a": [12, 12, 12, 12, 12, 12, 12, 12],
+            "b": [10, 13, 13],
+            'c': [6, 7, 8, 9]
+        }]
+        self.assertEqual(predicted, reference)
+
+    def test_fill(self):
+        tokenizer = self._make_tokenizer()
+        mapper = EncodeFieldsMapper(
+            fields_to_encode=["a", "b", "c"], tokenizer=tokenizer,
+        ) >> TruncateFieldsMapper(
+            fields_to_truncate=["a", "b"],
+            fields_to_preserve=["c"],
+            max_length=16,
+            strategy="uniform",
+        ) >> FillEncodedPromptMapper(
+            template="{a} is a {b} with the help of {c}.",
+            tokenizer=tokenizer,
+        )
+
+        data = [{
+            "a": "many " * 30 + " hello world",
+            "b": "hi" + "i" * 10 + " there",
+            "c": "this is a test",
+        }]
+
+        output = mapper.map(data, remove_columns=True)
+
+        reference = [{
+            'input_ids' : (
+                # {a}
+                [12, 12, 12, 12, 12, 12, 12, 12]
+                # is a
+                + [7, 8]
+                # {b}
+                + [10, 13, 13]
+                # with the help of
+                + [14, 15, 1, 16]
+                # {c}
+                + [6, 7, 8, 9]
+                # .
+                + [1]
+            ),
+            'attention_mask': [1] * 22
+        }]
+        print(output)
+        # breakpoint()
+        self.assertEqual(len(output), len(reference))
+        self.assertEqual(output[0].keys(), reference[0].keys())
+        self.assertEqual(
+            output[0]['input_ids'], reference[0]['input_ids']
+        )
+        self.assertEqual(
+            output[0]['attention_mask'], reference[0]['attention_mask']
         )

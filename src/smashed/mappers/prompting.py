@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+from functools import reduce
 from math import floor
-from typing import Any, Dict, List, Literal, Optional, Union
+import operator
+from typing import Dict, List, Literal, Optional, Union
 from string import Formatter
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -32,7 +34,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
                     add_special_tokens=False,
                     return_attention_mask=False,
                     return_token_type_ids=False,
-                ).input_ids if field in self.fields_to_encode else field
+                ).input_ids if name in self.fields_to_encode else field
             )
             for name, field in data.items()
         }
@@ -46,7 +48,7 @@ class TruncateFieldsMapper(SingleBaseMapper):
     def __init__(
         self,
         fields_to_truncate: List[str],
-        fields_to_preserve: List[str],
+        fields_to_preserve: Optional[List[str]] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
         max_length: Optional[int] = None,
         length_penalty: int = 0,
@@ -94,7 +96,7 @@ class TruncateFieldsMapper(SingleBaseMapper):
 
         self.tokenizer = tokenizer
         self.fields_to_truncate = sorted(set(fields_to_truncate))
-        self.fields_to_preserve = sorted(set(fields_to_preserve))
+        self.fields_to_preserve = sorted(set(fields_to_preserve or []))
         self.max_length = max_length - length_penalty
         self.strategy = strategy
         super().__init__(
@@ -184,10 +186,18 @@ class TruncateFieldsMapper(SingleBaseMapper):
         else:
             raise ValueError(f"Unknown strategy {self.strategy}")
 
-        for field, length in zip(self.fields_to_truncate, truncated_lens):
-            data[field] = data[field][:length]
+        # we add all the truncated fields to the output
+        output = {
+            field: data[field][:truncated_len]
+            for field, truncated_len in zip(
+                self.fields_to_truncate, truncated_lens
+            )
+        }
 
-        return data
+        # we add back to the output the fields that we are not truncating
+        output.update({k: data[k] for k in self.fields_to_preserve})
+
+        return output
 
 
 @dataclass
@@ -219,7 +229,7 @@ class PromptSegment:
 
     prompt_text: str
     field_name: Union[str, None]
-    prompt_token_ids: Optional[List[int]] = None
+    prompt_token_ids: Optional[List[int]]
 
     @classmethod
     def _from_template_single(
@@ -278,7 +288,7 @@ class PromptSegment:
             return self.prompt_text
 
 
-class FillTextPrompt(SingleBaseMapper):
+class FillTextPromptMapper(SingleBaseMapper):
     """Fills a prompt template with text fields."""
     def __init__(self, prompt_template: str, output_field_name: str):
         self.prompt = PromptSegment.from_template(template=prompt_template)
@@ -296,14 +306,14 @@ class FillTextPrompt(SingleBaseMapper):
         return data
 
 
-class FillEncodedPrompt(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
+class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
     def __init__(
         self,
         template: str,
         tokenizer: PreTrainedTokenizerBase,
         output_prefix: Optional[str] = None,
         return_attention_mask: bool = True,
-        return_token_type_ids: bool = True
+        return_token_type_ids: bool = False
     ) -> None:
         self.tokenizer = tokenizer
         self._prefix = output_prefix
@@ -336,16 +346,14 @@ class FillEncodedPrompt(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        encoded_prompt = self.bos_token_ids + [
-            segment.fill_encoded(data) for segment in self.prompt
-        ] + self.eos_token_ids
+        encoded_prompt = self.bos_token_ids + sum(
+            (segment.fill_encoded(data) for segment in self.prompt), []
+        ) + self.eos_token_ids
 
-        data[self.prefix("input_ids")] = encoded_prompt
+        output = {self.prefix("input_ids") : encoded_prompt}
         if self.return_attention_mask:
-            data[self.prefix("attention_mask")] = (
-                [self.tokenizer.mask_token_id] * len(encoded_prompt)
-            )
+            output[self.prefix("attention_mask")] = [1] * len(encoded_prompt)
         if self.return_token_type_ids:
-            data[self.prefix("token_type_ids")] = [0] * len(encoded_prompt)
+            output[self.prefix("token_type_ids")] = [0] * len(encoded_prompt)
 
-        return data
+        return output
