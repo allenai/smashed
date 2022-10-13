@@ -110,11 +110,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         return transformed_batch
 
     @trouting
-    def map(  # type: ignore
-        self,
-        dataset: Any,
-        **map_kwargs: Any,
-    ) -> Any:
+    def map(self, dataset: Any, **map_kwargs: Any) -> Any:
         raise ValueError(
             f"I don't know how to map a dataset of type {type(dataset)}; "
             "interface not implemented."
@@ -137,11 +133,12 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 the transform method. By default, this is empty; other
                 implementations may use this.
         """
-
         # explicitly casting to a boolean since this is all that is
         # supported by the simple mapper.
         # TODO[lucas]: maybe support specifying which fields to keep?
-        remove_columns = bool(map_kwargs.pop("remove_columns", False))
+        remove_columns = bool(map_kwargs.get("remove_columns", False))
+
+        print(remove_columns)
 
         if isinstance(dataset, abc.Sequence):
             self._check_fields_datasets(
