@@ -20,10 +20,10 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerBase,
-        encoding_template: str,
-        decoding_template: Optional[str] = None,
+        source_template: str,
+        target_template: Optional[str] = None,
         fields_to_truncate: Optional[Sequence[str]] = None,
-        decoding_output_name: Union[
+        target_output_name: Union[
             Literal["labels"], Literal["decoder_input_ids"]
         ] = "labels",
         is_split_into_words: bool = False,
@@ -36,7 +36,7 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         fields_to_truncate = fields_to_truncate or []
 
         source_prompt_mapper = FillEncodedPromptMapper(
-            template=encoding_template,
+            template=source_template,
             tokenizer=tokenizer,
             output_prefix=None,
             return_attention_mask=return_attention_mask,
@@ -44,9 +44,9 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         )
         fields_to_encode = source_prompt_mapper.input_fields
 
-        if decoding_template is not None:
+        if target_template is not None:
             target_prompt_mapper = FillEncodedPromptMapper(
-                template=decoding_template,
+                template=target_template,
                 tokenizer=tokenizer,
                 return_attention_mask=False,
                 # we will change this later
@@ -69,15 +69,20 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
             else:
                 source_fields_to_preserve.append(field_name)
 
-        source_truncation_mapper = TruncateNFieldsMapper(
-            fields_to_truncate=source_fields_to_truncate,
-            fields_to_preserve=source_fields_to_preserve,
-            max_length=max_source_length,
-            strategy=strategy,
-            tokenizer=tokenizer,
-            length_penalty=sum(len(ps) for ps in source_prompt_mapper.prompt),
-        )
-        self.chain(source_truncation_mapper)
+        print(source_fields_to_truncate, source_fields_to_preserve)
+
+        if source_fields_to_truncate:
+            source_truncation_mapper = TruncateNFieldsMapper(
+                fields_to_truncate=source_fields_to_truncate,
+                fields_to_preserve=source_fields_to_preserve,
+                max_length=max_source_length,
+                strategy=strategy,
+                tokenizer=tokenizer,
+                length_penalty=sum(
+                    len(ps) for ps in source_prompt_mapper.prompt
+                ),
+            )
+            self.chain(source_truncation_mapper)
 
         if target_prompt_mapper:
             target_fields_to_truncate, target_fields_to_preserve = [], []
@@ -86,17 +91,19 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
                     target_fields_to_truncate.append(field_name)
                 else:
                     target_fields_to_preserve.append(field_name)
-            target_truncation_mapper = TruncateNFieldsMapper(
-                fields_to_truncate=target_fields_to_truncate,
-                fields_to_preserve=target_fields_to_preserve,
-                max_length=max_target_length or max_source_length,
-                strategy=strategy,
-                tokenizer=tokenizer,
-                length_penalty=sum(
-                    len(ps) for ps in target_prompt_mapper.prompt
-                ),
-            )
-            self.chain(target_truncation_mapper)
+
+            if target_fields_to_truncate:
+                target_truncation_mapper = TruncateNFieldsMapper(
+                    fields_to_truncate=target_fields_to_truncate,
+                    fields_to_preserve=target_fields_to_preserve,
+                    max_length=max_target_length or max_source_length,
+                    strategy=strategy,
+                    tokenizer=tokenizer,
+                    length_penalty=sum(
+                        len(ps) for ps in target_prompt_mapper.prompt
+                    ),
+                )
+                self.chain(target_truncation_mapper)
 
         self.chain(source_prompt_mapper)
 
@@ -105,9 +112,14 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         if target_prompt_mapper:
             self.chain(target_prompt_mapper)
 
-            if decoding_output_name == "labels":
+            if target_output_name == "labels":
                 rename_fields_map["decoder_input_ids"] = "labels"
             else:
                 rename_fields_map["decoder_input_ids"] = "decoder_input_ids"
 
-        self.chain(RenameFieldsMapper(rename_fields_map=rename_fields_map))
+        self.chain(
+            RenameFieldsMapper(
+                rename_fields_map=rename_fields_map,
+                remove_rest=True
+            )
+        )

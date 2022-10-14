@@ -8,6 +8,7 @@ from smashed.mappers.prompting import (
     FillEncodedPromptMapper,
     TruncateNFieldsMapper,
 )
+from smashed.recipes.prompting import PromptingMapperRecipe
 
 
 class TestTruncate(unittest.TestCase):
@@ -170,8 +171,54 @@ class TestTruncate(unittest.TestCase):
                 "attention_mask": [1] * 22,
             }
         ]
-        print(output)
-        # breakpoint()
+
+        self.assertEqual(len(output), len(reference))
+        self.assertEqual(output[0].keys(), reference[0].keys())
+        self.assertEqual(output[0]["input_ids"], reference[0]["input_ids"])
+        self.assertEqual(
+            output[0]["attention_mask"], reference[0]["attention_mask"]
+        )
+
+    def test_recipe(self):
+        tokenizer = self._make_tokenizer()
+        recipe = PromptingMapperRecipe(
+            tokenizer=tokenizer,
+            source_template="{a} is a {b} with the help of {c}.",
+            max_source_length=22,
+            fields_to_truncate=["a", "b"],
+            strategy="uniform",
+        )
+
+        data = [
+            {
+                "a": "many " * 30 + " hello world",
+                "b": "hi" + "i" * 10 + " there",
+                "c": "this is a test",
+            }
+        ]
+
+        output = recipe.map(data)
+
+        reference = [
+            {
+                "input_ids": (
+                    # {a}
+                    [12, 12, 12, 12, 12, 12, 12, 12]
+                    # is a
+                    + [7, 8]
+                    # {b}
+                    + [10, 13, 13]
+                    # with the help of
+                    + [14, 15, 1, 16]
+                    # {c}
+                    + [6, 7, 8, 9]
+                    # .
+                    + [1]
+                ),
+                "attention_mask": [1] * 22,
+            }
+        ]
+
         self.assertEqual(len(output), len(reference))
         self.assertEqual(output[0].keys(), reference[0].keys())
         self.assertEqual(output[0]["input_ids"], reference[0]["input_ids"])

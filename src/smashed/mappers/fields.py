@@ -66,21 +66,32 @@ class RenameFieldsMapper(SingleBaseMapper):
     def always_remove_columns(cls) -> bool:
         return True
 
-    def __init__(self, rename_fields_map: Dict[str, str]):
+    def __init__(
+        self,
+        rename_fields_map: Dict[str, str],
+        remove_rest: bool = False
+    ):
         """
         Args:
             rename_fields_map (Dict[str, str]): Mapping from old field name
                 to new field name.
+            remove_rest (bool, optional): Whether to remove fields that are
+                not in the rename_fields_map. Defaults to False.
         """
 
         self.rename_fields_map = rename_fields_map
+        self.remove_rest = remove_rest
         super().__init__(
             input_fields=list(rename_fields_map.keys()),
             output_fields=list(rename_fields_map.values()),
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        return {self.rename_fields_map.get(k, k): v for k, v in data.items()}
+        return {
+            self.rename_fields_map.get(k, k): v
+            for k, v in data.items()
+            if k in self.rename_fields_map or not self.remove_rest
+        }
 
 
 class MakeFieldMapper(SingleBaseMapper):

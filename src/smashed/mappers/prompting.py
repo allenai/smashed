@@ -96,6 +96,9 @@ class TruncateNFieldsMapper(SingleBaseMapper):
                 amount. Defaults to 'longest'.
         """
 
+        if len(fields_to_truncate) == 0:
+            raise ValueError("fields_to_truncate must be non-empty")
+
         if tokenizer is None and max_length is None:
             raise ValueError("Tokenizer or max_length must be provided.")
         elif max_length is None:
@@ -194,6 +197,7 @@ class TruncateNFieldsMapper(SingleBaseMapper):
         max_len = self.max_length - sum(
             len(data[field]) for field in self.fields_to_preserve
         )
+
         if self.strategy == "uniform":
             truncated_lens = self._find_truncated_lens_uniform(
                 lens=lens_to_truncate, max_len=max_len

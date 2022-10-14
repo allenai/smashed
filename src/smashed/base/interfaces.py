@@ -52,6 +52,11 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         expected_fields: Sequence[str],
         reverse_membership_check: bool = False,
     ) -> None:
+        """Checks whether the provided fields are a subset of the
+        expected fields. If reverse_membership_check is True, checks
+        whether the provided fields are a superset of the expected
+        fields."""
+
         if provided_fields is None:
             return
 
