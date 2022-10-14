@@ -9,6 +9,7 @@ import copy
 import unittest
 
 from smashed.base.mappers import SingleBaseMapper
+from smashed.utils import make_pipeline
 
 
 class MockMapper(SingleBaseMapper):
@@ -83,6 +84,14 @@ class TestPipeline(unittest.TestCase):
     def test_run_pipeline(self):
         """Test a full pipeline"""
         pipeline = MockMapper(1) >> MockMapper(2) >> MockMapper(3)
+
+        dataset = [{"stage": [0]}]
+        dataset = pipeline.map(dataset)
+
+        self.assertEqual(dataset[0]["stage"], [0, 1, 2, 3])
+
+    def test_make_pipeline_function(self):
+        pipeline = make_pipeline(MockMapper(1), MockMapper(2), MockMapper(3))
 
         dataset = [{"stage": [0]}]
         dataset = pipeline.map(dataset)
