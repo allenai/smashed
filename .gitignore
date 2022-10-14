@@ -57,3 +57,6 @@ site/
 
 # remove temp dir
 tmp/
+
+# locks
+*.lock

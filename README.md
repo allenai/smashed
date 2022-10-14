@@ -1,6 +1,6 @@
 ![Colorful logo of smashed. It is the word smashed written in a playful font that vaguely looks like pipes.](https://github.com/allenai/smashed/raw/main/resources/smashed.png)
 
-**S**equential **MA**ppers for **S**equences of **HE**terogeneous **D**ictionaries is a set of Python interfaces designed to apply transformations to samples in datasets, which are often implemented as sequences of dictionaries. To start, run 
+**S**equential **MA**ppers for **S**equences of **HE**terogeneous **D**ictionaries is a set of Python interfaces designed to apply transformations to samples in datasets, which are often implemented as sequences of dictionaries. To start, run
 
 ```bash
 pip install smashed
@@ -172,3 +172,11 @@ To contribute to SMASHED, make sure to:
     5. *Tests:* `pytest -v --color=yes tests/` (Should return no error)
 8. Commit, push, and create a pull request.
 9. Tag `soldni` to review the PR.
+
+### A note about versioning
+
+SMASHED follows [Semantic Versioning](https://semver.org/). In short, this means that the version number is MAJOR.MINOR.PATCH, where:
+
+- MAJOR version when you make incompatible API changes,
+- MINOR version when you add functionality in a backwards compatible manner; adding a mapper typically falls under this category, and
+- PATCH version when you make backwards compatible bug fixes.
