@@ -119,7 +119,6 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
 
         self.chain(
             RenameFieldsMapper(
-                rename_fields_map=rename_fields_map,
-                remove_rest=True
+                rename_fields_map=rename_fields_map, remove_rest=True
             )
         )

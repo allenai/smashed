@@ -67,9 +67,7 @@ class RenameFieldsMapper(SingleBaseMapper):
         return True
 
     def __init__(
-        self,
-        rename_fields_map: Dict[str, str],
-        remove_rest: bool = False
+        self, rename_fields_map: Dict[str, str], remove_rest: bool = False
     ):
         """
         Args:
