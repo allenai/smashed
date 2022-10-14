@@ -8,7 +8,7 @@ from .collators import (
 )
 from .converters import Python2TorchMapper, Torch2PythonMapper
 from .debug import DebugBatchedMapper, DebugSingleMapper
-from .fields import ChangeFieldsMapper, MakeFieldMapper
+from .fields import ChangeFieldsMapper, MakeFieldMapper, RenameFieldsMapper
 from .filters import FilterMapper
 from .loaders import (
     CsvLoaderMapper,
@@ -65,6 +65,7 @@ __all__ = [
     "OneHotMapper",
     "PaddingMapper",
     "Python2TorchMapper",
+    "RenameFieldsMapper",
     "SequencesConcatenateMapper",
     "SingleValueToSequenceMapper",
     "StartCachingMapper",

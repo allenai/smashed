@@ -23,7 +23,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
         self,
         fields_to_encode: List[str],
         tokenizer: PreTrainedTokenizerBase,
-        is_split_into_words: Optional[bool] = False,
+        is_split_into_words: bool = False,
     ):
         """
         Args:
