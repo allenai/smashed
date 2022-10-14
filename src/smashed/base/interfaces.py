@@ -23,10 +23,11 @@ from .abstract import (
     AbstractSingleBaseMapper,
 )
 from .types import TransformBatchType, TransformElementType
+from .views import DataBatchView
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
-        from datasets.arrow_dataset import Dataset
+        from datasets.arrow_dataset import Batch, Dataset
         from datasets.iterable_dataset import IterableDataset
 
         HuggingFaceDataset = TypeVar(
@@ -128,28 +129,27 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
 
     @trouting
     def map(self, dataset: Any, **map_kwargs: Any) -> Any:
+        """Transform a dataset by applying this mapper's transform method.
+
+        Args:
+            dataset (DatasetType): The dataset to transform.
+            map_kwargs (Any, optional): Additional keyword arguments to
+                pass to control the map operation. The available options
+                differ depending on the dataset. Defaults to {}.
+        """
+
         raise ValueError(
             f"I don't know how to map a dataset of type {type(dataset)}; "
             "interface not implemented."
         )
 
     @map.add_interface(dataset=list)
-    def map_list_of_dicts(
+    def _map_list_of_dicts(
         self,
         dataset: Sequence[TransformElementType],
         **map_kwargs: Any,
     ) -> Sequence[TransformElementType]:
-        """Transform a dataset by applying this mapper's transform method.
 
-        Args:
-            dataset (DatasetType): The dataset to transform.
-            remove_columns (Optional[bool], optional): If True, remove discard
-                any columns that are in the input dataset, but are not returned
-                by the transform method. Defaults to False.
-            map_kwargs (Any, optional): Additional keyword arguments to pass to
-                the transform method. By default, this is empty; other
-                implementations may use this.
-        """
         # explicitly casting to a boolean since this is all that is
         # supported by the simple mapper.
         # TODO[lucas]: maybe support specifying which fields to keep?
@@ -210,7 +210,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
     if HUGGINGFACE_DATASET_AVAILABLE:
 
         @map.add_interface(dataset=(Dataset, IterableDataset))
-        def map_huggingface_dataset(
+        def _map_huggingface_dataset(
             self,
             dataset: HuggingFaceDataset,
             **map_kwargs: Any,
@@ -254,3 +254,45 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 return self.pipeline.map(transformed_dataset, **map_kwargs)
             else:
                 return transformed_dataset
+
+        @map.add_interface(dataset=Batch)
+        def _map_huggingface_dataset_batch(
+            self,
+            dataset: Batch,
+            **map_kwargs: Any,
+        ) -> Batch:
+            # explicitly casting to a boolean since this is all that is
+            # supported by the simple mapper.
+            # TODO[lucas]: maybe support specifying which fields to keep?
+            remove_columns = (
+                bool(map_kwargs.get("remove_columns", False))
+                or self.always_remove_columns
+            )
+
+            dtview: DataBatchView[Batch, str, Any] = DataBatchView(dataset)
+
+            self._check_fields_datasets(
+                provided_fields=dataset.keys(),
+                expected_fields=self.input_fields,
+            )
+
+            if isinstance(self, AbstractBatchedBaseMapper):
+                dtview = dtview.map(self.transform)
+            elif isinstance(self, AbstractSingleBaseMapper):
+                dtview.update(self.transform(dtr) for dtr in dtview)
+            else:
+                raise TypeError(
+                    "Mapper but be either a SingleBaseMapper or "
+                    "a BatchedBaseMapper"
+                )
+
+            self._check_fields_datasets(
+                provided_fields=dtview.keys(),
+                expected_fields=self.output_fields,
+            )
+
+            for column in tuple(dtview.keys()):
+                if remove_columns and column not in self.output_fields:
+                    dtview.pop(column)
+
+            return dtview.orig()

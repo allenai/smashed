@@ -1,4 +1,4 @@
-from typing import Any, Generic, Iterable, List, TypeVar, Union
+from typing import Any, Generic, Iterable, Tuple, TypeVar, Union
 
 from .types import TransformElementType
 
@@ -9,8 +9,8 @@ S = TypeVar("S")
 class AbstractBaseMapper(Generic[D, S]):
     """An abstract implementation of a Mapper"""
 
-    input_fields: List[str]
-    output_fields: List[str]
+    input_fields: Tuple[str, ...]
+    output_fields: Tuple[str, ...]
     fingerprint: str
     pipeline: Union["AbstractBaseMapper", None]
 
