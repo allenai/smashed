@@ -10,22 +10,11 @@ import unittest
 
 from necessary import necessary
 
-from smashed.base.mappers import SingleBaseMapper
 from smashed.mappers import EndCachingMapper, StartCachingMapper
+from smashed.mappers.debug import MockMapper
 
 with necessary("datasets"):
     from datasets.arrow_dataset import Dataset
-
-
-class MockMapper(SingleBaseMapper):
-    """A mock mapper that returns the same data it receives.
-    Used for testing."""
-
-    def __init__(self):
-        super().__init__()
-
-    def transform(self, data: dict) -> dict:
-        return {k: v + 1 for k, v in data.items()}
 
 
 class TestCaching(unittest.TestCase):
@@ -35,8 +24,8 @@ class TestCaching(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             pipeline = (
                 StartCachingMapper(tmpdir)
-                >> MockMapper()
-                >> MockMapper()
+                >> MockMapper(1)
+                >> MockMapper(1)
                 >> EndCachingMapper()
             )
 
@@ -54,8 +43,8 @@ class TestCaching(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             pipeline = (
                 StartCachingMapper(tmpdir)
-                >> MockMapper()
-                >> MockMapper()
+                >> MockMapper(1)
+                >> MockMapper(1)
                 >> EndCachingMapper()
             )
 
@@ -69,14 +58,14 @@ class TestCaching(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             pipeline = (
-                StartCachingMapper(tmpdir) >> MockMapper() >> MockMapper()
+                StartCachingMapper(tmpdir) >> MockMapper(1) >> MockMapper(1)
             )
 
             with self.assertRaises(ValueError):
                 # This should fail because we didn't end the caching
                 pipeline.map([{"a": 1, "b": 2}])
 
-            pipeline = MockMapper() >> MockMapper() >> EndCachingMapper()
+            pipeline = MockMapper(1) >> MockMapper(1) >> EndCachingMapper()
 
             with self.assertRaises(ValueError):
                 # This should fail because we didn't start the caching

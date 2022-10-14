@@ -8,22 +8,8 @@ Email:  lucas@allenai.org
 import copy
 import unittest
 
-from smashed.base.mappers import SingleBaseMapper
+from smashed.mappers.debug import MockMapper
 from smashed.utils import make_pipeline
-
-
-class MockMapper(SingleBaseMapper):
-    """A mock mapper that returns the same data it receives.
-    Used for testing."""
-
-    __slots__ = ("stage",)
-
-    def __init__(self, stage: int):
-        super().__init__()
-        self.stage = stage
-
-    def transform(self, data: dict) -> dict:
-        return {"stage": (data.get("stage", []) + [self.stage])}
 
 
 class TestPipeline(unittest.TestCase):
@@ -65,16 +51,16 @@ class TestPipeline(unittest.TestCase):
         pipeline = mapper1 >> mapper2 >> mapper3
 
         self.assertIsInstance(pipeline, MockMapper)
-        self.assertEqual(pipeline.stage, 1)
+        self.assertEqual(pipeline.value, 1)
 
         self.assertIsInstance(pipeline.pipeline, MockMapper)
-        self.assertEqual(pipeline.pipeline.stage, 2)  # pyright: ignore
+        self.assertEqual(pipeline.pipeline.value, 2)  # pyright: ignore
 
         self.assertIsInstance(
             pipeline.pipeline.pipeline, MockMapper  # pyright: ignore
         )
         self.assertEqual(
-            pipeline.pipeline.pipeline.stage, 3  # pyright: ignore
+            pipeline.pipeline.pipeline.value, 3  # pyright: ignore
         )
 
         self.assertEqual(
@@ -83,7 +69,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_run_pipeline(self):
         """Test a full pipeline"""
-        pipeline = MockMapper(1) >> MockMapper(2) >> MockMapper(3)
+        pipeline = MockMapper([1]) >> MockMapper([2]) >> MockMapper([3])
 
         dataset = [{"stage": [0]}]
         dataset = pipeline.map(dataset)
@@ -91,7 +77,9 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(dataset[0]["stage"], [0, 1, 2, 3])
 
     def test_make_pipeline_function(self):
-        pipeline = make_pipeline(MockMapper(1), MockMapper(2), MockMapper(3))
+        pipeline = make_pipeline(
+            MockMapper([1]), MockMapper([2]), MockMapper([3])
+        )
 
         dataset = [{"stage": [0]}]
         dataset = pipeline.map(dataset)
@@ -99,7 +87,7 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(dataset[0]["stage"], [0, 1, 2, 3])
 
     def test_reconstruction_pipeline(self):
-        p1 = MockMapper(1) >> MockMapper(2) >> MockMapper(3)
+        p1 = MockMapper([1]) >> MockMapper([2]) >> MockMapper([3])
         p2 = (
             p1.detach()
             >> p1.pipeline.detach()  # pyright: ignore
