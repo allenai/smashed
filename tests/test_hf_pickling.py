@@ -5,7 +5,7 @@ from necessary import necessary
 
 from smashed.base import SingleBaseMapper
 
-with necessary("datasets"):
+with necessary(("datasets", "dill")):
     import dill
     from datasets.fingerprint import Hasher
 
