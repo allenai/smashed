@@ -3,7 +3,7 @@ import hashlib
 import inspect
 import pickle
 from itertools import chain
-from typing import Iterable, List, NamedTuple, Optional, TypeVar, Union
+from typing import Iterable, NamedTuple, Optional, TypeVar, Union
 
 from ..utils import bytes_from_int, int_from_bytes
 from .abstract import (
@@ -23,8 +23,8 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
 
     def __init__(
         self,
-        input_fields: Optional[List[str]] = None,
-        output_fields: Optional[List[str]] = None,
+        input_fields: Optional[Iterable[str]] = None,
+        output_fields: Optional[Iterable[str]] = None,
     ) -> None:
         """Create a new Mapper.
 
@@ -37,8 +37,8 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
                 mapper will not validate the output of transform. Defaults to
                 None.
         """
-        self.input_fields = input_fields or []
-        self.output_fields = output_fields or []
+        self.input_fields = tuple(input_fields or [])
+        self.output_fields = tuple(output_fields or [])
         self.fingerprint = self._get_mapper_fingerprint()
         self.pipeline = None
 

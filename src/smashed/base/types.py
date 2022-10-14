@@ -1,6 +1,10 @@
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, List, Mapping, Union
 
-TransformElementType = Dict[str, Any]
-TransformBatchType = Dict[str, List[Any]]
+from .views import DataBatchView, DataRowView
+
+TransformElementType = Union[Dict[str, Any], DataRowView[str, Any]]
+TransformBatchType = Union[
+    Dict[str, List[Any]], DataBatchView[Any, str, List[Any]]
+]
 FeatureType = Any
 Features = Mapping[str, FeatureType]

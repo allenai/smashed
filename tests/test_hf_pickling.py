@@ -3,25 +3,11 @@ import unittest
 
 from necessary import necessary
 
-from smashed.base import SingleBaseMapper
+from smashed.mappers.debug import MockMapper
 
 with necessary(("datasets", "dill")):
     import dill
     from datasets.fingerprint import Hasher
-
-
-class MockMapper(SingleBaseMapper):
-    """A mock mapper that returns the same data it receives.
-    Used for testing."""
-
-    __slots__ = ("v",)
-
-    def __init__(self, v: int = 1):
-        self.v = v
-        super().__init__()
-
-    def transform(self, data: dict) -> dict:
-        return {k: v + self.v for k, v in data.items()}
 
 
 class TestPickling(unittest.TestCase):
@@ -29,7 +15,7 @@ class TestPickling(unittest.TestCase):
         """Test if caching works"""
 
         # this should not fail
-        m = MockMapper() >> MockMapper()
+        m = MockMapper(1) >> MockMapper(1)
         m2 = pickle.loads(pickle.dumps(m))
         self.assertEqual(m, m2)
 
@@ -48,7 +34,7 @@ class TestPickling(unittest.TestCase):
         """Test if caching works"""
 
         # this should not fail
-        m = MockMapper() >> MockMapper()
+        m = MockMapper(1) >> MockMapper(1)
         m2 = dill.loads(dill.dumps(m))
         self.assertEqual(m, m2)
 

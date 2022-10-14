@@ -69,8 +69,6 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
             else:
                 source_fields_to_preserve.append(field_name)
 
-        print(source_fields_to_truncate, source_fields_to_preserve)
-
         if source_fields_to_truncate:
             source_truncation_mapper = TruncateNFieldsMapper(
                 fields_to_truncate=source_fields_to_truncate,
