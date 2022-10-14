@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from math import floor
 from string import Formatter
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Sequence, Union, cast
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
@@ -21,7 +21,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
 
     def __init__(
         self,
-        fields_to_encode: List[str],
+        fields_to_encode: Sequence[str],
         tokenizer: PreTrainedTokenizerBase,
         is_split_into_words: bool = False,
     ):
@@ -306,7 +306,7 @@ class PromptSegment:
         else:
             return self.prompt_token_ids
 
-    def fill_text(self, data: Dict[str, str]) -> str:
+    def fill_text(self, data: TransformElementType) -> str:
         if self.field_name:
             return self.prompt_text + data[self.field_name]
         else:
@@ -374,7 +374,13 @@ class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
     def transform(self, data: TransformElementType) -> TransformElementType:
         encoded_prompt = (
             self.bos_token_ids
-            + sum((segment.fill_encoded(data) for segment in self.prompt), [])
+            + sum(
+                (
+                    ps.fill_encoded(cast(Dict[str, List[int]], data))
+                    for ps in self.prompt
+                ),
+                [],
+            )
             + self.eos_token_ids
         )
 

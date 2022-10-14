@@ -87,7 +87,7 @@ class Python2TorchMapper(SingleBaseMapper):
     if HUGGINGFACE_DATASET_AVAILABLE:
 
         @map.add_interface(dataset=(Dataset, IterableDataset))
-        def map_huggingface_dataset(
+        def _map_huggingface_dataset(
             self,
             dataset: HuggingFaceDataset,
             **map_kwargs: Any,
@@ -103,7 +103,7 @@ class Torch2PythonMapper(SingleBaseMapper):
         """
         super().__init__()
 
-    def transform(
+    def transform(  # type: ignore
         self: "Torch2PythonMapper", data: Dict[str, torch.Tensor]
     ) -> TransformElementType:
         return {
@@ -125,7 +125,7 @@ class Torch2PythonMapper(SingleBaseMapper):
     if HUGGINGFACE_DATASET_AVAILABLE:
 
         @map.add_interface(dataset=(Dataset, IterableDataset))
-        def map_huggingface_dataset(
+        def _map_huggingface_dataset(
             self,
             dataset: HuggingFaceDataset,
             **map_kwargs: Any,

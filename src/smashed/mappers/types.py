@@ -145,7 +145,7 @@ class CastMapper(SingleBaseMapper, RecurseOpMixIn):
             return new_definition
 
         @map.add_interface(dataset=(Dataset, IterableDataset))
-        def map_huggingface_dataset(
+        def _map_huggingface_dataset(
             self,
             dataset: HuggingFaceDataset,
             **map_kwargs: Any,

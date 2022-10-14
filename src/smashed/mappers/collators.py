@@ -209,7 +209,7 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
 
         return torch.cat(to_stack, dim=dim)
 
-    def transform(
+    def transform(  # type: ignore
         self: "TensorCollatorMapper", data: Dict[str, Sequence[torch.Tensor]]
     ) -> Dict[str, torch.Tensor]:
 

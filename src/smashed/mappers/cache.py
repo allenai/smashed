@@ -13,13 +13,18 @@ from smashed.utils import get_cache_dir
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
-        from datasets.arrow_dataset import Dataset
+        from datasets.arrow_dataset import Dataset, Batch
         from datasets.iterable_dataset import IterableDataset
         from datasets.fingerprint import disable_caching, enable_caching
 
 from ..base import SingleBaseMapper
 from ..base.mappers import PipelineFingerprintMixIn
 from .types import TransformElementType
+
+__all__ = [
+    "EndCachingMapper",
+    "StartCachingMapper",
+]
 
 
 class DisableIntermediateCachingContext:
@@ -62,10 +67,12 @@ class CachePathContext:
         base_dir: Union[str, Path],
         pipeline: Sequence[PipelineFingerprintMixIn],
         dataset: Any,
+        n_samples_iterable_fingerprint: int = 10,
     ):
         self.base_dir = Path(base_dir)
         self.pipeline = pipeline
         self.dataset = dataset
+        self.n_samples_iterable_fingerprint = n_samples_iterable_fingerprint
 
     def get_pipeline_fingerprint(
         self, pipeline: Sequence[PipelineFingerprintMixIn]
@@ -107,7 +114,7 @@ class CachePathContext:
             self, dataset: IterableDataset
         ) -> str:
             """For iterable dataset, the fingerprint derived from info, split
-            names, and a sample of the top 5 elements."""
+            names, and a sample of the top n elements."""
             h = hashlib.sha1()
             h.update(
                 pickle.dumps(
@@ -115,11 +122,20 @@ class CachePathContext:
                         "info": dataset.info,
                         "split": dataset.split,
                         "features": dataset.features,
-                        "sample": dataset._head(n=5),
+                        "sample": dataset._head(
+                            n=self.n_samples_iterable_fingerprint
+                        ),
                     }
                 )
             )
             return h.hexdigest()
+
+        @get_dataset_fingerprint.add_interface(dataset=Batch)
+        def get_dataset_fingerprint_hf_batch(self, dataset: Batch) -> str:
+            raise ValueError(
+                "Cannot cache a Batch of a HuggingFace Dataset; please "
+                "cache at the Dataset level instead."
+            )
 
     def get_cache_path(self) -> Path:
         """Returns the full path to the cache file."""
@@ -180,6 +196,13 @@ class EndCachingMapper(SingleBaseMapper):
         def _save_hf_it(self, dataset: IterableDataset, path: Path):
             raise NotImplementedError(
                 "Saving an IterableDataset is not implemented yet"
+            )
+
+        @save_cache.add_interface(dataset=Batch)
+        def _save_hf_batch(self, dataset: Dataset, path: Path):
+            raise ValueError(
+                "Cannot cache a Batch of a HuggingFace Dataset; please "
+                "cache at the Dataset level instead."
             )
 
     def map(self, dataset: Any, **map_kwargs: Any) -> Any:
@@ -251,7 +274,7 @@ class StartCachingMapper(SingleBaseMapper):
 
     if HUGGINGFACE_DATASET_AVAILABLE:
 
-        @load_cache.add_interface(dataset=(IterableDataset, Dataset))
+        @load_cache.add_interface(dataset=(IterableDataset, Dataset, Batch))
         def _load_hf(
             self,
             path: Path,
