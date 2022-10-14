@@ -6,8 +6,8 @@ from necessary import necessary
 from smashed.base import SingleBaseMapper
 
 with necessary("datasets"):
-    from datasets.fingerprint import Hasher
     import dill
+    from datasets.fingerprint import Hasher
 
 
 class MockMapper(SingleBaseMapper):
