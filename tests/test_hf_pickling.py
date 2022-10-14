@@ -7,6 +7,7 @@ from smashed.base import SingleBaseMapper
 
 with necessary("datasets"):
     from datasets.fingerprint import Hasher
+    import dill
 
 
 class MockMapper(SingleBaseMapper):
@@ -43,9 +44,21 @@ class TestPickling(unittest.TestCase):
         hasher.update(m.transform)
         hasher.hexdigest()
 
+    def test_dill(self):
+        """Test if caching works"""
 
-if __name__ == "__main__":
-    import springs as sp
+        # this should not fail
+        m = MockMapper() >> MockMapper()
+        m2 = dill.loads(dill.dumps(m))
+        self.assertEqual(m, m2)
 
-    sp.configure_logging()
-    TestPickling().test_pickle()
+        # the dilled pipeline should yield same results
+        dt = [{"a": 1, "b": 2}]
+        out1 = m.map(dt)
+        out2 = m2.map(dt)
+        self.assertEqual(out1, out2)
+
+        # this should not fail if class is dillable
+        hasher = Hasher()
+        hasher.update(m.transform)
+        hasher.hexdigest()
