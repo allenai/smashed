@@ -1,7 +1,7 @@
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar
 
 from necessary import necessary
-from trouting import trouting
+from torch._utils import classproperty
 
 from ..base import SingleBaseMapper, TransformElementType
 
@@ -16,14 +16,19 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
 
 
 class ChangeFieldsMapper(SingleBaseMapper):
+    """Mapper that removes some of the fields in a dataset.
+    Either `keep_fields` or `drop_fields` must be specified, but not both."""
+
+    @classproperty
+    def always_remove_columns(cls) -> bool:
+        return True
+
     def __init__(
         self,
         keep_fields: Optional[List[str]] = None,
         drop_fields: Optional[List[str]] = None,
     ):
-        """Mapper that removes some of the fields in a dataset.
-        Either `keep_fields` or `drop_fields` must be specified, but not both.
-
+        """
         Args:
             keep_fields (List[str]): Fields to keep, all other fields
                 are dropped. Defaults to [].
@@ -39,44 +44,6 @@ class ChangeFieldsMapper(SingleBaseMapper):
 
         super().__init__(input_fields=drop_fields, output_fields=keep_fields)
 
-    @trouting
-    def map(  # type: ignore
-        self,
-        dataset: Any,
-        **map_kwargs: Any,
-    ) -> Any:
-        return super().map(dataset, **map_kwargs)
-
-    @map.add_interface(dataset=list)
-    def map_list_of_dicts(
-        self,
-        dataset: Sequence[TransformElementType],
-        **map_kwargs: Any,
-    ) -> Sequence[TransformElementType]:
-        """If the dataset is a list of dicts, we need to make sure that
-        all existing columns are removed."""
-        return super().map(dataset, remove_columns=True, **map_kwargs)
-
-    if HUGGINGFACE_DATASET_AVAILABLE:
-
-        @map.add_interface(dataset=(Dataset, IterableDataset))
-        def map_huggingface_dataset(
-            self,
-            dataset: HuggingFaceDataset,
-            **map_kwargs: Any,
-        ) -> HuggingFaceDataset:
-            """If the dataset is a HuggingFace dataset, we also need to
-            make sure that existing columns get removed, but in this case
-            the mechanism is different."""
-
-            # mechanism to remove columns in huggingface datasets is
-            # slightly different than in list of dict datasets.
-            map_kwargs = {
-                "remove_columns": list(dataset.features.keys()),
-                **map_kwargs,
-            }
-            return super().map(dataset, **map_kwargs)
-
     def transform(self, data: TransformElementType) -> TransformElementType:
         if self.input_fields:
             new_data = {
@@ -90,6 +57,39 @@ class ChangeFieldsMapper(SingleBaseMapper):
             raise ValueError("Must specify `keep_fields` or `drop_fields`")
 
         return new_data
+
+
+class RenameFieldsMapper(SingleBaseMapper):
+    """Mapper that renames some of the fields batch"""
+
+    @classproperty
+    def always_remove_columns(cls) -> bool:
+        return True
+
+    def __init__(
+        self, rename_fields_map: Dict[str, str], remove_rest: bool = False
+    ):
+        """
+        Args:
+            rename_fields_map (Dict[str, str]): Mapping from old field name
+                to new field name.
+            remove_rest (bool, optional): Whether to remove fields that are
+                not in the rename_fields_map. Defaults to False.
+        """
+
+        self.rename_fields_map = rename_fields_map
+        self.remove_rest = remove_rest
+        super().__init__(
+            input_fields=list(rename_fields_map.keys()),
+            output_fields=list(rename_fields_map.values()),
+        )
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        return {
+            self.rename_fields_map.get(k, k): v
+            for k, v in data.items()
+            if k in self.rename_fields_map or not self.remove_rest
+        }
 
 
 class MakeFieldMapper(SingleBaseMapper):

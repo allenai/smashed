@@ -1,10 +1,9 @@
 """
-
+Bunch of tokenization mappers for the smashed library.
 
 @lucas, @kylel
 
 """
-
 import unicodedata
 from typing import Any, List, Optional
 
@@ -12,8 +11,53 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from ..base import SingleBaseMapper, TransformElementType
 
+__all__ = [
+    "PaddingMapper",
+    "TokenizerMapper",
+    "ValidUnicodeMapper",
+]
 
-class TokenizerMapper(SingleBaseMapper):
+
+class GetTokenizerOutputFieldsMixin:
+    """A mixin class that figures out the output fields based on the arguments
+    that will be passed a to tokenizer.__call__ method."""
+
+    tokenizer: PreTrainedTokenizerBase
+    _prefix: Optional[str]
+
+    def output_fields_from_tokenizer_kwargs(
+        self, tokenizer_kwargs: Optional[dict] = None
+    ) -> List[str]:
+
+        tokenizer_kwargs = tokenizer_kwargs or {}
+
+        output_fields = ["input_ids"]
+
+        if tokenizer_kwargs.get("return_attention_mask", False):
+            output_fields.append("attention_mask")
+        if tokenizer_kwargs.get("return_token_type_ids", False):
+            output_fields.append("token_type_ids")
+        if tokenizer_kwargs.get("return_overflowing_tokens", False):
+            output_fields.append("overflow_to_sample_mapping")
+        if tokenizer_kwargs.get("return_special_tokens_mask", False):
+            output_fields.append("special_tokens_mask")
+        if tokenizer_kwargs.get("return_offsets_mapping", False):
+            output_fields.append("offset_mapping")
+        if tokenizer_kwargs.get("return_length", False):
+            output_fields.append("length")
+
+        return output_fields
+
+    def prefix(self, field_or_dict: str) -> str:
+        if self._prefix:
+            return f"{self.prefix}{field_or_dict}"
+        else:
+            return field_or_dict
+
+
+class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
+    """Tokenize a field using a tokenizer."""
+
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerBase,
@@ -30,67 +74,86 @@ class TokenizerMapper(SingleBaseMapper):
         return_length: Optional[bool] = False,
         return_word_ids: Optional[bool] = False,
         return_words: Optional[bool] = False,
-        **tk_kwargs: Any,
+        **tokenizer_kwargs: Any,
     ) -> None:
-        self.prefix = f"{output_prefix}_" if output_prefix else ""
+        """
+        Args:
+            tokenizer (PreTrainedTokenizerBase): A tokenizer from the
+                huggingface/transformers library.
+            input_field (str): The field to tokenize.
+            output_prefix (Optional[str], optional): A prefix to add to all
+                output fields. Defaults to None.
+            add_special_tokens (Optional[bool], optional): Whether or not to
+                add special tokens to the input. Defaults to True.
+            max_length (Optional[int], optional): The maximum length of the
+                input. If not provided, tokenizer.model_max_length will be
+                used. Defaults to None.
+            is_split_into_words (bool, optional): Whether or not the input
+                is already split into words. Defaults to False.
+            return_token_type_ids (bool, optional): Whether or not to return
+                token type ids. Defaults to False.
+            return_attention_mask (bool, optional): Whether or not to return
+                attention masks. Defaults to True.
+            return_overflowing_tokens (bool, optional): Whether or not to
+                return overflowing tokens. Defaults to False.
+            return_special_tokens_mask (bool, optional): Whether or not to
+                return special tokens masks. Defaults to False.
+            return_offsets_mapping (bool, optional): Whether or not to return
+                offsets mappings. Defaults to False.
+            return_length (bool, optional): Whether or not to return the
+                length of the input. Defaults to False.
+            return_word_ids (bool, optional): Whether or not to return the
+                word ids. Defaults to False.
+            return_words (bool, optional): Whether or not to return the
+                words. Defaults to False.
+            tokenizer_kwargs (Any): Additional keyword arguments to pass
+                to the tokenizer; these will override the above arguments.
+        """
+
         self.to_tokenize_filed = input_field
         self.tokenizer = tokenizer
+        self._prefix = output_prefix
 
         # arguments to be passed to the tokenizer __call__ function go here
-        tk_kwargs = {
+        tokenizer_kwargs = {
             "add_special_tokens": add_special_tokens,
             "max_length": max_length,
             "is_split_into_words": is_split_into_words,
-            **(tk_kwargs or {}),
+            "return_attention_mask": return_attention_mask,
+            "return_token_type_ids": return_token_type_ids,
+            "return_overflowing_tokens": return_overflowing_tokens,
+            "return_special_tokens_mask": return_special_tokens_mask,
+            "return_offsets_mapping": return_offsets_mapping,
+            "return_length": return_length,
+            **(tokenizer_kwargs or {}),
         }
 
-        output_fields = ["input_ids"]
+        output_fields = self.output_fields_from_tokenizer_kwargs(
+            tokenizer_kwargs=tokenizer_kwargs
+        )
 
-        # various options for the tokenizer affect which fields are returned
-        tk_kwargs["return_attention_mask"] = return_attention_mask
-        if return_attention_mask:
-            output_fields.append("attention_mask")
-
-        tk_kwargs["return_token_type_ids"] = return_token_type_ids
-        if return_token_type_ids:
-            output_fields.append("token_type_ids")
-
-        tk_kwargs["return_overflowing_tokens"] = return_overflowing_tokens
-        if return_overflowing_tokens:
-            output_fields.append("overflow_to_sample_mapping")
-
-        tk_kwargs["return_special_tokens_mask"] = return_special_tokens_mask
-        if return_special_tokens_mask:
-            output_fields.append("special_tokens_mask")
-
-        tk_kwargs["return_offsets_mapping"] = return_offsets_mapping
-        if return_offsets_mapping:
-            output_fields.append("offset_mapping")
-
-        tk_kwargs["return_length"] = return_length
-        if return_length:
-            output_fields.append("length")
-
+        # beside the fields returned by the tokenizer, we might also want
+        # to return the word ids and the words themselves, depending on
+        # options provided.
         self.return_word_ids = self.return_words = False
-        if "is_split_into_words" in tk_kwargs and return_word_ids:
+        if "is_split_into_words" in tokenizer_kwargs and return_word_ids:
             self.return_word_ids = True
             output_fields.append("word_ids")
             if return_words:
                 self.return_words = True
                 output_fields.append("words")
 
-        self.tokenize_kwargs = tk_kwargs
+        self.tokenize_kwargs = tokenizer_kwargs
+
         super().__init__(
             input_fields=[self.to_tokenize_filed],
-            output_fields=list(map(self._prefixify, output_fields)),
+            output_fields=list(map(self.prefix, output_fields)),
         )
-
-    def _prefixify(self, field_or_dict: str) -> str:
-        return f"{self.prefix}{field_or_dict}"
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         batch_encoding = self.tokenizer(
-            data[self.to_tokenize_filed], **self.tokenize_kwargs
+            (to_tok_field := data[self.to_tokenize_filed]),
+            **self.tokenize_kwargs,
         )
 
         # token_to_word mappings are unfortunately not natively returned by
@@ -112,18 +175,16 @@ class TokenizerMapper(SingleBaseMapper):
             if self.return_words:
                 batch_encoding["words"] = [
                     [
-                        None
-                        if word_id is None
-                        else data[self.input_fields[0]][word_id]
-                        for word_id in word_ids
+                        None if wid is None else to_tok_field[wid]
+                        for wid in wids
                     ]
                     # ignoring pylance complaining because we just added
                     # word_ids above!
-                    for word_ids in batch_encoding["word_ids"]  # type: ignore
+                    for wids in batch_encoding["word_ids"]  # pyright: ignore
                 ]
 
         return {
-            self._prefixify(field_name): field_value
+            self.prefix(field_name): field_value
             for field_name, field_value in batch_encoding.items()
         }
 
@@ -137,15 +198,17 @@ class ValidUnicodeMapper(SingleBaseMapper):
         input_fields: List[str],
         unicode_categories: List[str],
         replace_token: str,
-        # output_prefix: Optional[str] = None,
     ):
-        # self.batched = False
-        # self.input_fields = input_fields
-        # self.prefix = f'{output_prefix}_' if output_prefix else ''
-        # self.output_fields = [
-        #     f'{self.prefix}{input_field}'
-        #     for input_field in self.input_fields
-        # ]
+        """
+        Args:
+            input_fields (str): list of fields to be processed
+            unicode_categories (List[str]): list of unicode categories to
+                replace. See https://fileformat.info/info/unicode/category
+                for a list of categories.
+            replace_token (str): token to replace invalid unicode characters
+                with.
+        """
+
         super().__init__(input_fields=input_fields, output_fields=input_fields)
         self.unicode_categories = unicode_categories
         self.replace_token = replace_token
@@ -166,9 +229,6 @@ class ValidUnicodeMapper(SingleBaseMapper):
             k: v if k not in self.input_fields else _transform(v)
             for k, v in data.items()
         }
-        # new_data = {f'{self.prefix}{k}': v if k not in self.input_fields
-        #             else _transform(v) for k, v in data.items()}
-        # return new_data
 
 
 class PaddingMapper(SingleBaseMapper):
@@ -190,6 +250,14 @@ class PaddingMapper(SingleBaseMapper):
         pad_value: Any,
         fields_to_pad: Optional[List[str]] = None,
     ):
+        """
+        Args:
+            pad_to_length (int): length to pad to
+            pad_value (Any): value to pad with
+            fields_to_pad (List[str], optional): list of fields to pad.
+                If None, all fields will be padded. Defaults to None.
+        """
+
         super().__init__()
         self.pad_to_length = pad_to_length
         self.pad_value = pad_value

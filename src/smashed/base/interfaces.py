@@ -14,6 +14,7 @@ from typing import (
 )
 
 from necessary import necessary
+from torch._utils import classproperty
 from trouting import trouting
 
 from .abstract import (
@@ -34,12 +35,28 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
 
 
 class MapMethodInterfaceMixIn(AbstractBaseMapper):
+    """Mix-in class that implements the map method for all mappers
+    and various interfaces. Do not inherit from this class directly,
+    but use SingleBaseMapper/BatchedBaseMapper instead."""
+
+    @classproperty
+    def always_remove_columns(cls) -> bool:
+        """Whether this mapper should always remove its input columns
+        from the dataset. If False, the mapper will only remove columns
+        if the output columns are not a subset of the input columns."""
+        return False
+
     def _check_fields_datasets(
         self,
         provided_fields: Union[Iterable[str], None],
         expected_fields: Sequence[str],
         reverse_membership_check: bool = False,
     ) -> None:
+        """Checks whether the provided fields are a subset of the
+        expected fields. If reverse_membership_check is True, checks
+        whether the provided fields are a superset of the expected
+        fields."""
+
         if provided_fields is None:
             return
 
@@ -87,7 +104,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         keys = [k for k in data.keys()]
 
         # _index_fn ensures that, between when we unpack
-        # the sequence of samples in TrasformBatchType, and when we
+        # the sequence of samples in TransformBatchType, and when we
         # pack them into a list of dictionaries, we always get the
         # same order of features. This is important because we don't
         # want one feature value accidentally getting mapped to the
@@ -110,11 +127,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         return transformed_batch
 
     @trouting
-    def map(  # type: ignore
-        self,
-        dataset: Any,
-        **map_kwargs: Any,
-    ) -> Any:
+    def map(self, dataset: Any, **map_kwargs: Any) -> Any:
         raise ValueError(
             f"I don't know how to map a dataset of type {type(dataset)}; "
             "interface not implemented."
@@ -137,11 +150,13 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 the transform method. By default, this is empty; other
                 implementations may use this.
         """
-
         # explicitly casting to a boolean since this is all that is
         # supported by the simple mapper.
         # TODO[lucas]: maybe support specifying which fields to keep?
-        remove_columns = bool(map_kwargs.pop("remove_columns", False))
+        remove_columns = (
+            bool(map_kwargs.get("remove_columns", False))
+            or self.always_remove_columns
+        )
 
         if isinstance(dataset, abc.Sequence):
             self._check_fields_datasets(
@@ -205,13 +220,25 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 expected_fields=self.input_fields,
             )
 
+            if self.always_remove_columns:
+                remove_columns = list(dataset.features.keys())
+            else:
+                remove_columns = map_kwargs.get("remove_columns", [])
+
             if isinstance(self, AbstractBatchedBaseMapper):
                 transformed_dataset = dataset.map(
                     self._batch_transform_huggingface_datasets,
-                    **{**map_kwargs, "batched": True},  # type: ignore
+                    **{
+                        **map_kwargs,
+                        "batched": True,
+                        "remove_columns": remove_columns,
+                    },
                 )
             elif isinstance(self, AbstractSingleBaseMapper):
-                transformed_dataset = dataset.map(self.transform, **map_kwargs)
+                transformed_dataset = dataset.map(
+                    self.transform,
+                    **{**map_kwargs, "remove_columns": remove_columns},
+                )
             else:
                 raise TypeError(
                     "Mapper but be either a SingleBaseMapper or "

@@ -21,6 +21,10 @@ class FlattenMapper(SingleBaseMapper):
 
 
 class UnpackingMapper(BatchedBaseMapper):
+    """Unpacks some or all fields in a dataset sample.
+    Useful when features contain a list of values, but you want to
+    want individual values for each sample."""
+
     _DRP_EXTRA = "drop"
     _RPT_EXTRA = "repeat"
 
@@ -30,10 +34,7 @@ class UnpackingMapper(BatchedBaseMapper):
         fields_to_ignore: Optional[List[str]] = None,
         ignored_behavior: Optional[str] = None,
     ) -> None:
-        """Unpacks some or all fields in a dataset sample.
-        Useful when features contain a list of values, but you want to
-        want individual values for each sample.
-
+        """
         Args:
             fields_to_unpack (Optional[List[str]], optional): List of fields to
                 unpack. When not None, the other fields will be repeated (if
@@ -46,7 +47,7 @@ class UnpackingMapper(BatchedBaseMapper):
                 duplicated, while the others will be unpacked. Only one between
                 `fields_to_unpack` and `fields_to_ignore` can be set. Defaults
                 to None.
-            ignore_behavior (Optional[str]b, optional): How to handle fields
+            ignore_behavior (Optional[str], optional): How to handle fields
                 that are not unpacked. Can be "drop" or "repeat". Defaults to
                 None. Must be set when either `fields_to_unpack` or
                 `fields_to_ignore` is not None.
@@ -101,10 +102,11 @@ class UnpackingMapper(BatchedBaseMapper):
                 all_field_names_to_unpack = [
                     k for k in packed_sample.keys() if self.check_unpack_fn(k)
                 ]
-                if len(all_field_names_to_unpack) == 0:
-                    # raise an error if there's nothing to unpack,
-                    # which might indicate an error in setting up the mapper
-                    raise ValueError("No fields to unpack!")
+
+            if len(all_field_names_to_unpack) == 0:
+                # raise an error if there's nothing to unpack,
+                # which might indicate an error in setting up the mapper
+                raise ValueError("No fields to unpack!")
 
             unpacked_samples_it: Iterable[Dict[str, Any]] = (
                 # this re-attached all the field names to just the values

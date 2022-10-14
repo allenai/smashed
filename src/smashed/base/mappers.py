@@ -42,28 +42,47 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         self.fingerprint = self._get_mapper_fingerprint()
         self.pipeline = None
 
-    def __lshift__(self, other: P) -> P:
-        """Create a pipeline by combining this mapper with another."""
+    def chain(
+        self: P, next_mapper: "PipelineFingerprintMixIn", inplace: bool = True
+    ) -> P:
+        """Create a pipeline by combining this mapper with another.
 
-        # create a copy of the other mapper before attaching it to the
-        # current mapper
-        to_return = other.detach()
+        Args:
+            next_mapper (Mapper): The mapper to attach at the end of this
+                mapper or pipeline.
+            inplace (bool, optional): If True, the pipeline will be created
+                in place. If False, a new pipeline will be created. Defaults
+                to True.
+        """
 
-        # if the other mapper is already attached to a pipeline, we need
+        # create a copy of this mapper before attaching it to the next mapper
+        # unless inplace is True
+        to_return = self if inplace else self.detach()
+
+        # if the current mapper is already attached to a pipeline, we need
         # to recursively merge the pipelines; otherwise, we can just attach
-        # self to it.
-        if other.pipeline is not None:
-            to_merge = self << other.pipeline
+        # the next mapper to it.
+        if self.pipeline is not None:
+            to_merge = self.pipeline.chain(next_mapper)
         else:
-            to_merge = self
+            to_merge = next_mapper
 
+        # here's the part where we actually attach the next mapper!
         to_return.pipeline = to_merge
 
         return to_return
 
-    def __rshift__(self: P, other: "PipelineFingerprintMixIn") -> P:
-        """Create a new Pipeline by combining this mapper with another."""
-        return other << self
+    def __lshift__(self, prev_mapper: P) -> P:
+        """Create a pipeline by combining this mapper with another. This is
+        equivalent to other.chain(self, inplace=False), but with notation
+        self << other."""
+        return prev_mapper.chain(self, inplace=False)
+
+    def __rshift__(self: P, next_mapper: "PipelineFingerprintMixIn") -> P:
+        """Create a pipeline by combining this mapper with another. This is
+        equivalent to self.chain(other, inplace=False), but with notation
+        self >> other."""
+        return self.chain(next_mapper, inplace=False)
 
     def __repr__(self) -> str:
         """Return a string representation of this mapper."""
