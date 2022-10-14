@@ -14,6 +14,9 @@ class AbstractBaseMapper(Generic[D, S]):
     fingerprint: str
     pipeline: Union["AbstractBaseMapper", None]
 
+    def __init__(self, *args, **kwargs):
+        ...
+
     def map(self, dataset: D, **map_kwargs: Any) -> D:
         """Transform a dataset by applying this mapper's transform method.
 

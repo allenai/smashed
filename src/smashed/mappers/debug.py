@@ -42,8 +42,8 @@ class _MockMapperMixIn(AbstractBaseMapper):
         output_fields: Optional[Iterable[str]] = None,
     ):
         super().__init__(
-            input_fields=input_fields,  # type: ignore
-            output_fields=output_fields,  # type: ignore
+            input_fields=input_fields,
+            output_fields=output_fields,
         )
         self.value = value
         self.default = type(value)
