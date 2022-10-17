@@ -2,6 +2,7 @@ import itertools
 import random
 from typing import (
     Any,
+    Dict,
     Iterable,
     List,
     Literal,
@@ -477,12 +478,21 @@ class SingleValueToSequenceMapper(SingleBaseMapper):
 
 
 class SequencesConcatenateMapper(SingleBaseMapper):
+
+    concat_fields: Union[Dict[str, None], None]
+
     def __init__(self, concat_fields: Optional[List[str]] = None):
         super().__init__(
             input_fields=concat_fields, output_fields=concat_fields
         )
         self.concat_fields = (
-            set(concat_fields) if concat_fields is not None else None
+            # @soldni: using `dict.fromkeys` in place of `frozenset` to avoid
+            # issues with hashability: sets are not guaranteed to have the
+            # same hash, which causes issues when trying to cache through
+            # huggingface datasets.
+            dict.fromkeys(concat_fields)
+            if concat_fields is not None
+            else None
         )
 
     def _to_concat(self, field_name: str) -> bool:

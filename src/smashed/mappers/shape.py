@@ -1,6 +1,5 @@
-from functools import partial
 from itertools import chain
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Dict, Iterable, List, Optional
 
 from ..base import BatchedBaseMapper, SingleBaseMapper, TransformElementType
 
@@ -28,6 +27,9 @@ class UnpackingMapper(BatchedBaseMapper):
 
     _DRP_EXTRA = "drop"
     _RPT_EXTRA = "repeat"
+
+    fields_to_unpack: Optional[Dict[str, None]]
+    fields_to_ignore: Optional[Dict[str, None]]
 
     def __init__(
         self,
@@ -70,41 +72,38 @@ class UnpackingMapper(BatchedBaseMapper):
             )
 
         if fields_to_unpack is not None:
-            field_names = set(fields_to_unpack)
-            self.check_unpack_fn = partial(
-                self._check_unpack_fn, field_names=field_names
-            )
+            # @soldni: using `dict.fromkeys` in place of `frozenset` to avoid
+            # issues with hashability: sets are not guaranteed to have the
+            # same hash, which causes issues when trying to cache through
+            # huggingface datasets.
+            self.fields_to_unpack = dict.fromkeys(fields_to_unpack)
+            self.fields_to_ignore = None
+
         elif fields_to_ignore is not None:
-            field_names = set(fields_to_ignore)
-            self.check_unpack_fn = partial(
-                self._check_unpack_fn,
-                field_names=field_names,
-                true_if_in=False,
-            )
+            self.fields_to_unpack = None
+            # @soldni: using `dict.fromkeys` in place of `frozenset` to avoid
+            # issues with hashability: sets are not guaranteed to have the
+            # same hash, which causes issues when trying to cache through
+            # huggingface datasets.
+            self.fields_to_ignore = dict.fromkeys(fields_to_ignore)
+
         else:
-            field_names = None
-            # unpack all!
-            self.check_unpack_fn = partial(self._check_unpack_fn)
+            self.fields_to_unpack = self.fields_to_ignore = None
 
         self.ignore_behavior = ignored_behavior
 
         super().__init__(
-            input_fields=list(field_names) if field_names else None,
-            output_fields=list(field_names) if field_names else None,
+            input_fields=(fields_to_unpack or []) + (fields_to_ignore or []),
+            output_fields=(fields_to_unpack or []) + (fields_to_ignore or []),
         )
 
-    @staticmethod
-    def _check_unpack_fn(
-        f: str, field_names: Optional[Set[str]] = None, true_if_in: bool = True
-    ) -> bool:
-        """This function is necessary otherwise the self.check_unpack_fn
-        attribute renders the whole class un-picklable."""
-        if field_names is None:
-            return True
-        elif true_if_in:
-            return f in field_names
+    def _check_wether_to_unpack(self, field_name: str) -> bool:
+        if self.fields_to_unpack is not None:
+            return field_name in self.fields_to_unpack
+        elif self.fields_to_ignore is not None:
+            return field_name not in self.fields_to_ignore
         else:
-            return f not in field_names
+            return True
 
     def transform(
         self, data: Iterable[TransformElementType]
@@ -120,7 +119,9 @@ class UnpackingMapper(BatchedBaseMapper):
             # first, compute the names of fields to unpack
             if all_field_names_to_unpack is None:
                 all_field_names_to_unpack = [
-                    k for k in packed_sample.keys() if self.check_unpack_fn(k)
+                    k
+                    for k in packed_sample.keys()
+                    if self._check_wether_to_unpack(k)
                 ]
 
             if len(all_field_names_to_unpack) == 0:

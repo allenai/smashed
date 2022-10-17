@@ -26,6 +26,10 @@ INT_MAX_LENGTH = sys.maxsize
 class EncodeFieldsMapper(SingleBaseMapper):
     """Simply encodes the fields in the input data using the tokenizer."""
 
+    tokenizer: PreTrainedTokenizerBase
+    is_split_into_words: bool
+    fields_to_encode: Dict[str, None]
+
     def __init__(
         self,
         fields_to_encode: Sequence[str],
@@ -43,7 +47,12 @@ class EncodeFieldsMapper(SingleBaseMapper):
 
         self.tokenizer = tokenizer
         self.is_split_into_words = is_split_into_words
-        self.fields_to_encode = set(fields_to_encode)
+        # @soldni: using `dict.fromkeys` in place of `frozenset` to avoid
+        # issues with hashability: sets are not guaranteed to have the
+        # same hash, which causes issues when trying to cache through
+        # huggingface datasets.
+        self.fields_to_encode = dict.fromkeys(fields_to_encode)
+
         super().__init__(
             input_fields=fields_to_encode,
             output_fields=fields_to_encode,

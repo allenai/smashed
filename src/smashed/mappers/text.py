@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, List, Union
+from typing import Any, Dict, List, Union
 
 from ftfy import TextFixerConfig, fix_text
 
@@ -8,6 +8,8 @@ from ..base import SingleBaseMapper, TransformElementType
 
 class FtfyMapper(SingleBaseMapper):
     """Uses ftfy to fix text encoding and general weirdness issues."""
+
+    fields_to_fix: Dict[str, None]
 
     def __init__(
         self,
@@ -27,7 +29,11 @@ class FtfyMapper(SingleBaseMapper):
         if isinstance(input_fields, str):
             input_fields = [input_fields]
 
-        self.fields_to_fix = set(input_fields)
+        # @soldni: using `dict.fromkeys` in place of `frozenset` to avoid
+        # issues with hashability: sets are not guaranteed to have the
+        # same hash, which causes issues when trying to cache through
+        # huggingface datasets.
+        self.fields_to_fix = dict.fromkeys(input_fields)
 
         # check if options for ftfy are valid
         valid_ftfy_args = set(inspect.getfullargspec(TextFixerConfig).args)
