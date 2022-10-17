@@ -18,13 +18,6 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
     into a prompt. It outputs input_ids, etc.
     """
 
-    @property
-    def name(self) -> str:
-        # we don't want to use `PromptingMapperRecipe` as the name, because
-        # it is less descriptive than the name of the class that inherits
-        # from.
-        return super().name
-
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerBase,
@@ -47,9 +40,13 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         strategy: Union[Literal["longest"], Literal["uniform"]] = "longest",
         return_attention_mask: bool = True,
         return_token_type_ids: bool = False,
+        extra_keep_fields: Optional[Sequence[str]] = None,
+        extra_encode_fields: Optional[Sequence[str]] = None
     ):
         fields_to_truncate = fields_to_truncate or []
         fields_to_stride = fields_to_stride or []
+        extra_keep_fields = extra_keep_fields or []
+        extra_encode_fields = extra_encode_fields or []
 
         source_prompt_mapper = FillEncodedPromptMapper(
             template=source_template,
@@ -60,7 +57,10 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
             return_attention_mask=return_attention_mask,
             return_token_type_ids=return_token_type_ids,
         )
-        fields_to_encode = source_prompt_mapper.input_fields
+        fields_to_encode = (
+            source_prompt_mapper.input_fields +
+            tuple(extra_encode_fields or [])
+        )
 
         if target_template is not None:
             target_prompt_mapper = FillEncodedPromptMapper(
@@ -118,7 +118,10 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         # we need to rename some fields to make sure there is no conflict
         # between the source and target prompts; further this will eliminate
         # all fields that are not needed for this recipe.
-        rename_fields_map = {k: k for k in source_prompt_mapper.output_fields}
+        rename_fields_map = {
+            k: k for k in
+            source_prompt_mapper.output_fields + tuple(extra_keep_fields)
+        }
 
         if target_prompt_mapper:
 
