@@ -173,7 +173,7 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
         self,
         field_to_stride: str,
         max_length: int,
-        stride: Optional[int] = None
+        stride: Optional[int] = None,
     ):
         """
         Args:

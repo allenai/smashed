@@ -28,9 +28,7 @@ class TestFlattenMapper(unittest.TestCase):
 
     def test_stride(self):
         mapper = SingleSequenceStriderMapper(
-            field_to_stride="input_ids",
-            max_length=3,
-            stride=1
+            field_to_stride="input_ids", max_length=3, stride=1
         )
         dataset = [
             {"input_ids": [1, 2, 3, 4]},
@@ -46,13 +44,11 @@ class TestFlattenMapper(unittest.TestCase):
                 {"input_ids": [2, 3, 4]},
                 {"input_ids": [5, 6, 7]},
                 {"input_ids": [6, 7, 8]},
-            ]
+            ],
         )
 
         mapper = SingleSequenceStriderMapper(
-            field_to_stride="input_ids",
-            max_length=2,
-            stride=2
+            field_to_stride="input_ids", max_length=2, stride=2
         )
         dataset = [
             {"input_ids": [1, 2, 3, 4]},
@@ -67,5 +63,5 @@ class TestFlattenMapper(unittest.TestCase):
                 {"input_ids": [3, 4]},
                 {"input_ids": [5, 6]},
                 {"input_ids": [7, 8]},
-            ]
+            ],
         )

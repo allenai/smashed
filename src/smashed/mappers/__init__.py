@@ -31,7 +31,7 @@ from .prompting import (
     FillTextPromptMapper,
     TruncateNFieldsMapper,
 )
-from .shape import FlattenMapper, UnpackingMapper, SingleSequenceStriderMapper
+from .shape import FlattenMapper, SingleSequenceStriderMapper, UnpackingMapper
 from .text import FtfyMapper
 from .tokenize import PaddingMapper, TokenizerMapper, ValidUnicodeMapper
 from .types import BinarizerMapper, CastMapper, LookupMapper, OneHotMapper
