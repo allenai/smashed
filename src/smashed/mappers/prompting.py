@@ -1,7 +1,7 @@
+import sys
 from dataclasses import dataclass
 from math import floor
 from string import Formatter
-import sys
 from typing import Dict, List, Literal, Optional, Sequence, Union, cast
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
@@ -362,11 +362,13 @@ class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         self.return_token_type_ids = return_token_type_ids
 
         self.bos_token_ids = (
-            [] if tokenizer.bos_token_id is None or not add_bos_token
+            []
+            if tokenizer.bos_token_id is None or not add_bos_token
             else [tokenizer.bos_token_id]
         )
         self.eos_token_ids = (
-            [] if tokenizer.eos_token_id is None or not add_eos_token
+            []
+            if tokenizer.eos_token_id is None or not add_eos_token
             else [tokenizer.eos_token_id]
         )
 

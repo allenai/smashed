@@ -72,15 +72,14 @@ class UnpackingMapper(BatchedBaseMapper):
         if fields_to_unpack is not None:
             field_names = set(fields_to_unpack)
             self.check_unpack_fn = partial(
-                self._check_unpack_fn,
-                field_names=field_names
+                self._check_unpack_fn, field_names=field_names
             )
         elif fields_to_ignore is not None:
             field_names = set(fields_to_ignore)
             self.check_unpack_fn = partial(
                 self._check_unpack_fn,
                 field_names=field_names,
-                true_if_in=False
+                true_if_in=False,
             )
         else:
             field_names = None
@@ -96,9 +95,7 @@ class UnpackingMapper(BatchedBaseMapper):
 
     @staticmethod
     def _check_unpack_fn(
-        f: str,
-        field_names: Optional[Set[str]] = None,
-        true_if_in: bool = True
+        f: str, field_names: Optional[Set[str]] = None, true_if_in: bool = True
     ) -> bool:
         """This function is necessary otherwise the self.check_unpack_fn
         attribute renders the whole class un-picklable."""
