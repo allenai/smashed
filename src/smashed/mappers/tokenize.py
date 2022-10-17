@@ -51,7 +51,8 @@ class GetTokenizerOutputFieldsMixin:
     def prefix(self, field_or_dict: str) -> str:
         return (
             f"{self._prefix}_{field_or_dict}"
-            if self._prefix else field_or_dict
+            if self._prefix
+            else field_or_dict
         )
 
 
