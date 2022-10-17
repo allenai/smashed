@@ -162,3 +162,55 @@ class UnpackingMapper(BatchedBaseMapper):
                 )
 
             yield from unpacked_samples_it
+
+
+class SingleSequenceStriderMapper(BatchedBaseMapper):
+    """Mapper that creates multiple sequences from a single field
+    if the field is longer than the provided maximum length; an optional
+    stride can be used to create overlapping sequences."""
+
+    def __init__(
+        self,
+        field_to_stride: str,
+        max_length: int,
+        stride: Optional[int] = None,
+    ):
+        """
+        Args:
+            field_to_stride (str): Name of the field to stride.
+            max_length (int): Maximum length for each sequence; if a sequence
+                is longer than this, it will be split into multiple sequences.
+            stride (Optional[int], optional): Step to use when striding. If not
+                provided, the stride step will be equal to `max_length`, which
+                will create non-overlapping sequences. Defaults to None.
+        """
+
+        self.field_to_stride = field_to_stride
+        self.max_length = max_length
+        self.stride = stride or max_length
+
+        super().__init__(
+            input_fields=[field_to_stride],
+            output_fields=[field_to_stride],
+        )
+
+    def transform(
+        self, data: Iterable[TransformElementType]
+    ) -> Iterable[TransformElementType]:
+
+        for sample in data:
+            field_to_stride = sample[self.field_to_stride]
+
+            if len(field_to_stride) > self.max_length:
+                for i in range(
+                    0, len(field_to_stride) - self.max_length + 1, self.stride
+                ):
+                    new_sample = {
+                        **sample,
+                        self.field_to_stride: field_to_stride[
+                            i : i + self.max_length
+                        ],
+                    }
+                    yield new_sample
+            else:
+                yield sample
