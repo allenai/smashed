@@ -41,7 +41,7 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         return_attention_mask: bool = True,
         return_token_type_ids: bool = False,
         extra_keep_fields: Optional[Sequence[str]] = None,
-        extra_encode_fields: Optional[Sequence[str]] = None
+        extra_encode_fields: Optional[Sequence[str]] = None,
     ):
         fields_to_truncate = fields_to_truncate or []
         fields_to_stride = fields_to_stride or []
@@ -57,9 +57,8 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
             return_attention_mask=return_attention_mask,
             return_token_type_ids=return_token_type_ids,
         )
-        fields_to_encode = (
-            source_prompt_mapper.input_fields +
-            tuple(extra_encode_fields or [])
+        fields_to_encode = source_prompt_mapper.input_fields + tuple(
+            extra_encode_fields or []
         )
 
         if target_template is not None:
@@ -119,8 +118,9 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         # between the source and target prompts; further this will eliminate
         # all fields that are not needed for this recipe.
         rename_fields_map = {
-            k: k for k in
-            source_prompt_mapper.output_fields + tuple(extra_keep_fields)
+            k: k
+            for k in source_prompt_mapper.output_fields
+            + tuple(extra_keep_fields)
         }
 
         if target_prompt_mapper:
