@@ -232,12 +232,21 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                         **map_kwargs,
                         "batched": True,
                         "remove_columns": remove_columns,
+                        # add name of mapper as description if a description
+                        # has not been provided
+                        "desc": map_kwargs.get("desc", type(self).__name__),
                     },
                 )
             elif isinstance(self, AbstractSingleBaseMapper):
                 transformed_dataset = dataset.map(
                     self.transform,
-                    **{**map_kwargs, "remove_columns": remove_columns},
+                    **{
+                        **map_kwargs,
+                        "remove_columns": remove_columns,
+                        # add name of mapper as description if a description
+                        # has not been provided
+                        "desc": map_kwargs.get("desc", type(self).__name__),
+                    },
                 )
             else:
                 raise TypeError(

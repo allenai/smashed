@@ -21,7 +21,11 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         self,
         tokenizer: PreTrainedTokenizerBase,
         source_template: str,
+        source_add_bos_token: bool = True,
+        source_add_eos_token: bool = True,
         target_template: Optional[str] = None,
+        target_add_bos_token: bool = True,
+        target_add_eos_token: bool = True,
         fields_to_truncate: Optional[Sequence[str]] = None,
         target_output_name: Union[
             Literal["labels"], Literal["decoder_input_ids"]
@@ -39,6 +43,8 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
             template=source_template,
             tokenizer=tokenizer,
             output_prefix=None,
+            add_bos_token=source_add_bos_token,
+            add_eos_token=source_add_eos_token,
             return_attention_mask=return_attention_mask,
             return_token_type_ids=return_token_type_ids,
         )
@@ -48,6 +54,8 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
             target_prompt_mapper = FillEncodedPromptMapper(
                 template=target_template,
                 tokenizer=tokenizer,
+                add_bos_token=target_add_bos_token,
+                add_eos_token=target_add_eos_token,
                 return_attention_mask=False,
                 # we will change this later
                 output_prefix="decoder",
