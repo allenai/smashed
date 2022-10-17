@@ -18,6 +18,13 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
     into a prompt. It outputs input_ids, etc.
     """
 
+    @property
+    def name(self) -> str:
+        # we don't want to use `PromptingMapperRecipe` as the name, because
+        # it is less descriptive than the name of the class that inherits
+        # from.
+        return super().name
+
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerBase,
@@ -43,11 +50,6 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
     ):
         fields_to_truncate = fields_to_truncate or []
         fields_to_stride = fields_to_stride or []
-
-        if sum(1 for e in fields_to_truncate if e in fields_to_stride) > 0:
-            raise ValueError(
-                "Fields to truncate and fields to stride cannot overlap."
-            )
 
         source_prompt_mapper = FillEncodedPromptMapper(
             template=source_template,
@@ -155,13 +157,21 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         fields_to_stride = []
 
         for field_name in prompt_mapper.input_fields:
-            if field_name in all_fields_to_stride:
-                fields_to_stride.append(field_name)
-            elif field_name in all_fields_to_truncate:
+            if field_name in all_fields_to_truncate:
                 fields_to_truncate.append(field_name)
             else:
                 fields_to_preserve.append(field_name)
 
+            if field_name in all_fields_to_stride:
+                # note how strided fields still participate into the
+                # fields to preserve unless we also want to truncate them
+                fields_to_stride.append(field_name)
+
+        # we need to figure out what length we need to stride to; if not
+        # provided, we will use the max_length for truncation, which is
+        # either max_source_length/max_target_length or the model_max_length
+        # from the tokenizer; if none of the three is provided, we will
+        # raise an error if there are fields to stride.
         max_length_when_striding = (
             stride_max_length or max_length or tokenizer.model_max_length
         )
@@ -182,6 +192,8 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
             self.chain(strider_mapper)
 
         if fields_to_truncate:
+            # truncation has to be done globally so that all sequence
+            # lengths are accounted for
             source_truncation_mapper = TruncateNFieldsMapper(
                 fields_to_truncate=fields_to_truncate,
                 fields_to_preserve=fields_to_preserve,
