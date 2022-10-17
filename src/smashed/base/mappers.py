@@ -3,7 +3,7 @@ import hashlib
 import inspect
 import pickle
 from itertools import chain
-from typing import Iterable, NamedTuple, Optional, TypeVar, Union
+from typing import Iterable, NamedTuple, Optional, Tuple, TypeVar, Union
 
 from ..utils import bytes_from_int, int_from_bytes
 from .abstract import (
@@ -19,6 +19,9 @@ P = TypeVar("P", bound="PipelineFingerprintMixIn")
 
 class PipelineFingerprintMixIn(AbstractBaseMapper):
 
+    input_fields: Tuple[str, ...]
+    output_fields: Tuple[str, ...]
+    fingerprint: str
     pipeline: Union["PipelineFingerprintMixIn", None]
 
     def __init__(
@@ -29,16 +32,17 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         """Create a new Mapper.
 
         Args:
-            input_fields (Optional[List[str]], optional): The fields expected
-                by this mapper. If None is provided, the mapper will not
-                check for the presence of any input fields. Defaults to None.
-            output_fields (Optional[List[str]], optional): The fields produced
-                by this mapper after transformation. If None is provided, the
-                mapper will not validate the output of transform. Defaults to
-                None.
+            input_fields (Optional[Iterable[str]], optional): The fields
+                expected by this mapper. If None is provided, the mapper will
+                not check for the presence of any input fields.
+                Defaults to None.
+            output_fields (Optional[Iterable[str]], optional): The fields
+                produced by this mapper after transformation. If None is
+                provided, the mapper will not validate the output of transform.
+                Defaults to None.
         """
-        self.input_fields = tuple(input_fields or [])
-        self.output_fields = tuple(output_fields or [])
+        self.input_fields = tuple(sorted(set(input_fields or [])))
+        self.output_fields = tuple(sorted(set(output_fields or [])))
         self.fingerprint = self._get_mapper_fingerprint()
         self.pipeline = None
 
