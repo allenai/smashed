@@ -1,6 +1,0 @@
-torch>=1.9
-transformers>=4.5
-necessary>=0.2.3
-trouting>=0.2.2
-ftfy>=6.1.1
-platformdirs>=2.5.0

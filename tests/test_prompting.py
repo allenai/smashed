@@ -142,6 +142,8 @@ class TestTruncate(unittest.TestCase):
             )
         )
 
+        print(mapper)
+
         data = [
             {
                 "a": "many " * 30 + " hello world",
