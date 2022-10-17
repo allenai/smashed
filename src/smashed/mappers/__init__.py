@@ -31,7 +31,7 @@ from .prompting import (
     FillTextPromptMapper,
     TruncateNFieldsMapper,
 )
-from .shape import FlattenMapper, UnpackingMapper
+from .shape import FlattenMapper, UnpackingMapper, SingleSequenceStriderMapper
 from .text import FtfyMapper
 from .tokenize import PaddingMapper, TokenizerMapper, ValidUnicodeMapper
 from .types import BinarizerMapper, CastMapper, LookupMapper, OneHotMapper
@@ -67,6 +67,7 @@ __all__ = [
     "Python2TorchMapper",
     "RenameFieldsMapper",
     "SequencesConcatenateMapper",
+    "SingleSequenceStriderMapper",
     "SingleValueToSequenceMapper",
     "StartCachingMapper",
     "TensorCollatorMapper",
