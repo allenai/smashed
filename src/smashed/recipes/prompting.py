@@ -50,7 +50,7 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
                 tokenizer=tokenizer,
                 return_attention_mask=False,
                 # we will change this later
-                output_prefix="decoder_",
+                output_prefix="decoder",
             )
             fields_to_encode += target_prompt_mapper.input_fields
         else:

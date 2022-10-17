@@ -49,10 +49,10 @@ class GetTokenizerOutputFieldsMixin:
         return output_fields
 
     def prefix(self, field_or_dict: str) -> str:
-        if self._prefix:
-            return f"{self.prefix}{field_or_dict}"
-        else:
-            return field_or_dict
+        return (
+            f"{self._prefix}_{field_or_dict}"
+            if self._prefix else field_or_dict
+        )
 
 
 class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
