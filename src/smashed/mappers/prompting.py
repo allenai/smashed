@@ -138,8 +138,8 @@ class TruncateNFieldsMapper(SingleBaseMapper):
             )
 
         self.tokenizer = tokenizer
-        self.fields_to_truncate = sorted(set(fields_to_truncate))
-        self.fields_to_preserve = sorted(set(fields_to_preserve or []))
+        self.fields_to_truncate = tuple(sorted(set(fields_to_truncate)))
+        self.fields_to_preserve = tuple(sorted(set(fields_to_preserve or [])))
         self.max_length = max_length - length_penalty
         self.strategy = strategy
         super().__init__(

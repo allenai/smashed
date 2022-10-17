@@ -1,3 +1,4 @@
+import logging
 from collections import abc
 from itertools import chain
 from typing import (
@@ -35,6 +36,9 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
         )
 
 
+Logger = logging.getLogger(__name__)
+
+
 class MapMethodInterfaceMixIn(AbstractBaseMapper):
     """Mix-in class that implements the map method for all mappers
     and various interfaces. Do not inherit from this class directly,
@@ -46,6 +50,12 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         from the dataset. If False, the mapper will only remove columns
         if the output columns are not a subset of the input columns."""
         return False
+
+    @property
+    def name(self) -> str:
+        """The name of this mapper. By default, this is the name of the
+        class."""
+        return type(self).__name__
 
     def _check_fields_datasets(
         self,
@@ -220,6 +230,8 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 expected_fields=self.input_fields,
             )
 
+            print_fingerprint = map_kwargs.pop("print_fingerprint", False)
+
             if self.always_remove_columns:
                 remove_columns = list(dataset.features.keys())
             else:
@@ -234,7 +246,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                         "remove_columns": remove_columns,
                         # add name of mapper as description if a description
                         # has not been provided
-                        "desc": map_kwargs.get("desc", type(self).__name__),
+                        "desc": map_kwargs.get("desc", self.name),
                     },
                 )
             elif isinstance(self, AbstractSingleBaseMapper):
@@ -245,7 +257,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                         "remove_columns": remove_columns,
                         # add name of mapper as description if a description
                         # has not been provided
-                        "desc": map_kwargs.get("desc", type(self).__name__),
+                        "desc": map_kwargs.get("desc", self.name),
                     },
                 )
             else:
@@ -253,6 +265,13 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                     "Mapper but be either a SingleBaseMapper or "
                     "a BatchedBaseMapper"
                 )
+
+            if print_fingerprint:
+                Logger.warn(
+                    f"Fingerprint at {self.name}: "
+                    + str(getattr(transformed_dataset, "_fingerprint", None))
+                )
+            map_kwargs["print_fingerprint"] = print_fingerprint
 
             self._check_fields_datasets(
                 provided_fields=transformed_dataset.features.keys(),

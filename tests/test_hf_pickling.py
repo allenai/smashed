@@ -3,7 +3,11 @@ import unittest
 
 from necessary import necessary
 
-from smashed.mappers import TokenizerMapper, UnpackingMapper
+from smashed.mappers import (
+    TokenizerMapper,
+    TruncateNFieldsMapper,
+    UnpackingMapper,
+)
 from smashed.mappers.debug import MockMapper
 
 with necessary(("datasets", "dill")):
@@ -82,6 +86,18 @@ class TestPickling(unittest.TestCase):
             tokenizer=AutoTokenizer.from_pretrained("bert-base-uncased"),
             input_field="a",
         )
+
+        hashes = set()
+        for _ in range(100):
+            processed_dataset = mp.map(dataset)
+            hashes.add(processed_dataset._fingerprint)
+
+        self.assertEqual(len(hashes), 1)
+
+    def test_truncate_fingerprint(self):
+        mp = TruncateNFieldsMapper(fields_to_truncate=["a", "b"], max_length=2)
+
+        dataset = Dataset.from_dict({"a": [[1, 2, 3]], "b": [[4, 5, 6]]})
 
         hashes = set()
         for _ in range(100):
