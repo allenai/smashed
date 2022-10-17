@@ -4,6 +4,11 @@ from typing import Any, Callable, Iterable, NamedTuple
 from ..base import BatchedBaseMapper, TransformElementType
 from .types import RecurseOpMixIn
 
+
+def not_contains(a: Any, b: Any) -> bool:
+    return not operator.contains(a, b)
+
+
 VALID_OPERATIONS = {
     "+": operator.add,
     "-": operator.sub,
@@ -25,7 +30,7 @@ VALID_OPERATIONS = {
     "is": operator.is_,
     "is not": operator.is_not,
     "in": operator.contains,
-    "not in": lambda x, y: not operator.contains(x, y),
+    "not in": not_contains,
 }
 
 

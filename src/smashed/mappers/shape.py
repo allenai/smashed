@@ -1,5 +1,6 @@
+from functools import partial
 from itertools import chain
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set
 
 from ..base import BatchedBaseMapper, SingleBaseMapper, TransformElementType
 
@@ -70,14 +71,20 @@ class UnpackingMapper(BatchedBaseMapper):
 
         if fields_to_unpack is not None:
             field_names = set(fields_to_unpack)
-            self.check_unpack_fn = lambda f: f in field_names
+            self.check_unpack_fn = partial(
+                self._check_unpack_fn, field_names=field_names
+            )
         elif fields_to_ignore is not None:
             field_names = set(fields_to_ignore)
-            self.check_unpack_fn = lambda f: f not in field_names
+            self.check_unpack_fn = partial(
+                self._check_unpack_fn,
+                field_names=field_names,
+                true_if_in=False,
+            )
         else:
             field_names = None
             # unpack all!
-            self.check_unpack_fn = lambda _: True
+            self.check_unpack_fn = partial(self._check_unpack_fn)
 
         self.ignore_behavior = ignored_behavior
 
@@ -85,6 +92,19 @@ class UnpackingMapper(BatchedBaseMapper):
             input_fields=list(field_names) if field_names else None,
             output_fields=list(field_names) if field_names else None,
         )
+
+    @staticmethod
+    def _check_unpack_fn(
+        f: str, field_names: Optional[Set[str]] = None, true_if_in: bool = True
+    ) -> bool:
+        """This function is necessary otherwise the self.check_unpack_fn
+        attribute renders the whole class un-picklable."""
+        if field_names is None:
+            return True
+        elif true_if_in:
+            return f in field_names
+        else:
+            return f not in field_names
 
     def transform(
         self, data: Iterable[TransformElementType]

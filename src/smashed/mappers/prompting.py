@@ -1,3 +1,4 @@
+import sys
 from dataclasses import dataclass
 from math import floor
 from string import Formatter
@@ -14,6 +15,12 @@ __all__ = [
     "FillTextPromptMapper",
     "TruncateNFieldsMapper",
 ]
+
+
+# We use this as maximum length for the tokenizer in case we are not
+# truncating; we need this otherwise huggingface prints a warning.
+# Using sys.maxsize from here: https://stackoverflow.com/a/7604981/938048
+INT_MAX_LENGTH = sys.maxsize
 
 
 class EncodeFieldsMapper(SingleBaseMapper):
@@ -47,6 +54,11 @@ class EncodeFieldsMapper(SingleBaseMapper):
             name: (
                 self.tokenizer(
                     field,
+                    # we are not really truncating given the value of
+                    # max length, but we need to pass something to avoid
+                    # a warning from huggingface
+                    truncation=True,
+                    max_length=INT_MAX_LENGTH,
                     add_special_tokens=False,
                     return_attention_mask=False,
                     return_token_type_ids=False,
@@ -340,6 +352,8 @@ class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         output_prefix: Optional[str] = None,
         return_attention_mask: bool = True,
         return_token_type_ids: bool = False,
+        add_bos_token: bool = True,
+        add_eos_token: bool = True,
     ) -> None:
         self.tokenizer = tokenizer
         self._prefix = output_prefix
@@ -348,10 +362,14 @@ class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         self.return_token_type_ids = return_token_type_ids
 
         self.bos_token_ids = (
-            [] if tokenizer.bos_token_id is None else [tokenizer.bos_token_id]
+            []
+            if tokenizer.bos_token_id is None or not add_bos_token
+            else [tokenizer.bos_token_id]
         )
         self.eos_token_ids = (
-            [] if tokenizer.eos_token_id is None else [tokenizer.eos_token_id]
+            []
+            if tokenizer.eos_token_id is None or not add_eos_token
+            else [tokenizer.eos_token_id]
         )
 
         self.prompt = PromptSegment.from_template(
