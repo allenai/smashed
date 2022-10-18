@@ -54,3 +54,20 @@ class ConcatenateContextMapper(SingleBaseMapper):
                 "context must be either a string or a list of strings,"
                 f' but it is {type(data["context"])}'
             )
+
+
+class UniqueAnswerMapper(SingleBaseMapper):
+    answer_field: str
+
+    def __init__(self, answer_field: str = "answers"):
+        super().__init__()
+        self.answer_field = answer_field
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        data[self.answer_field] = [
+            # we use fromkeys to remove duplicates because it
+            # preserves the order of the list
+            t
+            for t in dict.fromkeys(data[self.answer_field])
+        ]
+        return data

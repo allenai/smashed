@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Sequence, Union
+from typing import Dict, List, Literal, Optional, Sequence, Union
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
@@ -40,12 +40,16 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         strategy: Union[Literal["longest"], Literal["uniform"]] = "longest",
         return_attention_mask: bool = True,
         return_token_type_ids: bool = False,
-        extra_keep_fields: Optional[Sequence[str]] = None,
+        extra_keep_field_names: Union[None, List[str], Dict[str, str]] = None,
         extra_encode_fields: Optional[Sequence[str]] = None,
     ):
         fields_to_truncate = fields_to_truncate or []
         fields_to_stride = fields_to_stride or []
-        extra_keep_fields = extra_keep_fields or []
+
+        extra_keep_field_names = extra_keep_field_names or []
+        if isinstance(extra_keep_field_names, list):
+            extra_keep_field_names = {f: f for f in extra_keep_field_names}
+
         extra_encode_fields = extra_encode_fields or []
 
         source_prompt_mapper = FillEncodedPromptMapper(
@@ -118,9 +122,8 @@ class PromptingMapperRecipe(EncodeFieldsMapper):
         # between the source and target prompts; further this will eliminate
         # all fields that are not needed for this recipe.
         rename_fields_map = {
-            k: k
-            for k in source_prompt_mapper.output_fields
-            + tuple(extra_keep_fields)
+            **{k: k for k in source_prompt_mapper.output_fields},
+            **{k: v for k, v in extra_keep_field_names.items()},
         }
 
         if target_prompt_mapper:
