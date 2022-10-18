@@ -8,7 +8,12 @@ from .collators import (
 )
 from .converters import Python2TorchMapper, Torch2PythonMapper
 from .debug import DebugBatchedMapper, DebugSingleMapper
-from .fields import ChangeFieldsMapper, MakeFieldMapper, RenameFieldsMapper
+from .fields import (
+    ChangeFieldsMapper,
+    EnumerateFieldMapper,
+    MakeFieldMapper,
+    RenameFieldsMapper,
+)
 from .filters import FilterMapper
 from .loaders import (
     CsvLoaderMapper,
@@ -38,6 +43,7 @@ from .types import BinarizerMapper, CastMapper, LookupMapper, OneHotMapper
 
 __all__ = [
     "AttentionMaskSequencePaddingMapper",
+    "EnumerateFieldMapper",
     "BinarizerMapper",
     "CastMapper",
     "ChangeFieldsMapper",

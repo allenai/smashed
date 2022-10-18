@@ -93,15 +93,15 @@ class RenameFieldsMapper(SingleBaseMapper):
 
 
 class MakeFieldMapper(SingleBaseMapper):
+    """Mapper that adds a new field to a dataset."""
+
     def __init__(
         self: "MakeFieldMapper",
         field_name: str,
         value: Any,
         shape_like: Optional[str] = None,
     ):
-        """Mapper that adds a new field to a dataset.
-
-        Args:
+        """Args:
             field_name (str): Name of the new field.
             value (Optional[Any]): Value to assign to the new field.
             shape_like (Optional[str], optional): If a fixed value is provided,
@@ -121,3 +121,68 @@ class MakeFieldMapper(SingleBaseMapper):
 
         data[self.output_fields[0]] = new_value
         return data
+
+
+class EnumerateFieldMapper(SingleBaseMapper):
+    """Enumerate values in a field; optionally assigning the same id to
+    repeated values."""
+
+    def __init__(
+        self,
+        field_to_enumerate: str,
+        destination_field: Optional[str] = None,
+        same_id_for_repeated: bool = True,
+    ):
+        """Args:
+            field_to_enumerate (str): Name of the field to enumerate.
+            destination_field (str, optional): Name of the field where the
+                enumeration of samples will be stored. If None, the enumeration
+                will replace the original field. Defaults to None.
+            same_id_for_repeated (bool, optional): Whether to assign the same
+                id to repeated values. Requires value in the field to
+                be hashable. Defaults to True.
+        """
+        self.enum_field = field_to_enumerate
+        self.dest_field = destination_field or field_to_enumerate
+        self.same_id_for_repeated = same_id_for_repeated
+        self._init_memory()
+
+        super().__init__(
+            input_fields=[self.enum_field], output_fields=[self.dest_field]
+        )
+
+    def _init_memory(self):
+        """Initializes counters to keep track of enumeration."""
+        self.memory: Dict[Any, int] = {}
+        self.count: int = 0
+
+    def __getstate__(self) -> dict:
+        out = super().__getstate__()
+
+        # do not store enumerations when pickling the mapper
+        out.pop("memory")
+        out.pop("count")
+        return out
+
+    def __setstate__(self, state: dict) -> None:
+        super().__setstate__(state)
+        # reinitialize counters when unpickling the mapper
+        self._init_memory()
+
+    def transform(self, element: TransformElementType) -> TransformElementType:
+        if self.same_id_for_repeated:
+            try:
+                i = self.memory.setdefault(
+                    element[self.enum_field], len(self.memory)
+                )
+            except TypeError as e:
+                raise TypeError(
+                    f"Could not enumerate field `{self.enum_field}` "
+                    "because it is not hashable."
+                ) from e
+        else:
+            i = self.count
+            self.count += 1
+
+        element[self.dest_field] = i
+        return element
