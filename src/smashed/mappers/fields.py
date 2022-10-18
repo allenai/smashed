@@ -160,8 +160,8 @@ class EnumerateFieldMapper(SingleBaseMapper):
         out = super().__getstate__()
 
         # do not store enumerations when pickling the mapper
-        out.pop("memory")
-        out.pop("count")
+        out['__dict__'].pop("memory")
+        out['__dict__'].pop("count")
         return out
 
     def __setstate__(self, state: dict) -> None:

@@ -1,5 +1,7 @@
 import pickle
 import unittest
+from uuid import uuid4
+from attr import field
 
 from necessary import necessary
 
@@ -7,8 +9,10 @@ from smashed.mappers import (
     TokenizerMapper,
     TruncateNFieldsMapper,
     UnpackingMapper,
+    EnumerateFieldMapper
 )
 from smashed.mappers.debug import MockMapper
+from smashed.mappers.contrib.squad import ConcatenateContextMapper
 
 with necessary(("datasets", "dill")):
     import dill
@@ -105,3 +109,36 @@ class TestPickling(unittest.TestCase):
             hashes.add(processed_dataset._fingerprint)
 
         self.assertEqual(len(hashes), 1)
+
+    def test_concat_context(self):
+        mp = ConcatenateContextMapper()
+        dataset = Dataset.from_dict({
+            "context": [
+                ["hello world", "my name is john doe"],
+                ["simple string"]
+            ]
+        })
+
+        hashes = set()
+        for _ in range(100):
+            processed_dataset = mp.map(dataset)
+            hashes.add(processed_dataset._fingerprint)
+
+        self.assertEqual(len(hashes), 1)
+
+    def test_enumerate(self):
+        mp = EnumerateFieldMapper("answers")
+        dataset = Dataset.from_dict({
+            "answers": [uuid4().hex for _ in range(20)] * 2
+        })
+
+        hashes = set()
+        for _ in range(20):
+            processed_dataset = mp.map(dataset)
+            hashes.add(processed_dataset._fingerprint)
+
+        self.assertEqual(len(hashes), 1)
+        self.assertEqual(
+            mp.map(dataset)["answers"],
+            [i for i in range(20)] + [i for i in range(20)]
+        )
