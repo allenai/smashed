@@ -102,11 +102,11 @@ class MakeFieldMapper(SingleBaseMapper):
         shape_like: Optional[str] = None,
     ):
         """Args:
-            field_name (str): Name of the new field.
-            value (Optional[Any]): Value to assign to the new field.
-            shape_like (Optional[str], optional): If a fixed value is provided,
-                this existing field that will be used to determine the shape of
-                the new field. Defaults to None.
+        field_name (str): Name of the new field.
+        value (Optional[Any]): Value to assign to the new field.
+        shape_like (Optional[str], optional): If a fixed value is provided,
+            this existing field that will be used to determine the shape of
+            the new field. Defaults to None.
 
         """
         super().__init__(output_fields=[field_name])
@@ -134,13 +134,13 @@ class EnumerateFieldMapper(SingleBaseMapper):
         same_id_for_repeated: bool = True,
     ):
         """Args:
-            field_to_enumerate (str): Name of the field to enumerate.
-            destination_field (str, optional): Name of the field where the
-                enumeration of samples will be stored. If None, the enumeration
-                will replace the original field. Defaults to None.
-            same_id_for_repeated (bool, optional): Whether to assign the same
-                id to repeated values. Requires value in the field to
-                be hashable. Defaults to True.
+        field_to_enumerate (str): Name of the field to enumerate.
+        destination_field (str, optional): Name of the field where the
+            enumeration of samples will be stored. If None, the enumeration
+            will replace the original field. Defaults to None.
+        same_id_for_repeated (bool, optional): Whether to assign the same
+            id to repeated values. Requires value in the field to
+            be hashable. Defaults to True.
         """
         self.enum_field = field_to_enumerate
         self.dest_field = destination_field or field_to_enumerate
@@ -160,8 +160,8 @@ class EnumerateFieldMapper(SingleBaseMapper):
         out = super().__getstate__()
 
         # do not store enumerations when pickling the mapper
-        out['__dict__'].pop("memory")
-        out['__dict__'].pop("count")
+        out["__dict__"].pop("memory")
+        out["__dict__"].pop("count")
         return out
 
     def __setstate__(self, state: dict) -> None:

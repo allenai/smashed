@@ -5,13 +5,13 @@ from uuid import uuid4
 from necessary import necessary
 
 from smashed.mappers import (
+    EnumerateFieldMapper,
     TokenizerMapper,
     TruncateNFieldsMapper,
     UnpackingMapper,
-    EnumerateFieldMapper
 )
-from smashed.mappers.debug import MockMapper
 from smashed.mappers.contrib.squad import ConcatenateContextMapper
+from smashed.mappers.debug import MockMapper
 
 with necessary(("datasets", "dill")):
     import dill
@@ -111,12 +111,14 @@ class TestPickling(unittest.TestCase):
 
     def test_concat_context(self):
         mp = ConcatenateContextMapper()
-        dataset = Dataset.from_dict({
-            "context": [
-                ["hello world", "my name is john doe"],
-                ["simple string"]
-            ]
-        })
+        dataset = Dataset.from_dict(
+            {
+                "context": [
+                    ["hello world", "my name is john doe"],
+                    ["simple string"],
+                ]
+            }
+        )
 
         hashes = set()
         for _ in range(100):
@@ -127,9 +129,9 @@ class TestPickling(unittest.TestCase):
 
     def test_enumerate(self):
         mp = EnumerateFieldMapper("answers")
-        dataset = Dataset.from_dict({
-            "answers": [uuid4().hex for _ in range(20)] * 2
-        })
+        dataset = Dataset.from_dict(
+            {"answers": [uuid4().hex for _ in range(20)] * 2}
+        )
 
         hashes = set()
         for _ in range(20):
@@ -139,5 +141,5 @@ class TestPickling(unittest.TestCase):
         self.assertEqual(len(hashes), 1)
         self.assertEqual(
             mp.map(dataset)["answers"],
-            [i for i in range(20)] + [i for i in range(20)]
+            [i for i in range(20)] + [i for i in range(20)],
         )
