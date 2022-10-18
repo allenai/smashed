@@ -1,7 +1,6 @@
 import pickle
 import unittest
 from uuid import uuid4
-from attr import field
 
 from necessary import necessary
 
