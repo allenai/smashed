@@ -12,6 +12,8 @@ class DebugSingleMapper(SingleBaseMapper):
         if use_ipdb:
             os.environ["PYTHONBREAKPOINT"] = "ipdb.set_trace"
 
+        super().__init__()
+
     def transform(self, data: TransformElementType) -> TransformElementType:
         breakpoint()
         return data
@@ -23,6 +25,8 @@ class DebugBatchedMapper(BatchedBaseMapper):
     def __init__(self, use_ipdb: bool = False):
         if use_ipdb:
             os.environ["PYTHONBREAKPOINT"] = "ipdb.set_trace"
+
+        super().__init__()
 
     def transform(
         self, data: Iterable[TransformElementType]
