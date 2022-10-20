@@ -1,4 +1,5 @@
 from typing import Optional
+
 from smashed.base import SingleBaseMapper, TransformElementType
 
 
@@ -24,8 +25,8 @@ class ConcatenateContextMapper(SingleBaseMapper):
         paragraph_eos: str = "\n",
         header_bos: Optional[str] = None,
         header_eos: Optional[str] = None,
-        document_bos: str = '',
-        document_eos: str = '',
+        document_bos: str = "",
+        document_eos: str = "",
     ):
         """
         Args:
@@ -47,10 +48,8 @@ class ConcatenateContextMapper(SingleBaseMapper):
                 '' (empty string).
             document_eos (str): the end of document token. Defaults to ''
                 (empty string).
-
         """
-
-        self.context_field_name = context_field_name
+        self.ctx_fld = context_field_name
         self.sec_bos = section_bos
         self.sec_eos = section_eos
         self.par_bos = paragraph_bos
@@ -66,11 +65,11 @@ class ConcatenateContextMapper(SingleBaseMapper):
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        if isinstance(data["context"], str):
+        if isinstance(data[self.ctx_fld], str):
             return data
-        elif isinstance(data["context"], list):
+        elif isinstance(data[self.ctx_fld], list):
             sections = []
-            for sec in data["context"]:
+            for sec in data[self.ctx_fld]:
                 if sec is None:
                     continue
 
@@ -88,12 +87,14 @@ class ConcatenateContextMapper(SingleBaseMapper):
                 else:
                     raise ValueError(f"Invalid type for section: {type(sec)}")
 
-            data['context'] = self.doc_bos + "".join(sections) + self.doc_eos
+            data[self.ctx_fld] = (
+                self.doc_bos + "".join(sections) + self.doc_eos
+            )
             return data
         else:
             raise ValueError(
                 "context must be either a string or a list of strings,"
-                f' but it is {type(data["context"])}'
+                f" but it is {type(data[self.ctx_fld])}"
             )
 
 
