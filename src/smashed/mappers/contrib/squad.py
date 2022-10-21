@@ -1,6 +1,13 @@
 from typing import Optional
 
-from smashed.base import SingleBaseMapper, TransformElementType
+from ...base import SingleBaseMapper, TransformElementType
+
+
+__all__ = [
+    "AddEvidencesLocation",
+    "ConcatenateContextMapper",
+    "UniqueAnswerMapper",
+]
 
 
 class ConcatenateContextMapper(SingleBaseMapper):
@@ -99,6 +106,8 @@ class ConcatenateContextMapper(SingleBaseMapper):
 
 
 class UniqueAnswerMapper(SingleBaseMapper):
+    """A mapper that removes duplicate answers from the answer field """
+
     answer_field: str
 
     def __init__(self, answer_field: str = "answers"):
@@ -113,3 +122,30 @@ class UniqueAnswerMapper(SingleBaseMapper):
             for t in dict.fromkeys(data[self.answer_field])
         ]
         return data
+
+
+class AddEvidencesLocation(SingleBaseMapper):
+    """A mapper that adds the location of  """
+    def __init__(
+        self,
+        context_field: str = "context",
+        evidence_field: str = "evidences",
+        location_field: str = "locations",
+    ) -> None:
+        self.context_field = context_field
+        self.evidence_field = evidence_field
+        self.location_field = location_field
+        super().__init__(
+            input_fields=[evidence_field],
+            output_fields=[location_field],
+        )
+
+    def transform(
+        self, data: TransformElementType
+    ) -> TransformElementType:
+        return {
+            "locations": [
+                data[self.context_field].find(evidence)
+                for evidence in data[self.evidence_field]
+            ]
+        }

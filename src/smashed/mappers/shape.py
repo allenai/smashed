@@ -1,23 +1,35 @@
 from itertools import chain
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 from ..base import BatchedBaseMapper, SingleBaseMapper, TransformElementType
 
 
 class FlattenMapper(SingleBaseMapper):
-    def __init__(self, field: str) -> None:
-        super().__init__(input_fields=[field], output_fields=[field])
+    """Flattens a list of lists into a single list."""
+
+    def __init__(self, field: Union[str, Sequence[str]]) -> None:
+        """
+        Args:
+            field (str, Sequence[str]): the name of the field or multiple
+                fields to flatten.
+        """
+        self.fields_to_flatten = [field] if isinstance(field, str) else field
+        super().__init__(
+            input_fields=self.fields_to_flatten,
+            output_fields=self.fields_to_flatten
+        )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        field_name, *_ = self.input_fields
+        output: Dict[str, List[Any]] = {}
 
-        flattened_field = data[field_name]
+        for field in self.fields_to_flatten:
+            to_flatten = data[field]
+            if len(to_flatten) > 0:
+                while isinstance(to_flatten[0], list):
+                    to_flatten = list(chain.from_iterable(to_flatten))
+            output[field] = to_flatten
 
-        if len(flattened_field) > 0:
-            while isinstance(flattened_field[0], list):
-                flattened_field = list(chain.from_iterable(flattened_field))
-
-        return {field_name: flattened_field}
+        return output
 
 
 class UnpackingMapper(BatchedBaseMapper):
@@ -218,9 +230,3 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
                 yield from self._stride_single(sample)
             else:
                 yield sample
-
-
-# class SingleSequenceStriderWithLabelsMapper(SingleSequenceStriderMapper):
-#     """Mapper that creates multiple sequences from a single field
-#     if the field is longer than the provided maximum length. Given a
-#     mask with the location of labels, it also makes submasks for """

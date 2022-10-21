@@ -92,16 +92,19 @@ class TestTruncate(unittest.TestCase):
         )
         data = [
             {
-                "a": "many " * 30 + " hello world",
-                "b": "hi" + "i" * 10 + " there",
+                "a": "many  hello world",
+                "b": "hiii there",
                 "c": "this is a test",
             }
         ]
 
         data = mapper.map(data)
 
-        self.assertIn("end_offset_a", data[0])
-        self.assertIn("start_offset_a", data[0])
+        self.assertIn("offset_a", data[0])
+        self.assertEqual(
+            data[0]["offset_a"],
+            [[0, 4], [6, 11], [12, 17]],
+        )
 
     def test_encode(self):
         tokenizer = self._make_tokenizer()
