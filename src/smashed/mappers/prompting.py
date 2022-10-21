@@ -1,6 +1,6 @@
-from itertools import chain
 import sys
 from dataclasses import dataclass
+from itertools import chain
 from math import floor
 from string import Formatter
 from typing import Dict, List, Literal, Optional, Sequence, Union, cast
@@ -77,9 +77,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
             # offsets mapping for all fields; if it is false, they
             # don't want to return it for any field
             fields_to_return_offset_mapping = (
-                fields_to_encode
-                if fields_to_return_offset_mapping
-                else []
+                fields_to_encode if fields_to_return_offset_mapping else []
             )
 
         self.tokenizer = tokenizer
@@ -95,13 +93,16 @@ class EncodeFieldsMapper(SingleBaseMapper):
         self.fields_to_encode = dict.fromkeys(fields_to_encode)
 
         output_fields = list(self.fields_to_encode)
-        output_fields.extend(chain.from_iterable(
-            (f"{self.end_prefix}_{f}", f"{self.start_prefix}_{f}")
-            for f in self.offset_mapping_fields
-        ))
+        output_fields.extend(
+            chain.from_iterable(
+                (f"{self.end_prefix}_{f}", f"{self.start_prefix}_{f}")
+                for f in self.offset_mapping_fields
+            )
+        )
 
         super().__init__(
-            input_fields=self.fields_to_encode, output_fields=output_fields,
+            input_fields=self.fields_to_encode,
+            output_fields=output_fields,
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
@@ -132,9 +133,10 @@ class EncodeFieldsMapper(SingleBaseMapper):
                 # interfaces, like huggingface, would probably complain
                 (
                     updated[f"{self.start_prefix}_{field}"],
-                    updated[f"{self.end_prefix}_{field}"]
+                    updated[f"{self.end_prefix}_{field}"],
                 ) = map(list, zip(*batch_encoding.offset_mapping))
 
+        # TODO[@soldni]: remove this after you have in-place views
         return {**data, **updated}
 
 
