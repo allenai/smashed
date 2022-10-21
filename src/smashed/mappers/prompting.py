@@ -136,8 +136,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
                     updated[f"{self.end_prefix}_{field}"],
                 ) = map(list, zip(*batch_encoding.offset_mapping))
 
-        # TODO[@soldni]: remove this after you have in-place views
-        return {**data, **updated}
+        return updated
 
 
 class TruncateNFieldsMapper(SingleBaseMapper):

@@ -8,7 +8,7 @@ from smashed.mappers.prompting import (
     FillEncodedPromptMapper,
     TruncateNFieldsMapper,
 )
-from smashed.recipes.prompting import PromptingMapperRecipe
+from smashed.recipes.prompting import prompting_recipe
 
 
 class TestTruncate(unittest.TestCase):
@@ -202,7 +202,7 @@ class TestTruncate(unittest.TestCase):
 
     def test_recipe(self):
         tokenizer = self._make_tokenizer()
-        recipe = PromptingMapperRecipe(
+        recipe = prompting_recipe(
             tokenizer=tokenizer,
             source_template="{a} is a {b} with the help of {c}.",
             max_source_length=22,
