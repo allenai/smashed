@@ -1,3 +1,4 @@
+from itertools import chain
 import sys
 from dataclasses import dataclass
 from math import floor
@@ -5,6 +6,7 @@ from string import Formatter
 from typing import Dict, List, Literal, Optional, Sequence, Union, cast
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 from ..base import SingleBaseMapper, TransformElementType
 from .tokenize import GetTokenizerOutputFieldsMixin
@@ -35,6 +37,9 @@ class EncodeFieldsMapper(SingleBaseMapper):
         fields_to_encode: Sequence[str],
         tokenizer: PreTrainedTokenizerBase,
         is_split_into_words: bool = False,
+        fields_to_return_offset_mapping: Union[Sequence[str], bool] = False,
+        end_offset_prefix: str = "end_offset",
+        start_offset_prefix: str = "start_offset",
     ):
         """
         Args:
@@ -43,42 +48,94 @@ class EncodeFieldsMapper(SingleBaseMapper):
                 to use for encoding.
             is_split_into_words (bool, optional): Whether the input fields
                 are already split into words. Defaults to False.
+            fields_to_return_offset_mapping (Union[Sequence[str], bool],
+                optional): The fields to return the offset mapping for.
+                If True, offset mapping will be returned for all fields;
+                if False, no offset mapping will be returned; if a sequence,
+                offset mapping will be returned for the fields in the sequence.
+                For each field the offset mapping is requested, two additional
+                fields will be returned: one with the start offsets and one
+                with the end offsets. The name of these additional fields is
+                controlled by the `start_offset_prefix` and `end_offset_prefix`
+                arguments. Defaults to False.
+            start_offset_prefix (str, optional): The prefix to use for the
+                new field with start offsets. Defaults to "pos_start".
+            end_offset_prefix (str, optional): The prefix to use for the
+                new field with end offsets. Defaults to "pos_end".
         """
+
+        if fields_to_return_offset_mapping and not isinstance(
+            tokenizer, PreTrainedTokenizerFast
+        ):
+            raise TypeError(
+                "return_offsets_mapping is only supported for fast tokenizers,"
+                " i.e. those that inherit from PreTrainedTokenizerFast."
+            )
+
+        if isinstance(fields_to_return_offset_mapping, bool):
+            # if user provides true, it means they want to return the
+            # offsets mapping for all fields; if it is false, they
+            # don't want to return it for any field
+            fields_to_return_offset_mapping = (
+                fields_to_encode
+                if fields_to_return_offset_mapping
+                else []
+            )
 
         self.tokenizer = tokenizer
         self.is_split_into_words = is_split_into_words
+        self.offset_mapping_fields = set(fields_to_return_offset_mapping)
+        self.end_prefix = end_offset_prefix
+        self.start_prefix = start_offset_prefix
+
         # @soldni: using `dict.fromkeys` in place of `frozenset` to avoid
         # issues with hashability: sets are not guaranteed to have the
         # same hash, which causes issues when trying to cache through
         # huggingface datasets.
         self.fields_to_encode = dict.fromkeys(fields_to_encode)
 
+        output_fields = list(self.fields_to_encode)
+        output_fields.extend(chain.from_iterable(
+            (f"{self.end_prefix}_{f}", f"{self.start_prefix}_{f}")
+            for f in self.offset_mapping_fields
+        ))
+
         super().__init__(
-            input_fields=fields_to_encode,
-            output_fields=fields_to_encode,
+            input_fields=self.fields_to_encode, output_fields=output_fields,
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        tokenized = {
-            name: (
-                self.tokenizer(
-                    field,
-                    # we are not really truncating given the value of
-                    # max length, but we need to pass something to avoid
-                    # a warning from huggingface
-                    truncation=True,
-                    max_length=INT_MAX_LENGTH,
-                    add_special_tokens=False,
-                    return_attention_mask=False,
-                    return_token_type_ids=False,
-                    is_split_into_words=self.is_split_into_words,
-                ).input_ids
-                if name in self.fields_to_encode
-                else field
+        updated = {}
+
+        for field in self.fields_to_encode:
+            return_offset_for_this_field = field in self.offset_mapping_fields
+
+            batch_encoding = self.tokenizer(
+                data[field],
+                # we are not really truncating given the value of
+                # max length, but we need to pass something to avoid
+                # a warning from huggingface
+                truncation=True,
+                max_length=INT_MAX_LENGTH,
+                add_special_tokens=False,
+                return_attention_mask=False,
+                return_token_type_ids=False,
+                return_offsets_mapping=return_offset_for_this_field,
+                is_split_into_words=self.is_split_into_words,
             )
-            for name, field in data.items()
-        }
-        return tokenized
+
+            # this is work the word ids
+            updated[field] = batch_encoding.input_ids
+
+            if return_offset_for_this_field:
+                # by default these are returned as tuples, but some
+                # interfaces, like huggingface, would probably complain
+                (
+                    updated[f"{self.start_prefix}_{field}"],
+                    updated[f"{self.end_prefix}_{field}"]
+                ) = map(list, zip(*batch_encoding.offset_mapping))
+
+        return {**data, **updated}
 
 
 class TruncateNFieldsMapper(SingleBaseMapper):

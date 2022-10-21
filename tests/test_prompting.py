@@ -1,7 +1,7 @@
 import unittest
 from tempfile import NamedTemporaryFile
 
-from transformers.models.bert import BertTokenizer
+from transformers.models.bert import BertTokenizerFast
 
 from smashed.mappers.prompting import (
     EncodeFieldsMapper,
@@ -54,7 +54,7 @@ class TestTruncate(unittest.TestCase):
             truncated,
         )
 
-    def _make_tokenizer(self) -> BertTokenizer:
+    def _make_tokenizer(self) -> BertTokenizerFast:
         with NamedTemporaryFile(mode="r+") as f:
             vocab = [
                 "[PAD]",
@@ -77,10 +77,31 @@ class TestTruncate(unittest.TestCase):
             ]
             f.write("\n".join(vocab))
             f.flush()
-            tokenizer = BertTokenizer(f.name, do_lower_case=True)
+            tokenizer = BertTokenizerFast(f.name, do_lower_case=True)
 
         tokenizer.model_max_length = 32
         return tokenizer
+
+    def test_encode_offset(self):
+        tokenizer = self._make_tokenizer()
+
+        mapper = EncodeFieldsMapper(
+            fields_to_encode=["a", "b", "c"],
+            tokenizer=tokenizer,
+            fields_to_return_offset_mapping=("a",),
+        )
+        data = [
+            {
+                "a": "many " * 30 + " hello world",
+                "b": "hi" + "i" * 10 + " there",
+                "c": "this is a test",
+            }
+        ]
+
+        data = mapper.map(data)
+
+        self.assertIn("end_offset_a", data[0])
+        self.assertIn("start_offset_a", data[0])
 
     def test_encode(self):
         tokenizer = self._make_tokenizer()
