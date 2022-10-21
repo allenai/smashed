@@ -1,6 +1,7 @@
-from typing import List, Annotated
+from typing import List
 
 import numpy as np
+from typing_extensions import Annotated
 
 from ..base import SingleBaseMapper, TransformElementType
 

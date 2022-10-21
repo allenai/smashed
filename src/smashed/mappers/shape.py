@@ -16,7 +16,7 @@ class FlattenMapper(SingleBaseMapper):
         self.fields_to_flatten = [field] if isinstance(field, str) else field
         super().__init__(
             input_fields=self.fields_to_flatten,
-            output_fields=self.fields_to_flatten
+            output_fields=self.fields_to_flatten,
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:

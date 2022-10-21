@@ -2,7 +2,6 @@ from typing import Optional
 
 from ...base import SingleBaseMapper, TransformElementType
 
-
 __all__ = [
     "AddEvidencesLocation",
     "ConcatenateContextMapper",
@@ -106,7 +105,7 @@ class ConcatenateContextMapper(SingleBaseMapper):
 
 
 class UniqueAnswerMapper(SingleBaseMapper):
-    """A mapper that removes duplicate answers from the answer field """
+    """A mapper that removes duplicate answers from the answer field"""
 
     answer_field: str
 
@@ -125,7 +124,8 @@ class UniqueAnswerMapper(SingleBaseMapper):
 
 
 class AddEvidencesLocation(SingleBaseMapper):
-    """A mapper that adds the location of  """
+    """A mapper that adds the location of"""
+
     def __init__(
         self,
         context_field: str = "context",
@@ -140,9 +140,7 @@ class AddEvidencesLocation(SingleBaseMapper):
             output_fields=[location_field],
         )
 
-    def transform(
-        self, data: TransformElementType
-    ) -> TransformElementType:
+    def transform(self, data: TransformElementType) -> TransformElementType:
         return {
             "locations": [
                 data[self.context_field].find(evidence)
