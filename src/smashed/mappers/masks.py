@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Annotated
 
 import numpy as np
 
@@ -142,11 +142,11 @@ class MaskToRangeMapper(MaskToIndicesMapper):
 
     @staticmethod
     def _find_consecutive(
-        data: np.ndarray, stepsize: int = 1
-    ) -> List[Tuple[int, int]]:
+        data: np.ndarray, step_size: int = 1
+    ) -> List[Annotated[List[int], 2]]:
         """Adapted from https://stackoverflow.com/a/7353335/938048"""
-        splits = np.split(data, np.where(np.diff(data) != stepsize)[0] + 1)
-        return [(split[0], split[-1] + 1) for split in splits]
+        splits = np.split(data, np.where(np.diff(data) != step_size)[0] + 1)
+        return [[split[0], split[-1] + 1] for split in splits]
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         # this is the mask we received as input; it's a mix of
