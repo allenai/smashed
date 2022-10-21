@@ -1,7 +1,17 @@
-from typing import Dict, List, Literal, Optional, Sequence, TypeVar, Union
+from typing import (
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
+from ..base.mappers import PipelineFingerprintMixIn
 from ..mappers.fields import RenameFieldsMapper
 from ..mappers.prompting import (
     EncodeFieldsMapper,
@@ -9,7 +19,6 @@ from ..mappers.prompting import (
     TruncateNFieldsMapper,
 )
 from ..mappers.shape import SingleSequenceStriderMapper
-from ..base.mappers import PipelineFingerprintMixIn
 
 
 def prompting_recipe(
@@ -35,6 +44,9 @@ def prompting_recipe(
     return_token_type_ids: bool = False,
     extra_keep_field_names: Union[None, List[str], Dict[str, str]] = None,
     extra_encode_fields: Optional[Sequence[str]] = None,
+    encoder_mapper_cls: Type[EncodeFieldsMapper] = EncodeFieldsMapper,
+    fill_mapper_cls: Type[FillEncodedPromptMapper] = FillEncodedPromptMapper,
+    truncate_mapper_cls: Type[TruncateNFieldsMapper] = TruncateNFieldsMapper,
 ) -> PipelineFingerprintMixIn:
     """A recipe that creates chained mappers for prompting tasks.
 
@@ -102,7 +114,7 @@ def prompting_recipe(
 
     extra_encode_fields = extra_encode_fields or []
 
-    source_prompt_mapper = FillEncodedPromptMapper(
+    source_prompt_mapper = fill_mapper_cls(
         template=source_template,
         tokenizer=tokenizer,
         output_prefix=None,
@@ -116,7 +128,7 @@ def prompting_recipe(
     )
 
     if target_template is not None:
-        target_prompt_mapper = FillEncodedPromptMapper(
+        target_prompt_mapper = fill_mapper_cls(
             template=target_template,
             tokenizer=tokenizer,
             add_bos_token=target_add_bos_token,
@@ -131,7 +143,7 @@ def prompting_recipe(
 
     # this sets up the encoder for all the fields we have to put in
     # the source and target prompts
-    pipeline = EncodeFieldsMapper(
+    pipeline = encoder_mapper_cls(
         fields_to_encode=fields_to_encode,
         tokenizer=tokenizer,
         is_split_into_words=is_split_into_words,
@@ -149,6 +161,7 @@ def prompting_recipe(
         max_length=max_source_length,
         stride_max_length=stride_max_length,
         stride_step=stride_step,
+        truncate_mapper_cls=truncate_mapper_cls,
     )
 
     if target_prompt_mapper:
@@ -164,6 +177,7 @@ def prompting_recipe(
             max_length=max_target_length or max_source_length,
             stride_max_length=stride_max_length,
             stride_step=stride_step,
+            truncate_mapper_cls=truncate_mapper_cls,
         )
 
     # now that the sequences are ready, we can set up the prompt template
@@ -214,6 +228,7 @@ def _add_truncation_and_striding(
     max_length: Optional[int] = None,
     stride_max_length: Optional[int] = None,
     stride_step: Optional[int] = None,
+    truncate_mapper_cls: Type[TruncateNFieldsMapper] = TruncateNFieldsMapper,
 ) -> P:
     fields_to_truncate = []
     fields_to_preserve = []
@@ -257,7 +272,7 @@ def _add_truncation_and_striding(
     if fields_to_truncate:
         # truncation has to be done globally so that all sequence
         # lengths are accounted for
-        source_truncation_mapper = TruncateNFieldsMapper(
+        source_truncation_mapper = truncate_mapper_cls(
             fields_to_truncate=fields_to_truncate,
             fields_to_preserve=fields_to_preserve,
             max_length=max_length,

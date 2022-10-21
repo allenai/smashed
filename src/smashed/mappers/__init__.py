@@ -20,6 +20,12 @@ from .loaders import (
     HuggingFaceDatasetLoaderMapper,
     JsonlLoaderMapper,
 )
+from .masks import (
+    IndicesToMaskMapper,
+    MaskToIndicesMapper,
+    MaskToRangeMapper,
+    RangeToMaskMapper,
+)
 from .multiseq import (
     AttentionMaskSequencePaddingMapper,
     LabelsMaskerMapper,
@@ -43,7 +49,6 @@ from .types import BinarizerMapper, CastMapper, LookupMapper, OneHotMapper
 
 __all__ = [
     "AttentionMaskSequencePaddingMapper",
-    "EnumerateFieldMapper",
     "BinarizerMapper",
     "CastMapper",
     "ChangeFieldsMapper",
@@ -52,6 +57,7 @@ __all__ = [
     "DebugSingleMapper",
     "EncodeFieldsMapper",
     "EndCachingMapper",
+    "EnumerateFieldMapper",
     "FillEncodedPromptMapper",
     "FillTextPromptMapper",
     "FilterMapper",
@@ -61,16 +67,20 @@ __all__ = [
     "FromTokenizerTensorCollatorMapper",
     "FtfyMapper",
     "HuggingFaceDatasetLoaderMapper",
+    "IndicesToMaskMapper",
     "JsonlLoaderMapper",
     "LabelsMaskerMapper",
     "ListCollatorMapper",
     "LookupMapper",
     "MakeAttentionMaskMapper",
     "MakeFieldMapper",
+    "MaskToIndicesMapper",
+    "MaskToRangeMapper",
     "MultiSequenceStriderMapper",
     "OneHotMapper",
     "PaddingMapper",
     "Python2TorchMapper",
+    "RangeToMaskMapper",
     "RenameFieldsMapper",
     "SequencesConcatenateMapper",
     "SingleSequenceStriderMapper",

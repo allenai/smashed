@@ -1,6 +1,5 @@
 import sys
 from dataclasses import dataclass
-from itertools import chain
 from math import floor
 from string import Formatter
 from typing import Dict, List, Literal, Optional, Sequence, Union, cast
@@ -38,8 +37,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
         tokenizer: PreTrainedTokenizerBase,
         is_split_into_words: bool = False,
         fields_to_return_offset_mapping: Union[Sequence[str], bool] = False,
-        end_offset_prefix: str = "end_offset",
-        start_offset_prefix: str = "start_offset",
+        offset_prefix: str = "offset",
     ):
         """
         Args:
@@ -58,10 +56,8 @@ class EncodeFieldsMapper(SingleBaseMapper):
                 with the end offsets. The name of these additional fields is
                 controlled by the `start_offset_prefix` and `end_offset_prefix`
                 arguments. Defaults to False.
-            start_offset_prefix (str, optional): The prefix to use for the
-                new field with start offsets. Defaults to "pos_start".
-            end_offset_prefix (str, optional): The prefix to use for the
-                new field with end offsets. Defaults to "pos_end".
+            offset_prefix (str, optional): The prefix to use for the
+                new field with offsets. Defaults to "pos_start".
         """
 
         if fields_to_return_offset_mapping and not isinstance(
@@ -83,8 +79,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
         self.tokenizer = tokenizer
         self.is_split_into_words = is_split_into_words
         self.offset_mapping_fields = set(fields_to_return_offset_mapping)
-        self.end_prefix = end_offset_prefix
-        self.start_prefix = start_offset_prefix
+        self.offset_prefix = offset_prefix
 
         # @soldni: using `dict.fromkeys` in place of `frozenset` to avoid
         # issues with hashability: sets are not guaranteed to have the
@@ -92,13 +87,10 @@ class EncodeFieldsMapper(SingleBaseMapper):
         # huggingface datasets.
         self.fields_to_encode = dict.fromkeys(fields_to_encode)
 
-        output_fields = list(self.fields_to_encode)
-        output_fields.extend(
-            chain.from_iterable(
-                (f"{self.end_prefix}_{f}", f"{self.start_prefix}_{f}")
-                for f in self.offset_mapping_fields
-            )
-        )
+        output_fields = list(self.fields_to_encode) + [
+            f"{self.offset_prefix}_{field}"
+            for field in self.offset_mapping_fields
+        ]
 
         super().__init__(
             input_fields=self.fields_to_encode,
@@ -131,10 +123,9 @@ class EncodeFieldsMapper(SingleBaseMapper):
             if return_offset_for_this_field:
                 # by default these are returned as tuples, but some
                 # interfaces, like huggingface, would probably complain
-                (
-                    updated[f"{self.start_prefix}_{field}"],
-                    updated[f"{self.end_prefix}_{field}"],
-                ) = map(list, zip(*batch_encoding.offset_mapping))
+                updated[f"{self.offset_prefix}_{field}"] = [
+                    list(e) for e in batch_encoding.offset_mapping
+                ]
 
         return updated
 

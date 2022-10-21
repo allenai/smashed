@@ -194,23 +194,33 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
             output_fields=[field_to_stride],
         )
 
+    def _stride_single(
+        self, sample: TransformElementType
+    ) -> Iterable[TransformElementType]:
+
+        field_to_stride = sample[self.field_to_stride]
+
+        for i in range(
+            0, len(field_to_stride) - self.max_length + 1, self.stride
+        ):
+            new_sample = {
+                **sample,
+                self.field_to_stride: field_to_stride[i : i + self.max_length],
+            }
+            yield new_sample
+
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
 
         for sample in data:
-            field_to_stride = sample[self.field_to_stride]
-
-            if len(field_to_stride) > self.max_length:
-                for i in range(
-                    0, len(field_to_stride) - self.max_length + 1, self.stride
-                ):
-                    new_sample = {
-                        **sample,
-                        self.field_to_stride: field_to_stride[
-                            i : i + self.max_length
-                        ],
-                    }
-                    yield new_sample
+            if len(sample[self.field_to_stride]) > self.max_length:
+                yield from self._stride_single(sample)
             else:
                 yield sample
+
+
+# class SingleSequenceStriderWithLabelsMapper(SingleSequenceStriderMapper):
+#     """Mapper that creates multiple sequences from a single field
+#     if the field is longer than the provided maximum length. Given a
+#     mask with the location of labels, it also makes submasks for """
