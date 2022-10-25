@@ -18,18 +18,17 @@ __all__ = [
 ]
 
 
-# We use this as maximum length for the tokenizer in case we are not
-# truncating; we need this otherwise huggingface prints a warning.
-# Using sys.maxsize from here: https://stackoverflow.com/a/7604981/938048
-INT_MAX_LENGTH = sys.maxsize
-
-
 class EncodeFieldsMapper(SingleBaseMapper):
     """Simply encodes the fields in the input data using the tokenizer."""
 
     tokenizer: PreTrainedTokenizerBase
     is_split_into_words: bool
     fields_to_encode: Dict[str, None]
+
+    # We use this as maximum length for the tokenizer in case we are not
+    # truncating; we need this otherwise huggingface prints a warning.
+    # Using sys.maxsize from here: https://stackoverflow.com/a/7604981/938048
+    INT_MAX_LENGTH: int = sys.maxsize
 
     def __init__(
         self,
@@ -109,7 +108,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
                 # max length, but we need to pass something to avoid
                 # a warning from huggingface
                 truncation=True,
-                max_length=INT_MAX_LENGTH,
+                max_length=self.INT_MAX_LENGTH,
                 add_special_tokens=False,
                 return_attention_mask=False,
                 return_token_type_ids=False,
@@ -364,7 +363,7 @@ class PromptSegment:
         else:
             return len(self.prompt_token_ids)
 
-    def fill_encoded(self, data: Dict[str, List[int]]) -> List[int]:
+    def fill_encoded(self, data: TransformElementType) -> List[int]:
         if self.prompt_token_ids is None:
             raise ValueError(
                 "Cannot fill encoded prompt segment that was initialized"
@@ -450,13 +449,7 @@ class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
     def transform(self, data: TransformElementType) -> TransformElementType:
         encoded_prompt = (
             self.bos_token_ids
-            + sum(
-                (
-                    ps.fill_encoded(cast(Dict[str, List[int]], data))
-                    for ps in self.prompt
-                ),
-                [],
-            )
+            + sum((ps.fill_encoded(data) for ps in self.prompt), [])
             + self.eos_token_ids
         )
 

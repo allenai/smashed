@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal, Optional, Sequence, TypeVar, Union
+from typing import Dict, Literal, Optional, Sequence, TypeVar, Union
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 

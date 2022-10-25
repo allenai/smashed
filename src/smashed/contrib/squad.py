@@ -9,6 +9,7 @@ from smashed.mappers import (
     ChangeFieldsMapper,
     EncodeFieldsMapper,
     FillEncodedPromptMapper,
+    MakeFieldMapper,
     RangeToMaskMapper,
     SingleSequenceStriderMapper,
     UnpackingMapper,
@@ -16,14 +17,14 @@ from smashed.mappers import (
 from smashed.recipes.prompting import PromptingRecipe
 
 __all__ = [
-    "ConcatenateContextMapper",
-    "UniqueAnswerMapper",
     "AddEvidencesLocationMapper",
+    "ConcatenateContextMapper",
     "EncoderWithEvidenceLocationMapper",
-    "StriderWithEvidenceLocationMapper",
-    "AlternativePromptMapper",
+    "ReplaceIfNoEvidencePromptMapper",
     "SquadPromptTrainRecipe",
     "SquadPromptValidRecipe",
+    "StriderWithEvidenceLocationMapper",
+    "UniqueAnswerMapper",
 ]
 
 
@@ -159,15 +160,23 @@ class AddEvidencesLocationMapper(SingleBaseMapper):
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        return {
+        out = {
             "locations": [
                 (
                     (ev := data[self.context_field].find(evidence)),
                     ev + len(evidence) if ev >= 0 else -1,
                 )
-                for evidence in data[self.evidence_field]
+                for grouped in data[self.evidence_field]
+                for evidence in (
+                    grouped if isinstance(grouped, list) else (grouped,)
+                )
             ]
         }
+        # if len(out["locations"]) == 0:
+        #     # this is necessary otherwise huggingface
+        #     out["locations"] = [[-1, -1]]
+
+        return out
 
 
 class EncoderWithEvidenceLocationMapper(EncodeFieldsMapper):
@@ -210,6 +219,7 @@ class EncoderWithEvidenceLocationMapper(EncodeFieldsMapper):
                 locations_field_name=self.location_field,
             )
         )
+        # self.
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         out = super().transform(data)
@@ -257,24 +267,38 @@ class StriderWithEvidenceLocationMapper(SingleSequenceStriderMapper):
         super().__init__(*args, **kwargs)
 
 
-class AlternativePromptMapper(FillEncodedPromptMapper):
+class ReplaceIfNoEvidencePromptMapper(FillEncodedPromptMapper):
     def __init__(
         self,
+        *args,
         location_field: str = "locations",
         target_field: str = "labels",
         **kwargs,
-    ):
-        kwargs["output_prefix"] = None
-        super().__init__(**kwargs)
+    ) -> None:
+        super().__init__(*args, **kwargs)
         self.location_field = location_field
         self.target_field = target_field
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        if sum(data[self.location_field]) == 0:
-            encoded_alternative = super().transform(data)
-            return {self.target_field: encoded_alternative["input_ids"]}
+        if sum(data[self.location_field]) > 0:
+            encoded_target = data[self.target_field]
         else:
-            return {self.target_field: data[self.target_field]}
+            encoded_target = (
+                self.bos_token_ids
+                + sum((ps.fill_encoded(data) for ps in self.prompt), [])
+                + self.eos_token_ids
+            )
+
+            try:
+                if len(data[self.target_field]) and isinstance(
+                    data[self.target_field][0], list
+                ):
+                    # at test time, we have multiple answers!
+                    encoded_target = [encoded_target]
+            except KeyError:
+                breakpoint()
+
+        return {self.target_field: encoded_target}
 
 
 class _SquadPromptingRecipe(PromptingRecipe):
@@ -295,12 +319,14 @@ class _SquadPromptingRecipe(PromptingRecipe):
     def __init__(
         self,
         *args,
+        tokenizer: PreTrainedTokenizerBase,
         context_field: str = "context",
         location_field: str = "locations",
         **kwargs,
     ):
         self.location_field = location_field
         self.context_field = context_field
+        kwargs = {**kwargs, "tokenizer": tokenizer}
         super().__init__(*args, **kwargs)
 
 
@@ -315,9 +341,9 @@ class SquadPromptTrainRecipe(BaseRecipe):
         self,
         tokenizer: PreTrainedTokenizerBase,
         source_template: str,
-        target_template: str,
         context_length: int,
         context_stride: int,
+        target_template: Optional[str] = None,
         alternative_template: Optional[str] = None,
         target_output_name: Union[
             Literal["labels"], Literal["decoder_input_ids"]
@@ -340,6 +366,8 @@ class SquadPromptTrainRecipe(BaseRecipe):
         source_add_eos_token: bool = False,
         target_add_bos_token: bool = False,
         target_add_eos_token: bool = False,
+        extra_keep_field_names: Optional[Sequence[str]] = None,
+        extra_encode_fields: Optional[Sequence[str]] = None,
     ):
         super().__init__()
 
@@ -392,14 +420,17 @@ class SquadPromptTrainRecipe(BaseRecipe):
             extra_keep_field_names=(
                 *([location_field] if evidence_field else []),
                 *([id_field] if id_field else []),
+                *(extra_keep_field_names or []),
             ),
+            extra_encode_fields=extra_encode_fields,
         )
+
         if alternative_template:
-            pipeline = pipeline >> AlternativePromptMapper(
-                tokenizer=tokenizer,
-                template=alternative_template,
-                location_field=location_field,
+            pipeline = pipeline >> ReplaceIfNoEvidencePromptMapper(
                 target_field=target_output_name,
+                location_field=location_field,
+                template=alternative_template,
+                tokenizer=tokenizer,
             )
 
         if evidence_field:
@@ -411,6 +442,36 @@ class SquadPromptTrainRecipe(BaseRecipe):
 
 
 class SquadPromptValidRecipe(SquadPromptTrainRecipe):
+    def __init__(
+        self,
+        *args,
+        tokenizer: PreTrainedTokenizerBase,
+        target_output_name: Optional[str] = None,
+        answer_field: str = "answers",
+        **kwargs,
+    ):
+        kwargs = {
+            **kwargs,
+            "tokenizer": tokenizer,
+            "target_template": None,
+            "target_output_name": answer_field,
+            "answer_field": answer_field,
+            "extra_keep_field_names": [answer_field],
+            "extra_encode_fields": [answer_field],
+        }
+        super().__init__(*args, **kwargs)
+
+        self.chain(
+            MakeFieldMapper(
+                field_name="decoder_input_ids",
+                value=[tokenizer.pad_token_id],
+            )
+        )
+
+        from smashed.mappers import DebugSingleMapper
+
+        self.chain(DebugSingleMapper())
+
     def unpacking(self, pipeline: C, **kwargs: Any) -> C:
         # we don't unpack the answers in the validation set
         return pipeline
