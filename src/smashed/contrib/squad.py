@@ -283,10 +283,8 @@ class ReplaceIfNoEvidencePromptMapper(FillEncodedPromptMapper):
         if sum(data[self.location_field]) > 0:
             encoded_target = data[self.target_field]
         else:
-            encoded_target = (
-                self.bos_token_ids
-                + sum((ps.fill_encoded(data) for ps in self.prompt), [])
-                + self.eos_token_ids
+            encoded_target = sum(
+                (ps.fill_encoded(data) for ps in self.prompt), []
             )
 
             try:
@@ -467,10 +465,6 @@ class SquadPromptValidRecipe(SquadPromptTrainRecipe):
                 value=[tokenizer.pad_token_id],
             )
         )
-
-        from smashed.mappers import DebugSingleMapper
-
-        self.chain(DebugSingleMapper())
 
     def unpacking(self, pipeline: C, **kwargs: Any) -> C:
         # we don't unpack the answers in the validation set
