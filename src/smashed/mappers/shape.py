@@ -199,7 +199,8 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
         """
 
         self.fields_to_stride = dict.fromkeys(
-            [field_to_stride] if isinstance(field_to_stride, str)
+            [field_to_stride]
+            if isinstance(field_to_stride, str)
             else field_to_stride
         )
         self.max_length = max_length
@@ -230,7 +231,8 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
                 new_sample = {
                     name: (
                         values[i : i + self.max_length]
-                        if name in self.fields_to_stride else values
+                        if name in self.fields_to_stride
+                        else values
                     )
                     for name, values in sample.items()
                 }

@@ -1,14 +1,13 @@
-from typing import Optional, Sequence, Union
-
-from smashed.mappers import (
-    EncodeFieldsMapper,
-    SingleSequenceStriderMapper,
-    RangeToMaskMapper
-)
-from smashed.base import SingleBaseMapper, TransformElementType
-
 # from .future_bisect import bisect_left, bisect_right
 from bisect import bisect_left, bisect_right
+from typing import Optional, Sequence, Union
+
+from smashed.base import SingleBaseMapper, TransformElementType
+from smashed.mappers import (
+    EncodeFieldsMapper,
+    RangeToMaskMapper,
+    SingleSequenceStriderMapper,
+)
 
 __all__ = [
     "AddEvidencesLocationMapper",
@@ -153,8 +152,9 @@ class AddEvidencesLocationMapper(SingleBaseMapper):
             "locations": [
                 (
                     (ev := data[self.context_field].find(evidence)),
-                    ev + len(evidence) if ev >= 0 else -1
-                ) for evidence in data[self.evidence_field]
+                    ev + len(evidence) if ev >= 0 else -1,
+                )
+                for evidence in data[self.evidence_field]
             ]
         }
 
@@ -169,11 +169,11 @@ class EncoderWithEvidenceLocationMapper(EncodeFieldsMapper):
         context_field: str = "context",
         location_field: str = "locations",
         fields_to_encode: Optional[Sequence[str]] = None,
-        **kwargs
+        **kwargs,
     ):
-        kwargs['fields_to_return_offset_mapping'] = [context_field]
-        kwargs['fields_to_encode'] = (
-            [context_field] + list(fields_to_encode or [])
+        kwargs["fields_to_return_offset_mapping"] = [context_field]
+        kwargs["fields_to_encode"] = [context_field] + list(
+            fields_to_encode or []
         )
         super().__init__(*args, **kwargs)
 
@@ -187,7 +187,8 @@ class EncoderWithEvidenceLocationMapper(EncodeFieldsMapper):
         # remove the field with the context_offsets because we are going
         # to pop it out!
         self.output_fields = tuple(
-            f for f in self.output_fields
+            f
+            for f in self.output_fields
             if f != f"{self.offset_prefix}_{self.context_field}"
         )
 
@@ -231,14 +232,15 @@ class StriderWithEvidenceLocationMapper(SingleSequenceStriderMapper):
         context_field: str = "context",
         location_field: str = "locations",
         field_to_stride: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ):
         field_to_stride = (
-            [field_to_stride] if isinstance(field_to_stride, str)
+            [field_to_stride]
+            if isinstance(field_to_stride, str)
             else (field_to_stride or [])
         )
         unique_field_to_stride = set(
             (context_field, location_field, *field_to_stride)
         )
-        kwargs['fields_to_stride'] = sorted(unique_field_to_stride)
+        kwargs["fields_to_stride"] = sorted(unique_field_to_stride)
         super().__init__(*args, **kwargs)
