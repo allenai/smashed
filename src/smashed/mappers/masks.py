@@ -63,6 +63,11 @@ class RangeToMaskMapper(IndicesToMaskMapper):
     """Converts a field containing one or more ranges of indices to a mask."""
 
     def transform(self, data: TransformElementType) -> TransformElementType:
+        if len(data[self.locations_field_name]) == 0:
+            # in case of empty ranges, return a mask of zeros
+            empty_mask = [0] * len(data[self.reference_field_name])
+            return {self.mask_field_name: empty_mask}
+
         if isinstance(data[self.locations_field_name][0], list):
             # this means we have more than one start/end pair
             locs = data[self.locations_field_name]

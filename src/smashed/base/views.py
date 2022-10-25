@@ -73,6 +73,9 @@ class DataRowView(abc.Mapping, Generic[K, V]):
             f"({self._idx}, {str(self._dbv._data[self._idx])})"
         )
 
+    def pop(self, key: K) -> V:
+        return self[key]
+
 
 D = TypeVar("D", bound=abc.MutableMapping)
 T = TypeVar("T", bound="DataBatchView")

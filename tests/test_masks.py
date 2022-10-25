@@ -1,7 +1,5 @@
 import unittest
 
-import numpy as np
-
 from smashed.mappers import (
     IndicesToMaskMapper,
     MaskToIndicesMapper,

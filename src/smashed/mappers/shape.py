@@ -183,13 +183,14 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
 
     def __init__(
         self,
-        field_to_stride: str,
+        field_to_stride: Union[str, Sequence[str]],
         max_length: int,
         stride: Optional[int] = None,
     ):
         """
         Args:
-            field_to_stride (str): Name of the field to stride.
+            field_to_stride (str, List[str]): Name of the field or fields to
+                stride.
             max_length (int): Maximum length for each sequence; if a sequence
                 is longer than this, it will be split into multiple sequences.
             stride (Optional[int], optional): Step to use when striding. If not
@@ -197,36 +198,41 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
                 will create non-overlapping sequences. Defaults to None.
         """
 
-        self.field_to_stride = field_to_stride
+        self.fields_to_stride = dict.fromkeys(
+            [field_to_stride] if isinstance(field_to_stride, str)
+            else field_to_stride
+        )
         self.max_length = max_length
         self.stride = stride or max_length
 
         super().__init__(
-            input_fields=[field_to_stride],
-            output_fields=[field_to_stride],
+            input_fields=self.fields_to_stride,
+            output_fields=self.fields_to_stride,
         )
-
-    def _stride_single(
-        self, sample: TransformElementType
-    ) -> Iterable[TransformElementType]:
-
-        field_to_stride = sample[self.field_to_stride]
-
-        for i in range(
-            0, len(field_to_stride) - self.max_length + 1, self.stride
-        ):
-            new_sample = {
-                **sample,
-                self.field_to_stride: field_to_stride[i : i + self.max_length],
-            }
-            yield new_sample
 
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
 
+        if len(self.fields_to_stride) < 1:
+            # no fields to stride
+            yield from data
+
+        a_field_to_stride = next(iter(self.fields_to_stride))
+
         for sample in data:
-            if len(sample[self.field_to_stride]) > self.max_length:
-                yield from self._stride_single(sample)
-            else:
+            seq_len = len(sample[a_field_to_stride])
+            if seq_len < self.max_length:
+                # data is too short
                 yield sample
+
+            for i in range(0, seq_len - self.max_length + 1, self.stride):
+                new_sample = {
+                    name: (
+                        values[i : i + self.max_length]
+                        if name in self.fields_to_stride else values
+                    )
+                    for name, values in sample.items()
+                }
+
+                yield new_sample

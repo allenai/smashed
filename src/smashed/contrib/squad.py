@@ -1,9 +1,17 @@
-from typing import Optional
+from typing import Optional, Sequence, Union
 
-from ...base import SingleBaseMapper, TransformElementType
+from smashed.mappers import (
+    EncodeFieldsMapper,
+    SingleSequenceStriderMapper,
+    RangeToMaskMapper
+)
+from smashed.base import SingleBaseMapper, TransformElementType
+
+# from .future_bisect import bisect_left, bisect_right
+from bisect import bisect_left, bisect_right
 
 __all__ = [
-    "AddEvidencesLocation",
+    "AddEvidencesLocationMapper",
     "ConcatenateContextMapper",
     "UniqueAnswerMapper",
 ]
@@ -123,7 +131,7 @@ class UniqueAnswerMapper(SingleBaseMapper):
         return data
 
 
-class AddEvidencesLocation(SingleBaseMapper):
+class AddEvidencesLocationMapper(SingleBaseMapper):
     """A mapper that adds the location of"""
 
     def __init__(
@@ -143,7 +151,94 @@ class AddEvidencesLocation(SingleBaseMapper):
     def transform(self, data: TransformElementType) -> TransformElementType:
         return {
             "locations": [
-                data[self.context_field].find(evidence)
-                for evidence in data[self.evidence_field]
+                (
+                    (ev := data[self.context_field].find(evidence)),
+                    ev + len(evidence) if ev >= 0 else -1
+                ) for evidence in data[self.evidence_field]
             ]
         }
+
+
+class EncoderWithEvidenceLocationMapper(EncodeFieldsMapper):
+    """Regular encoder but shifts the locations in the locations field
+    based on the encoding of the context field"""
+
+    def __init__(
+        self,
+        *args,
+        context_field: str = "context",
+        location_field: str = "locations",
+        fields_to_encode: Optional[Sequence[str]] = None,
+        **kwargs
+    ):
+        kwargs['fields_to_return_offset_mapping'] = [context_field]
+        kwargs['fields_to_encode'] = (
+            [context_field] + list(fields_to_encode or [])
+        )
+        super().__init__(*args, **kwargs)
+
+        self.context_field = context_field
+        self.location_field = location_field
+
+        # add location field to expected input fields
+        if location_field not in self.input_fields:
+            self.input_fields = (location_field, *self.input_fields)
+
+        # remove the field with the context_offsets because we are going
+        # to pop it out!
+        self.output_fields = tuple(
+            f for f in self.output_fields
+            if f != f"{self.offset_prefix}_{self.context_field}"
+        )
+
+        self.chain(
+            RangeToMaskMapper(
+                mask_field_name=self.location_field,
+                reference_field_name=self.context_field,
+                locations_field_name=self.location_field,
+            )
+        )
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        out = super().transform(data)
+        offsets = out.pop(f"{self.offset_prefix}_{self.context_field}")
+        start_offsets, end_offsets = zip(*offsets)
+
+        # this is where we will add the shifted locations
+        out[self.location_field] = []
+
+        for start, end in data[self.location_field]:
+            if start > 0:
+                pos = bisect_right(start_offsets, start)
+                start, _ = offsets[pos - 1]
+            else:
+                start = -1
+            if end > 0:
+                pos = bisect_left(end_offsets, end)
+                _, end = offsets[pos]
+            else:
+                end = -1
+
+            out[self.location_field].append([start, end])
+
+        return out
+
+
+class StriderWithEvidenceLocationMapper(SingleSequenceStriderMapper):
+    def __init__(
+        self,
+        *args,
+        context_field: str = "context",
+        location_field: str = "locations",
+        field_to_stride: Optional[Union[str, Sequence[str]]] = None,
+        **kwargs
+    ):
+        field_to_stride = (
+            [field_to_stride] if isinstance(field_to_stride, str)
+            else (field_to_stride or [])
+        )
+        unique_field_to_stride = set(
+            (context_field, location_field, *field_to_stride)
+        )
+        kwargs['fields_to_stride'] = sorted(unique_field_to_stride)
+        super().__init__(*args, **kwargs)

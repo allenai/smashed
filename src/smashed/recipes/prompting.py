@@ -47,6 +47,9 @@ def prompting_recipe(
     encoder_mapper_cls: Type[EncodeFieldsMapper] = EncodeFieldsMapper,
     fill_mapper_cls: Type[FillEncodedPromptMapper] = FillEncodedPromptMapper,
     truncate_mapper_cls: Type[TruncateNFieldsMapper] = TruncateNFieldsMapper,
+    stride_mapper_cls: Type[SingleSequenceStriderMapper] = (
+        SingleSequenceStriderMapper
+    ),
 ) -> PipelineFingerprintMixIn:
     """A recipe that creates chained mappers for prompting tasks.
 
@@ -162,6 +165,7 @@ def prompting_recipe(
         stride_max_length=stride_max_length,
         stride_step=stride_step,
         truncate_mapper_cls=truncate_mapper_cls,
+        stride_mapper_cls=stride_mapper_cls,
     )
 
     if target_prompt_mapper:
@@ -178,6 +182,7 @@ def prompting_recipe(
             stride_max_length=stride_max_length,
             stride_step=stride_step,
             truncate_mapper_cls=truncate_mapper_cls,
+            stride_mapper_cls=stride_mapper_cls,
         )
 
     # now that the sequences are ready, we can set up the prompt template
@@ -229,6 +234,9 @@ def _add_truncation_and_striding(
     stride_max_length: Optional[int] = None,
     stride_step: Optional[int] = None,
     truncate_mapper_cls: Type[TruncateNFieldsMapper] = TruncateNFieldsMapper,
+    stride_mapper_cls: Type[SingleSequenceStriderMapper] = (
+        SingleSequenceStriderMapper
+    ),
 ) -> P:
     fields_to_truncate = []
     fields_to_preserve = []
@@ -262,7 +270,7 @@ def _add_truncation_and_striding(
                 "`tokenizer.model_max_length`."
             )
 
-        strider_mapper = SingleSequenceStriderMapper(
+        strider_mapper = stride_mapper_cls(
             field_to_stride=field_name,
             max_length=max_length_when_striding,
             stride=stride_step,
