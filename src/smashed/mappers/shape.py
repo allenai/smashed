@@ -45,8 +45,8 @@ class UnpackingMapper(BatchedBaseMapper):
 
     def __init__(
         self,
-        fields_to_unpack: Optional[List[str]] = None,
-        fields_to_ignore: Optional[List[str]] = None,
+        fields_to_unpack: Optional[Sequence[str]] = None,
+        fields_to_ignore: Optional[Sequence[str]] = None,
         ignored_behavior: Optional[str] = None,
     ) -> None:
         """
@@ -104,10 +104,8 @@ class UnpackingMapper(BatchedBaseMapper):
 
         self.ignore_behavior = ignored_behavior
 
-        super().__init__(
-            input_fields=(fields_to_unpack or []) + (fields_to_ignore or []),
-            output_fields=(fields_to_unpack or []) + (fields_to_ignore or []),
-        )
+        io_fields = (*(fields_to_unpack or []), *(fields_to_ignore or []))
+        super().__init__(input_fields=io_fields, output_fields=io_fields)
 
     def _check_wether_to_unpack(self, field_name: str) -> bool:
         if self.fields_to_unpack is not None:
@@ -236,5 +234,4 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
                     )
                     for name, values in sample.items()
                 }
-
                 yield new_sample

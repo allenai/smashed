@@ -39,8 +39,8 @@ class IndicesToMaskMapper(SingleBaseMapper):
         self.mask_fill_value = mask_fill_value
 
         super().__init__(
-            input_fields=[locations_field_name, reference_field_name],
-            output_fields=[mask_field_name],
+            input_fields=(locations_field_name, reference_field_name),
+            output_fields=(mask_field_name,),
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
@@ -120,8 +120,8 @@ class MaskToIndicesMapper(SingleBaseMapper):
         self.mask_fill_value = mask_fill_value
 
         super().__init__(
-            input_fields=[mask_field_name],
-            output_fields=[locations_field_name],
+            input_fields=(mask_field_name,),
+            output_fields=(locations_field_name,),
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:

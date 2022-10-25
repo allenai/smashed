@@ -4,13 +4,13 @@ from uuid import uuid4
 
 from necessary import necessary
 
+from smashed.contrib.squad import ConcatenateContextMapper
 from smashed.mappers import (
     EnumerateFieldMapper,
     TokenizerMapper,
     TruncateNFieldsMapper,
     UnpackingMapper,
 )
-from smashed.mappers.contrib.squad import ConcatenateContextMapper
 from smashed.mappers.debug import MockMapper
 
 with necessary(("datasets", "dill")):

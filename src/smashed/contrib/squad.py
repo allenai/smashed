@@ -1,18 +1,29 @@
-# from .future_bisect import bisect_left, bisect_right
 from bisect import bisect_left, bisect_right
-from typing import Optional, Sequence, Union
+from typing import Any, Literal, Optional, Sequence, Tuple, TypeVar, Union
 
-from smashed.base import SingleBaseMapper, TransformElementType
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+
+from smashed.base import BaseRecipe, SingleBaseMapper, TransformElementType
+from smashed.base.mappers import ChainableMapper
 from smashed.mappers import (
+    ChangeFieldsMapper,
     EncodeFieldsMapper,
+    FillEncodedPromptMapper,
     RangeToMaskMapper,
     SingleSequenceStriderMapper,
+    UnpackingMapper,
 )
+from smashed.recipes.prompting import PromptingRecipe
 
 __all__ = [
-    "AddEvidencesLocationMapper",
     "ConcatenateContextMapper",
     "UniqueAnswerMapper",
+    "AddEvidencesLocationMapper",
+    "EncoderWithEvidenceLocationMapper",
+    "StriderWithEvidenceLocationMapper",
+    "AlternativePromptMapper",
+    "SquadPromptTrainRecipe",
+    "SquadPromptValidRecipe",
 ]
 
 
@@ -242,5 +253,166 @@ class StriderWithEvidenceLocationMapper(SingleSequenceStriderMapper):
         unique_field_to_stride = set(
             (context_field, location_field, *field_to_stride)
         )
-        kwargs["fields_to_stride"] = sorted(unique_field_to_stride)
+        kwargs["field_to_stride"] = sorted(unique_field_to_stride)
         super().__init__(*args, **kwargs)
+
+
+class AlternativePromptMapper(FillEncodedPromptMapper):
+    def __init__(
+        self,
+        location_field: str = "locations",
+        target_field: str = "labels",
+        **kwargs,
+    ):
+        kwargs["output_prefix"] = None
+        super().__init__(**kwargs)
+        self.location_field = location_field
+        self.target_field = target_field
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        if sum(data[self.location_field]) == 0:
+            out = super().transform(data)
+            return {self.target_field: out["input_ids"]}
+
+        else:
+            breakpoint()
+            return {self.target_field: data[self.target_field]}
+
+
+class _SquadPromptingRecipe(PromptingRecipe):
+    def encoder_mapper(self, **kwargs) -> EncodeFieldsMapper:
+        return EncoderWithEvidenceLocationMapper(
+            context_field=self.context_field,
+            location_field=self.location_field,
+            **kwargs,
+        )
+
+    def strider_mapper(self, **kwargs) -> SingleSequenceStriderMapper:
+        return StriderWithEvidenceLocationMapper(
+            context_field=self.context_field,
+            location_field=self.location_field,
+            **kwargs,
+        )
+
+    def __init__(
+        self,
+        *args,
+        context_field: str = "context",
+        location_field: str = "locations",
+        **kwargs,
+    ):
+        self.location_field = location_field
+        self.context_field = context_field
+        super().__init__(*args, **kwargs)
+
+
+C = TypeVar("C", bound=ChainableMapper)
+
+
+class SquadPromptTrainRecipe(BaseRecipe):
+    def unpacking(self, pipeline: C, **kwargs: Any) -> C:
+        return pipeline >> UnpackingMapper(**kwargs)
+
+    def __init__(
+        self,
+        tokenizer: PreTrainedTokenizerBase,
+        source_template: str,
+        target_template: str,
+        context_length: int,
+        context_stride: int,
+        alternative_template: Optional[str] = None,
+        target_output_name: Union[
+            Literal["labels"], Literal["decoder_input_ids"]
+        ] = "labels",
+        answer_field: str = "answers",
+        context_field: str = "context",
+        location_field: str = "locations",
+        evidence_field: Union[str, None] = "evidences",
+        extras_field: Union[str, None] = "extras",
+        id_field: Union[str, None] = "id",
+        section_bos: str = "",
+        section_eos: str = "\n",
+        paragraph_bos: str = "\n\n",
+        paragraph_eos: str = "\n",
+        header_bos: Optional[str] = None,
+        header_eos: Optional[str] = None,
+        document_bos: str = "",
+        document_eos: str = "",
+        source_add_bos_token: bool = False,
+        source_add_eos_token: bool = False,
+        target_add_bos_token: bool = False,
+        target_add_eos_token: bool = False,
+    ):
+        super().__init__()
+
+        fields_to_unpack: Tuple[str, ...] = (
+            answer_field,
+            *((evidence_field,) if evidence_field else []),
+            *((extras_field,) if extras_field else []),
+        )
+
+        pipeline = ConcatenateContextMapper(
+            context_field_name=context_field,
+            section_bos=section_bos,
+            section_eos=section_eos,
+            paragraph_bos=paragraph_bos,
+            paragraph_eos=paragraph_eos,
+            header_bos=header_bos,
+            header_eos=header_eos,
+            document_bos=document_bos,
+            document_eos=document_eos,
+        )
+
+        pipeline = self.unpacking(
+            pipeline,
+            fields_to_unpack=fields_to_unpack,
+            ignored_behavior="repeat",
+        )
+
+        if evidence_field:
+            pipeline = pipeline >> AddEvidencesLocationMapper(
+                context_field=context_field,
+                evidence_field=evidence_field,
+                location_field=location_field,
+            )
+
+        pipeline = pipeline >> _SquadPromptingRecipe(
+            tokenizer=tokenizer,
+            context_field=context_field,
+            location_field=location_field,
+            source_template=source_template,
+            target_template=target_template,
+            fields_to_truncate=[context_field],
+            fields_to_stride=[context_field],
+            stride_max_length=context_length,
+            stride_step=context_stride,
+            target_output_name=target_output_name,
+            source_add_bos_token=source_add_bos_token,
+            source_add_eos_token=source_add_eos_token,
+            target_add_bos_token=target_add_bos_token,
+            target_add_eos_token=target_add_eos_token,
+            extra_keep_field_names=(
+                *([location_field] if evidence_field else []),
+                *([id_field] if id_field else []),
+            ),
+        )
+        if alternative_template:
+            pipeline = pipeline >> AlternativePromptMapper(
+                tokenizer=tokenizer,
+                template=alternative_template,
+                location_field=location_field,
+                target_field=target_output_name,
+            )
+
+        if evidence_field:
+            pipeline = pipeline >> ChangeFieldsMapper(
+                drop_fields=[location_field]
+            )
+
+        self.chain(pipeline)
+
+
+class SquadPromptValidRecipe(SquadPromptTrainRecipe):
+    def unpacking(self, pipeline: C, **kwargs: Any) -> C:
+        # we don't unpack the answers in the validation set
+        return pipeline

@@ -18,7 +18,7 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
         from datasets.fingerprint import disable_caching, enable_caching
 
 from ..base import SingleBaseMapper
-from ..base.mappers import PipelineFingerprintMixIn
+from ..base.mappers import ChainableMapper
 from .types import TransformElementType
 
 __all__ = [
@@ -65,7 +65,7 @@ class CachePathContext:
     def __init__(
         self,
         base_dir: Union[str, Path],
-        pipeline: Sequence[PipelineFingerprintMixIn],
+        pipeline: Sequence[ChainableMapper],
         dataset: Any,
         n_samples_iterable_fingerprint: int = 10,
     ):
@@ -75,7 +75,7 @@ class CachePathContext:
         self.n_samples_iterable_fingerprint = n_samples_iterable_fingerprint
 
     def get_pipeline_fingerprint(
-        self, pipeline: Sequence[PipelineFingerprintMixIn]
+        self, pipeline: Sequence[ChainableMapper]
     ) -> str:
         h = hashlib.sha1()
         for mapper in pipeline:
@@ -240,9 +240,9 @@ class StartCachingMapper(SingleBaseMapper):
         self.cache_dir = get_cache_dir(cache_dir)
         super().__init__()
 
-    def _get_pipeline_to_cache(self) -> Sequence[PipelineFingerprintMixIn]:
-        current: PipelineFingerprintMixIn = self
-        pipeline: List[PipelineFingerprintMixIn] = []
+    def _get_pipeline_to_cache(self) -> Sequence[ChainableMapper]:
+        current: ChainableMapper = self
+        pipeline: List[ChainableMapper] = []
 
         # traverse the pipeline till the end
         while current.pipeline is not None:
