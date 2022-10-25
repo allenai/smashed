@@ -271,11 +271,9 @@ class AlternativePromptMapper(FillEncodedPromptMapper):
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         if sum(data[self.location_field]) == 0:
-            out = super().transform(data)
-            return {self.target_field: out["input_ids"]}
-
+            encoded_alternative = super().transform(data)
+            return {self.target_field: encoded_alternative["input_ids"]}
         else:
-            breakpoint()
             return {self.target_field: data[self.target_field]}
 
 
