@@ -9,6 +9,7 @@ from typing import (
     Iterable,
     KeysView,
     Tuple,
+    Type,
     TypeVar,
     Union,
     ValuesView,
@@ -17,6 +18,10 @@ from typing import (
 
 K = TypeVar("K")
 V = TypeVar("V")
+
+
+class DEFAULT:
+    ...
 
 
 class DataRowView(abc.Mapping, Generic[K, V]):
@@ -73,8 +78,13 @@ class DataRowView(abc.Mapping, Generic[K, V]):
             f"({self._idx}, {str(self._dbv._data[self._idx])})"
         )
 
-    def pop(self, key: K) -> V:
-        return self[key]
+    def pop(self, key: K, default: Union[V, Type[DEFAULT]] = DEFAULT) -> V:
+        if key in self:
+            return self[key]
+        elif default is not DEFAULT:
+            return cast(V, default)
+        else:
+            raise KeyError(key)
 
 
 D = TypeVar("D", bound=abc.MutableMapping)
@@ -105,8 +115,13 @@ class DataBatchView(Generic[D, K, V]):
     def items(self) -> Iterable[Tuple[K, V]]:
         return zip(self.keys(), self.values())
 
-    def pop(self, key: K) -> V:
-        return self._data.pop(key)
+    def pop(self, key: K, default: Union[V, Type[DEFAULT]] = DEFAULT) -> V:
+        if key in self._data:
+            return self._data.pop(key)
+        elif default is not DEFAULT:
+            return cast(V, default)
+        else:
+            raise KeyError(key)
 
     def __getitem__(self, idx: int) -> DataRowView[K, V]:
         return DataRowView(self, idx)
