@@ -35,6 +35,17 @@ def get_version() -> str:
     return version
 
 
+def get_name() -> str:
+    """Get the name of the package."""
+    import smashed
+    return smashed.__package__ or smashed.__name__
+
+
+def get_name_and_version() -> str:
+    """Get the name and version of the package."""
+    return f"{get_name()}=={get_version()}"
+
+
 class SmashedWarnings:
     _WARNINGS = bool(os.environ.get("SMASHED_WARNINGS", True))
 

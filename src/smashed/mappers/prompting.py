@@ -2,7 +2,7 @@ import sys
 from dataclasses import dataclass
 from math import floor
 from string import Formatter
-from typing import Dict, List, Literal, Optional, Sequence, Union, cast
+from typing import Dict, List, Literal, Optional, Sequence, Union
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
