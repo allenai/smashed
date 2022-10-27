@@ -1,11 +1,4 @@
-import importlib.metadata
-import os
-import warnings
-from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Type, TypeVar, Union
-
-import platformdirs
-
+from . import glom
 from .caching import get_cache_dir
 from .convert import bytes_from_int, int_from_bytes
 from .version import get_name, get_name_and_version, get_version
@@ -17,6 +10,7 @@ __all__ = [
     "get_name_and_version",
     "get_name",
     "get_version",
+    "glom",
     "int_from_bytes",
     "SmashedWarnings",
 ]

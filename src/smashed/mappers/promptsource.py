@@ -1,22 +1,37 @@
-from typing import Optional, cast
-from ..base import SingleBaseMapper, TransformElementType
-from ..utils import get_name_and_version
+from typing import Dict, Optional, cast
 
-from necessary import necessary, Necessary
+from necessary import Necessary, necessary
+
+from ..base import SingleBaseMapper, TransformElementType
+from ..utils import get_name_and_version, glom
 
 if necessary("promptsource", soft=True):
-    from promptsource.templates import Template
-    from promptsource.templates import DatasetTemplates
+    from promptsource.templates import DatasetTemplates, Template
+
+if necessary("jinja2", soft=True):
     from jinja2 import Environment, meta
 
-PS_MISSING_MSG = (
-    "You must install promptsource to use this mapper. "
-    "You can do so by running `pip install promptsource` or "
-    "`pip install smashed[datasets]`."
+
+MISSING_MSG = (
+    "{module_name} missing. To install, run `pip install smashed[datasets]`."
 )
 
 
-@Necessary("promptsource", message=PS_MISSING_MSG)
+class TextTruncateMapper(SingleBaseMapper):
+    def __init__(self, fields_truncate_map: Dict[str, int]):
+        self.fields_to_truncate = tuple(
+            (glom.parse(field), truncate_to)
+            for field, truncate_to in fields_truncate_map.items()
+        )
+        # we only check for the first in case of nested fields
+        io_fields = [spec[0] for spec, _ in self.fields_to_truncate]
+        super().__init__(input_fields=io_fields, output_fields=io_fields)
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        return super().transform(data)
+
+
+@Necessary("promptsource", message=MISSING_MSG)
 class PromptsourceMapper(SingleBaseMapper):
     def __init__(
         self,
@@ -45,12 +60,12 @@ class PromptsourceMapper(SingleBaseMapper):
         source, target = self.template.apply(
             data,
             truncate=self.truncate,
-            highlight_variables=self.highlight_variables
+            highlight_variables=self.highlight_variables,
         )
         return {"source": source, "target": target}
 
 
-@Necessary("promptsource", message=PS_MISSING_MSG)
+@Necessary("promptsource", message=MISSING_MSG)
 class DatasetPromptsourceMapper(PromptsourceMapper):
     def __init__(
         self,
@@ -67,7 +82,8 @@ class DatasetPromptsourceMapper(PromptsourceMapper):
         subset_name = cast(str, subset_name)
 
         template = DatasetTemplates(
-            dataset_name=dataset_name, subset_name=subset_name,
+            dataset_name=dataset_name,
+            subset_name=subset_name,
         )[template_name]
 
         super().__init__(
@@ -79,7 +95,7 @@ class DatasetPromptsourceMapper(PromptsourceMapper):
         )
 
 
-@Necessary("promptsource", message=PS_MISSING_MSG)
+@Necessary("promptsource", message=MISSING_MSG)
 class JinjaPromptsourceMapper(PromptsourceMapper):
     def __init__(
         self,

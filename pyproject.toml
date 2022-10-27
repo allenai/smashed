@@ -16,6 +16,7 @@ dependencies = [
     "trouting>=0.2.2",
     "ftfy>=6.1.1",
     "platformdirs>=2.5.0",
+    "glom>=22.1.0",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
