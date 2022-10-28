@@ -1,18 +1,12 @@
 from copy import deepcopy
 from functools import partial
 from typing import (
-    Any,
     Dict,
-    List,
-    NamedTuple,
     Optional,
-    Sequence,
-    Tuple,
-    Union,
     cast,
 )
 
-import glom as gl
+
 from necessary import Necessary, necessary
 
 from ..base import SingleBaseMapper, TransformElementType
@@ -42,7 +36,7 @@ class TextTruncateMapper(SingleBaseMapper):
             for field, truncate_to in fields_truncate_map.items()
         )
         # we only check for the first in case of nested fields
-        io_fields = [spec.key[0] for spec, _ in self.fields_to_truncate]
+        io_fields = [str(spec.key[0]) for spec, _ in self.fields_to_truncate]
         super().__init__(input_fields=io_fields, output_fields=io_fields)
 
     @staticmethod
