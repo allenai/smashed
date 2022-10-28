@@ -2,24 +2,12 @@ import unittest
 
 from smashed.mappers.promptsource import (
     DatasetPromptsourceMapper,
-    JinjaPromptParser,
     JinjaPromptsourceMapper,
     PromptsourceMapper,
 )
 
 
 class TestPromptsource(unittest.TestCase):
-    def test_jinja_parser(self):
-        txt = (
-            "Q: {{question}}"
-            "{% for answer_text in answers.text %}"
-            "A: |||{{answer_text}}"
-            "{% endfor %}"
-        )
-        mapper = JinjaPromptsourceMapper(jinja=txt)
-        parser = JinjaPromptParser(mapper.template)
-        parser.get_variables()
-
     def test_jinja_prompt_source_mapper(self):
         mapper = JinjaPromptsourceMapper(
             jinja="Q: {{question}}\nA: |||{{answers.text[0]}}"
@@ -67,7 +55,3 @@ class TestPromptsource(unittest.TestCase):
         mapper2 = PromptsourceMapper(mapper.template)
         mapped_dataset2 = mapper2.map(dataset, remove_columns=True)
         self.assertEqual(mapped_dataset, mapped_dataset2)
-
-
-if __name__ == "__main__":
-    TestPromptsource().test_jinja_parser()

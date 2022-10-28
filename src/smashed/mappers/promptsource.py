@@ -1,15 +1,30 @@
-from typing import Dict, Optional, cast
+from copy import deepcopy
+from functools import partial
+from typing import (
+    Any,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
+import glom as gl
 from necessary import Necessary, necessary
 
 from ..base import SingleBaseMapper, TransformElementType
-from ..utils import get_name_and_version, glom
+from ..utils import Nested, get_name_and_version
 
-if necessary("promptsource", soft=True):
-    from promptsource.templates import DatasetTemplates, Template
+with necessary("promptsource", soft=True) as PROMPTSOURCE_AVAILABLE:
+    if PROMPTSOURCE_AVAILABLE:
+        from promptsource.templates import DatasetTemplates, Template
 
-if necessary("jinja2", soft=True):
-    from jinja2 import Environment, meta
+with necessary("jinja2", soft=True) as JINJA_AVAILABLE:
+    if JINJA_AVAILABLE:
+        from jinja2 import Environment, meta
 
 
 MISSING_MSG = (
@@ -20,15 +35,25 @@ MISSING_MSG = (
 class TextTruncateMapper(SingleBaseMapper):
     def __init__(self, fields_truncate_map: Dict[str, int]):
         self.fields_to_truncate = tuple(
-            (glom.parse(field), truncate_to)
+            (
+                Nested.from_str(field),
+                partial(self._truncate, truncate_to=truncate_to),
+            )
             for field, truncate_to in fields_truncate_map.items()
         )
         # we only check for the first in case of nested fields
-        io_fields = [spec[0] for spec, _ in self.fields_to_truncate]
+        io_fields = [spec.key[0] for spec, _ in self.fields_to_truncate]
         super().__init__(input_fields=io_fields, output_fields=io_fields)
 
+    @staticmethod
+    def _truncate(data: str, truncate_to: int) -> str:
+        return data[:truncate_to]
+
     def transform(self, data: TransformElementType) -> TransformElementType:
-        return super().transform(data)
+        data = deepcopy(data)
+        for field, truncate_fn in self.fields_to_truncate:
+            field.edit(data, truncate_fn)  # type: ignore
+        return data
 
 
 @Necessary("promptsource", message=MISSING_MSG)
