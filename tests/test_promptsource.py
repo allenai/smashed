@@ -77,8 +77,7 @@ class TestPromptsource(unittest.TestCase):
         )
         mapped_data = mapper.map(data, remove_columns=True)
         self.assertEqual(
-            mapped_data[0]["question"],
-            "What is the capital of France?"
+            mapped_data[0]["question"], "What is the capital of France?"
         )
         self.assertEqual(
             mapped_data[0]["context"],

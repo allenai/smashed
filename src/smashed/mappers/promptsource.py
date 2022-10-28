@@ -1,11 +1,6 @@
 from copy import deepcopy
 from functools import partial
-from typing import (
-    Dict,
-    Optional,
-    cast,
-)
-
+from typing import Dict, Optional, cast
 
 from necessary import Necessary, necessary
 
