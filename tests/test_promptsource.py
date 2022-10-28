@@ -1,11 +1,10 @@
 import unittest
 
+from smashed.mappers.nested import TextTruncateMapper, WordsTruncateMapper
 from smashed.mappers.promptsource import (
     DatasetPromptsourceMapper,
     JinjaPromptsourceMapper,
     PromptsourceMapper,
-    TextTruncateMapper,
-    WordsTruncateMapper,
 )
 
 
@@ -70,7 +69,7 @@ class TestPromptsource(unittest.TestCase):
             },
         ]
         mapper = TextTruncateMapper(
-            fields_truncate_map={
+            nested_fields={
                 "question": 30,
                 "context": 31,
                 "answers.text.[]": 5,
@@ -90,7 +89,7 @@ class TestPromptsource(unittest.TestCase):
         )
 
         mapper = WordsTruncateMapper(
-            fields_truncate_map={
+            nested_fields={
                 "question": 6,
                 "context": 6,
                 "answers.text.[]": 1,

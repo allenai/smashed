@@ -36,6 +36,7 @@ from .multiseq import (
     TokensSequencesPaddingMapper,
     TokenTypeIdsSequencePaddingMapper,
 )
+from .nested import TextTruncateMapper, WordsTruncateMapper
 from .prompting import (
     EncodeFieldsMapper,
     FillEncodedPromptMapper,
@@ -43,13 +44,9 @@ from .prompting import (
     TruncateNFieldsMapper,
 )
 from .promptsource import (
-    PromptsourceMapper,
     DatasetPromptsourceMapper,
     JinjaPromptsourceMapper,
-)
-from .nested import (
-    TextTruncateMapper,
-    WordsTruncateMapper
+    PromptsourceMapper,
 )
 from .shape import FlattenMapper, SingleSequenceStriderMapper, UnpackingMapper
 from .text import FtfyMapper

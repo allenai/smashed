@@ -1,6 +1,6 @@
 from copy import deepcopy
 from functools import partial
-from typing import Callable, Dict, Literal, Sequence, Union, Any
+from typing import Any, Callable, Dict, Literal, Sequence, Union
 
 from ..base import SingleBaseMapper, TransformElementType
 from ..utils import Nested
