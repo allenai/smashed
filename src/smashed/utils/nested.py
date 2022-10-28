@@ -25,10 +25,58 @@ class MISSING:
 
 
 class Nested:
+    """
+    A tool to operate on nested data structures.
+
+    Key grammar is as follows:
+    - A key is a sequence of key fragments.
+    - Fragments are separated by full stops, e.g. `a.b.c`.
+    - A key fragment is either a string, an integer, or a list containing
+        a sequence of key fragments.
+    - A string key fragment indicates a dictionary key; in case the key
+        contains reserved characters, it must be quoted, e.g. `a."b.c"`.
+    - An integer key fragment indicates a list index. Negative indices are
+        supported, e.g. `a.-1`.
+    - A list key indicates that all elements of a list must be processed.
+        list key can use either square brackets or parentheses, e.g. so the
+        keys `a.[b.c]` and `a.(b.c)` are equivalent. A list key can be
+        nested, e.g. `a.[b.[c.d]]`.
+
+    Example:
+
+    Given the following data structure:
+
+    data = {
+        "a": {
+            "b": 3,
+            "c": [{"d": 4}, {"d": 5}],
+            "e.f": {"g": [6, 7]},
+        }
+    }
+
+    The following keys are valid:
+        - `a.b` (selects 3)
+        - `a.c` (selects [{"d": 4}, {"d": 5}])
+        - `a.c.[d]` (selects [4, 5])
+        - `a.c.-1.d` (selects 5)
+        - `a."e.f".g` (selects [6, 7])
+        - `a."e.f".g.[]` (selects [6, 7])
+    """
+
     def __init__(self, key: KeyType):
+        """Create a Nested object from an already parsed key."""
+
+        if isinstance(key, str):
+            name = {type(self).__name__}
+            raise TypeError(
+                f"{name}.__init__ expects a parsed key, not a string. Use "
+                f"{name}.from_str() to create a {name} object from a string."
+            )
+
         self.key = key
 
     def __len__(self) -> int:
+        """Number of top-level steps in the key."""
         return len(self.key)
 
     def __getitem__(self, idx: int) -> KeyFr:
@@ -36,6 +84,8 @@ class Nested:
 
     @classmethod
     def to_str(cls, key: KeyType) -> str:
+        """Returns the key of this Nested object as a string."""
+
         return ".".join(
             f"[{cls.to_str(k)}]"
             if isinstance(k, (list, tuple))

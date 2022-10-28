@@ -42,6 +42,15 @@ from .prompting import (
     FillTextPromptMapper,
     TruncateNFieldsMapper,
 )
+from .promptsource import (
+    PromptsourceMapper,
+    DatasetPromptsourceMapper,
+    JinjaPromptsourceMapper,
+)
+from .nested import (
+    TextTruncateMapper,
+    WordsTruncateMapper
+)
 from .shape import FlattenMapper, SingleSequenceStriderMapper, UnpackingMapper
 from .text import FtfyMapper
 from .tokenize import PaddingMapper, TokenizerMapper, ValidUnicodeMapper
@@ -87,6 +96,7 @@ __all__ = [
     "SingleValueToSequenceMapper",
     "StartCachingMapper",
     "TensorCollatorMapper",
+    "TextTruncateMapper",
     "TokenizerMapper",
     "TokensSequencesPaddingMapper",
     "TokenTypeIdsSequencePaddingMapper",
@@ -94,4 +104,5 @@ __all__ = [
     "TruncateNFieldsMapper",
     "UnpackingMapper",
     "ValidUnicodeMapper",
+    "WordsTruncateMapper",
 ]

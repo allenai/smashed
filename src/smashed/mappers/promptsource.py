@@ -1,16 +1,9 @@
-from copy import deepcopy
-from functools import partial
-from typing import Dict, Literal, Optional, cast
+from typing import Optional, cast
 
 from necessary import Necessary, necessary
 
 from ..base import SingleBaseMapper, TransformElementType
-from ..utils import Nested, get_name_and_version
-from ..utils.wordsplitter import (
-    BaseWordSplitter,
-    BlingFireSplitter,
-    WhitespaceSplitter,
-)
+from ..utils import get_name_and_version
 
 with necessary("promptsource", soft=True) as PROMPTSOURCE_AVAILABLE:
     if PROMPTSOURCE_AVAILABLE:
@@ -19,50 +12,6 @@ with necessary("promptsource", soft=True) as PROMPTSOURCE_AVAILABLE:
 with necessary("jinja2", soft=True) as JINJA_AVAILABLE:
     if JINJA_AVAILABLE:
         from jinja2 import Environment, meta
-
-
-class TextTruncateMapper(SingleBaseMapper):
-    def __init__(self, fields_truncate_map: Dict[str, int]):
-        self.fields_to_truncate = tuple(
-            (
-                Nested.from_str(field),
-                partial(self._truncate, truncate_to=truncate_to),
-            )
-            for field, truncate_to in fields_truncate_map.items()
-        )
-        # we only check for the first in case of nested fields
-        io_fields = [str(spec.key[0]) for spec, _ in self.fields_to_truncate]
-        super().__init__(input_fields=io_fields, output_fields=io_fields)
-
-    def _truncate(self, data: str, truncate_to: int) -> str:
-        return data[:truncate_to]
-
-    def transform(self, data: TransformElementType) -> TransformElementType:
-        data = deepcopy(data)
-        for field, truncate_fn in self.fields_to_truncate:
-            field.edit(data, truncate_fn)  # type: ignore
-        return data
-
-
-class WordsTruncateMapper(TextTruncateMapper):
-    splitter: BaseWordSplitter
-
-    def __init__(
-        self,
-        fields_truncate_map: Dict[str, int],
-        splitter: Literal["blingfire", "whitespace"] = "blingfire",
-    ):
-        super().__init__(fields_truncate_map)
-        if splitter == "blingfire":
-            self.splitter = BlingFireSplitter()
-        elif splitter == "whitespace":
-            self.splitter = WhitespaceSplitter()
-        else:
-            raise ValueError(f"Unknown splitter: {splitter}")
-
-    def _truncate(self, data: str, truncate_to: int) -> str:
-        words = self.splitter(data)
-        return " ".join(words[:truncate_to])
 
 
 @Necessary(
