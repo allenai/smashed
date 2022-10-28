@@ -70,8 +70,8 @@ requires = [
 [project.optional-dependencies]
 dev = [
     "springs>=1.4.2",
-    "black[jupyter]<=21.12b0", # compatibility with promptsource
-    "isort>=5.10.1",
+    "black[jupyter]>=21.12b0",
+    "isort>=5.8.0",
     "mypy>=0.971",
     "pytest>=5.2",
     "ipython>=8.4.0",
