@@ -5,7 +5,7 @@ from smashed.mappers.promptsource import (
     JinjaPromptsourceMapper,
     PromptsourceMapper,
     TextTruncateMapper,
-    WordsTruncateMapper
+    WordsTruncateMapper,
 )
 
 
@@ -104,6 +104,4 @@ class TestPromptsource(unittest.TestCase):
         self.assertEqual(
             mapped_data[0]["context"], "Paris is the capital of France"
         )
-        self.assertEqual(
-            mapped_data[0]["answers"]["text"], ["Paris", "Paris"]
-        )
+        self.assertEqual(mapped_data[0]["answers"]["text"], ["Paris", "Paris"])

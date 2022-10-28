@@ -7,9 +7,9 @@ from necessary import Necessary, necessary
 from ..base import SingleBaseMapper, TransformElementType
 from ..utils import Nested, get_name_and_version
 from ..utils.wordsplitter import (
+    BaseWordSplitter,
     BlingFireSplitter,
     WhitespaceSplitter,
-    BaseWordSplitter
 )
 
 with necessary("promptsource", soft=True) as PROMPTSOURCE_AVAILABLE:
@@ -50,24 +50,24 @@ class WordsTruncateMapper(TextTruncateMapper):
     def __init__(
         self,
         fields_truncate_map: Dict[str, int],
-        splitter: Literal['blingfire', 'whitespace'] = 'blingfire',
+        splitter: Literal["blingfire", "whitespace"] = "blingfire",
     ):
         super().__init__(fields_truncate_map)
-        if splitter == 'blingfire':
+        if splitter == "blingfire":
             self.splitter = BlingFireSplitter()
-        elif splitter == 'whitespace':
+        elif splitter == "whitespace":
             self.splitter = WhitespaceSplitter()
         else:
             raise ValueError(f"Unknown splitter: {splitter}")
 
     def _truncate(self, data: str, truncate_to: int) -> str:
         words = self.splitter(data)
-        return ' '.join(words[:truncate_to])
+        return " ".join(words[:truncate_to])
 
 
 @Necessary(
     "promptsource",
-    message="{module_name} missing. Fix with 'pip install smashed[prompting]'"
+    message="{module_name} missing. Fix with 'pip install smashed[prompting]'",
 )
 class PromptsourceMapper(SingleBaseMapper):
     def __init__(
@@ -104,7 +104,7 @@ class PromptsourceMapper(SingleBaseMapper):
 
 @Necessary(
     "promptsource",
-    message="{module_name} missing. Fix with 'pip install smashed[prompting]'"
+    message="{module_name} missing. Fix with 'pip install smashed[prompting]'",
 )
 class DatasetPromptsourceMapper(PromptsourceMapper):
     def __init__(
@@ -137,7 +137,7 @@ class DatasetPromptsourceMapper(PromptsourceMapper):
 
 @Necessary(
     "promptsource",
-    message="{module_name} missing. Fix with 'pip install smashed[prompting]'"
+    message="{module_name} missing. Fix with 'pip install smashed[prompting]'",
 )
 class JinjaPromptsourceMapper(PromptsourceMapper):
     def __init__(

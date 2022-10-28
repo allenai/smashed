@@ -1,5 +1,6 @@
 from typing import List
-from necessary import necessary, Necessary
+
+from necessary import Necessary, necessary
 from tokenizers.pre_tokenizers import Whitespace
 
 with necessary("blingfire", soft=True) as BLINGFIRE_AVAILABLE:
@@ -7,15 +8,10 @@ with necessary("blingfire", soft=True) as BLINGFIRE_AVAILABLE:
         from blingfire import text_to_words
 
 
-__all__ = [
-    "WhitespaceSplitter",
-    "BlingFireSplitter"
-]
+__all__ = ["WhitespaceSplitter", "BlingFireSplitter"]
 
 
-BLINGFIRE_MESSAGE = (
-
-)
+BLINGFIRE_MESSAGE = ()
 
 
 class BaseWordSplitter:
@@ -28,7 +24,7 @@ class BaseWordSplitter:
 
 @Necessary(
     "blingfire",
-    message="{module_name} missing. Fix with 'pip install smashed[prompting]'"
+    message="{module_name} missing. Fix with 'pip install smashed[prompting]'",
 )
 class BlingFireSplitter(BaseWordSplitter):
     def __call__(self, text: str) -> List[str]:

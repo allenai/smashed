@@ -3,7 +3,7 @@ from .convert import bytes_from_int, int_from_bytes
 from .nested import Nested
 from .version import get_name, get_name_and_version, get_version
 from .warnings import SmashedWarnings
-from .wordsplitter import WhitespaceSplitter, BlingFireSplitter
+from .wordsplitter import BlingFireSplitter, WhitespaceSplitter
 
 __all__ = [
     "BlingFireSplitter",
