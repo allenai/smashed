@@ -5,6 +5,7 @@ from smashed.mappers.promptsource import (
     JinjaPromptsourceMapper,
     PromptsourceMapper,
     TextTruncateMapper,
+    WordsTruncateMapper
 )
 
 
@@ -60,10 +61,10 @@ class TestPromptsource(unittest.TestCase):
     def test_text_truncate_mapper(self):
         data = [
             {
-                "question": "What is the capital of France?" * 50,
-                "context": "Paris is the capital of France." * 50,
+                "question": "What is the capital of France? " * 50,
+                "context": "Paris is the capital of France. " * 50,
                 "answers": {
-                    "text": ["Paris" * 50, "Paris" * 50],
+                    "text": ["Paris " * 50, "Paris " * 50],
                     "answer_start": [0, 0],
                 },
             },
@@ -86,4 +87,23 @@ class TestPromptsource(unittest.TestCase):
         self.assertEqual(
             mapped_data[0]["answers"]["text"],
             ["Paris", "Paris"],
+        )
+
+        mapper = WordsTruncateMapper(
+            fields_truncate_map={
+                "question": 6,
+                "context": 6,
+                "answers.text.[]": 1,
+            },
+            splitter="blingfire",
+        )
+        mapped_data = mapper.map(data, remove_columns=True)
+        self.assertEqual(
+            mapped_data[0]["question"], "What is the capital of France"
+        )
+        self.assertEqual(
+            mapped_data[0]["context"], "Paris is the capital of France"
+        )
+        self.assertEqual(
+            mapped_data[0]["answers"]["text"], ["Paris", "Paris"]
         )

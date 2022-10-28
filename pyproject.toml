@@ -16,7 +16,6 @@ dependencies = [
     "trouting>=0.2.2",
     "ftfy>=6.1.1",
     "platformdirs>=2.5.0",
-    "glom>=22.1.0",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -88,7 +87,10 @@ remote = [
 datasets = [
   "datasets>=2.4.0",
   "dill>=0.3.0",
-  "promptsource>=0.2.3"
+]
+prompting = [
+    "promptsource>=0.2.3",
+    "blingfire>=0.1.8",
 ]
 torchdata = [
   "torch>=1.12.1",
@@ -98,7 +100,8 @@ all = [
     "smashed[dev]",
     "smashed[datasets]",
     "smashed[torchdata]",
-    "smashed[remote]"
+    "smashed[remote]",
+    "smashed[prompting]",
 ]
 
 [tool.black]

@@ -1,11 +1,16 @@
 from copy import deepcopy
 from functools import partial
-from typing import Dict, Optional, cast
+from typing import Dict, Literal, Optional, cast
 
 from necessary import Necessary, necessary
 
 from ..base import SingleBaseMapper, TransformElementType
 from ..utils import Nested, get_name_and_version
+from ..utils.wordsplitter import (
+    BlingFireSplitter,
+    WhitespaceSplitter,
+    BaseWordSplitter
+)
 
 with necessary("promptsource", soft=True) as PROMPTSOURCE_AVAILABLE:
     if PROMPTSOURCE_AVAILABLE:
@@ -14,11 +19,6 @@ with necessary("promptsource", soft=True) as PROMPTSOURCE_AVAILABLE:
 with necessary("jinja2", soft=True) as JINJA_AVAILABLE:
     if JINJA_AVAILABLE:
         from jinja2 import Environment, meta
-
-
-MISSING_MSG = (
-    "{module_name} missing. To install, run `pip install smashed[datasets]`."
-)
 
 
 class TextTruncateMapper(SingleBaseMapper):
@@ -34,8 +34,7 @@ class TextTruncateMapper(SingleBaseMapper):
         io_fields = [str(spec.key[0]) for spec, _ in self.fields_to_truncate]
         super().__init__(input_fields=io_fields, output_fields=io_fields)
 
-    @staticmethod
-    def _truncate(data: str, truncate_to: int) -> str:
+    def _truncate(self, data: str, truncate_to: int) -> str:
         return data[:truncate_to]
 
     def transform(self, data: TransformElementType) -> TransformElementType:
@@ -45,7 +44,31 @@ class TextTruncateMapper(SingleBaseMapper):
         return data
 
 
-@Necessary("promptsource", message=MISSING_MSG)
+class WordsTruncateMapper(TextTruncateMapper):
+    splitter: BaseWordSplitter
+
+    def __init__(
+        self,
+        fields_truncate_map: Dict[str, int],
+        splitter: Literal['blingfire', 'whitespace'] = 'blingfire',
+    ):
+        super().__init__(fields_truncate_map)
+        if splitter == 'blingfire':
+            self.splitter = BlingFireSplitter()
+        elif splitter == 'whitespace':
+            self.splitter = WhitespaceSplitter()
+        else:
+            raise ValueError(f"Unknown splitter: {splitter}")
+
+    def _truncate(self, data: str, truncate_to: int) -> str:
+        words = self.splitter(data)
+        return ' '.join(words[:truncate_to])
+
+
+@Necessary(
+    "promptsource",
+    message="{module_name} missing. Fix with 'pip install smashed[prompting]'"
+)
 class PromptsourceMapper(SingleBaseMapper):
     def __init__(
         self,
@@ -79,7 +102,10 @@ class PromptsourceMapper(SingleBaseMapper):
         return {"source": source, "target": target}
 
 
-@Necessary("promptsource", message=MISSING_MSG)
+@Necessary(
+    "promptsource",
+    message="{module_name} missing. Fix with 'pip install smashed[prompting]'"
+)
 class DatasetPromptsourceMapper(PromptsourceMapper):
     def __init__(
         self,
@@ -109,7 +135,10 @@ class DatasetPromptsourceMapper(PromptsourceMapper):
         )
 
 
-@Necessary("promptsource", message=MISSING_MSG)
+@Necessary(
+    "promptsource",
+    message="{module_name} missing. Fix with 'pip install smashed[prompting]'"
+)
 class JinjaPromptsourceMapper(PromptsourceMapper):
     def __init__(
         self,
