@@ -16,6 +16,7 @@ dependencies = [
     "trouting>=0.2.2",
     "ftfy>=6.1.1",
     "platformdirs>=2.5.0",
+    "glom>=21.0.0",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -79,7 +80,7 @@ dev = [
     "flake8>=5.0",
     "ipdb>=0.13.0",
     "flake8-pyi>=22.8.1",
-    "Flake8-pyproject>=1.1.0"
+    "Flake8-pyproject>=1.1.0",
 ]
 remote = [
     "smart-open>=5.2.1"
