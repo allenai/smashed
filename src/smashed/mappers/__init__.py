@@ -15,6 +15,7 @@ from .fields import (
     RenameFieldsMapper,
 )
 from .filters import FilterMapper
+from .glom import GlomMapper
 from .loaders import (
     CsvLoaderMapper,
     HuggingFaceDatasetLoaderMapper,
@@ -77,6 +78,7 @@ __all__ = [
     "FromTokenizerListCollatorMapper",
     "FromTokenizerTensorCollatorMapper",
     "FtfyMapper",
+    "GlomMapper",
     "HuggingFaceDatasetLoaderMapper",
     "IndicesToMaskMapper",
     "JinjaPromptsourceMapper",

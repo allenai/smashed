@@ -7,6 +7,7 @@ from necessary import necessary
 from smashed.contrib.squad import ConcatenateContextMapper
 from smashed.mappers import (
     EnumerateFieldMapper,
+    JinjaPromptsourceMapper,
     TokenizerMapper,
     TruncateMultipleFieldsMapper,
     UnpackingMapper,
@@ -145,3 +146,20 @@ class TestPickling(unittest.TestCase):
             mp.map(dataset)["answers"],
             [i for i in range(20)] + [i for i in range(20)],
         )
+
+    def test_promptsource(self):
+        mp = JinjaPromptsourceMapper(jinja="hello {{world}}")
+
+        dataset = Dataset.from_dict(
+            {"world": [uuid4().hex for _ in range(20)] * 2}
+        )
+
+        # make sure that serialization works both ways
+        mp = dill.loads(dill.dumps(mp))
+
+        hashes = set()
+        for _ in range(20):
+            processed_dataset = mp.map(dataset)
+            hashes.add(processed_dataset._fingerprint)
+
+        self.assertEqual(len(hashes), 1)

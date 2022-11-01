@@ -92,6 +92,7 @@ datasets = [
 prompting = [
     "promptsource>=0.2.3",
     "blingfire>=0.1.8",
+    "PyYAML>=6.0.0",
 ]
 torchdata = [
   "torch>=1.12.1",

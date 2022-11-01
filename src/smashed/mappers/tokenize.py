@@ -301,5 +301,4 @@ class TruncateSingleFieldMapper(SingleBaseMapper):
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        data = {k: v[: self.fields_to_truncate[k]] for k, v in data.items()}
-        return data
+        return {k: data[k][:v] for k, v in self.fields_to_truncate.items()}

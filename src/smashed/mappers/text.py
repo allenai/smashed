@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Dict, List, Literal, Sequence, Union
+from typing import Any, Dict, List, Literal, Sequence, Union, cast
 
 from ftfy import TextFixerConfig, fix_text
 
@@ -7,6 +7,7 @@ from ..base import SingleBaseMapper, TransformElementType
 from ..utils.wordsplitter import (
     BaseWordSplitter,
     BlingFireSplitter,
+    WhitespacePlusSplitter,
     WhitespaceSplitter,
 )
 
@@ -68,10 +69,14 @@ class TextToWordsMapper(SingleBaseMapper):
     def __init__(
         self,
         fields: Union[str, Sequence[str]],
-        splitter: Literal["blingfire", "whitespace"] = "blingfire",
+        splitter: Literal[
+            "blingfire", "whitespace", "whitespace_plus"
+        ] = "whitespace",
     ):
         if splitter == "blingfire":
             self.splitter = BlingFireSplitter()
+        elif splitter == "whitespace_plus":
+            self.splitter = WhitespacePlusSplitter()
         elif splitter == "whitespace":
             self.splitter = WhitespaceSplitter()
         else:
@@ -82,7 +87,9 @@ class TextToWordsMapper(SingleBaseMapper):
         super().__init__(input_fields=fields, output_fields=fields)
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        return {field: self.splitter(value) for field, value in data.items()}
+        return {
+            field: self.splitter(data[field]) for field in self.input_fields
+        }
 
 
 class WordsToTextMapper(SingleBaseMapper):
@@ -96,7 +103,11 @@ class WordsToTextMapper(SingleBaseMapper):
 
         super().__init__(input_fields=fields, output_fields=fields)
 
+    def _join(self, words: Union[Sequence[str], Sequence[Sequence[str]]]):
+        if isinstance(words[0], str):
+            return self.joiner.join(cast(Sequence[str], words))
+        else:
+            return [self.joiner.join(w) for w in words]
+
     def transform(self, data: TransformElementType) -> TransformElementType:
-        return {
-            field: self.joiner.join(value) for field, value in data.items()
-        }
+        return {field: self._join(data[field]) for field in self.input_fields}
