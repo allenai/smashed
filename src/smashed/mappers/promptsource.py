@@ -32,11 +32,11 @@ class PromptsourceMapper(SingleBaseMapper):
     ):
         self.template = template
         self.truncate = truncate
-        self.highlight_variables = highlight_variables
-        self.source_field_name = source_field_name
-        self.target_field_name = target_field_name
-        self.return_multiple_targets = return_multiple_targets
-        self.extra_variables = extra_variables or {}
+        self.highlight_vars = highlight_variables
+        self.src_fld_name = source_field_name
+        self.tgt_fld_name = target_field_name
+        self.return_multi_tgt = return_multiple_targets
+        self.extra_vars = extra_variables or {}
 
         # override the id for the template because by default it uses
         # a randomly generated uuid which makes hashing impossible
@@ -45,11 +45,15 @@ class PromptsourceMapper(SingleBaseMapper):
         # abstract syntax tree for the jinja template; we will use it
         # to find all fields that are required by the template
         ast = Environment().parse(self.template.jinja)
-        input_fields = sorted(meta.find_undeclared_variables(ast))
+        input_fields = sorted(
+            var_name
+            for var_name in meta.find_undeclared_variables(ast)
+            if var_name not in self.extra_vars
+        )
 
-        output_fields = [source_field_name]
+        output_fields = [self.src_fld_name]
         if "|||" in self.template.jinja:
-            output_fields.append(target_field_name)
+            output_fields.append(self.tgt_fld_name)
 
         super().__init__(
             input_fields=input_fields, output_fields=output_fields
@@ -71,33 +75,25 @@ class PromptsourceMapper(SingleBaseMapper):
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        if self.extra_variables:
+        if self.extra_vars:
             # add any extra variables to the data
-            data = {**data, **self.extra_variables}
+            data = {**data, **self.extra_vars}
 
-        source, *target = self.template.apply(
+        src, *tgt = self.template.apply(
             data,
             truncate=self.truncate,
-            highlight_variables=self.highlight_variables,
+            highlight_variables=self.highlight_vars,
         )
-        if self.return_multiple_targets:
-            return {
-                self.source_field_name: source,
-                self.target_field_name: target,
-            }
+        if self.return_multi_tgt:
+            return {self.src_fld_name: src, self.tgt_fld_name: tgt}
+        elif len(tgt) == 0:
+            return {self.src_fld_name: src}
+        elif len(tgt) > 1:
+            raise ValueError(
+                "Multiple targets, but `return_multiple_targets` is False"
+            )
         else:
-            if len(target) == 0:
-                return {self.source_field_name: source}
-            elif len(target) > 1:
-                raise ValueError(
-                    "Multiple targets returned, but return_multiple_targets "
-                    "is False"
-                )
-            else:
-                return {
-                    self.source_field_name: source,
-                    self.target_field_name: target[0],
-                }
+            return {self.src_fld_name: src, self.tgt_fld_name: tgt[0]}
 
 
 @Necessary(

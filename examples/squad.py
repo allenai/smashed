@@ -31,14 +31,12 @@ pipeline = (
     >> sm.WordsToTextMapper(
         fields=["question", "context", "answers"],
     )
-    >> (
-        p := sm.JinjaPromptsourceMapper(
-            jinja=(
-                "Q:{{question}}\nC:{{context}}\nA: "
-                "{% for answer in answers %}|||{{answer}}{% endfor %}"
-            ),
-            return_multiple_targets=True,
-        )
+    >> sm.JinjaPromptsourceMapper(
+        jinja=(
+            "Q:{{question}}\nC:{{context}}\nA: "
+            "{% for answer in answers %}|||{{answer}}{% endfor %}"
+        ),
+        return_multiple_targets=True,
     )
 )
 

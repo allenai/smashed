@@ -65,3 +65,18 @@ class TestFlattenMapper(unittest.TestCase):
                 {"input_ids": [7, 8]},
             ],
         )
+
+        mapper = SingleSequenceStriderMapper(
+            field_to_stride="input_ids", max_length=3, stride=3, keep_last=True
+        )
+        new_dataset = mapper.map(dataset)
+        self.assertEqual(len(new_dataset), 4)
+        self.assertEqual(
+            new_dataset,
+            [
+                {"input_ids": [1, 2, 3]},
+                {"input_ids": [4]},
+                {"input_ids": [5, 6, 7]},
+                {"input_ids": [8]},
+            ],
+        )

@@ -48,7 +48,12 @@ from .promptsource import (
     JinjaPromptsourceMapper,
     PromptsourceMapper,
 )
-from .shape import FlattenMapper, SingleSequenceStriderMapper, UnpackingMapper
+from .shape import (
+    FlattenMapper,
+    SingleSequenceStriderMapper,
+    SingleSequenceStriderMapperWithLocations,
+    UnpackingMapper,
+)
 from .text import FtfyMapper, TextToWordsMapper, WordsToTextMapper
 from .tokenize import (
     PaddingMapper,
@@ -99,6 +104,7 @@ __all__ = [
     "RenameFieldsMapper",
     "SequencesConcatenateMapper",
     "SingleSequenceStriderMapper",
+    "SingleSequenceStriderMapperWithLocations",
     "SingleValueToSequenceMapper",
     "StartCachingMapper",
     "TensorCollatorMapper",
