@@ -2,9 +2,10 @@ import sys
 from dataclasses import dataclass
 from math import floor
 from string import Formatter
-from typing import Dict, List, Literal, Optional, Sequence, Union, cast
+from typing import Dict, List, Literal, Optional, Sequence, Union
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 from ..base import SingleBaseMapper, TransformElementType
 from .tokenize import GetTokenizerOutputFieldsMixin
@@ -13,14 +14,8 @@ __all__ = [
     "EncodeFieldsMapper",
     "FillEncodedPromptMapper",
     "FillTextPromptMapper",
-    "TruncateNFieldsMapper",
+    "TruncateMultipleFieldsMapper",
 ]
-
-
-# We use this as maximum length for the tokenizer in case we are not
-# truncating; we need this otherwise huggingface prints a warning.
-# Using sys.maxsize from here: https://stackoverflow.com/a/7604981/938048
-INT_MAX_LENGTH = sys.maxsize
 
 
 class EncodeFieldsMapper(SingleBaseMapper):
@@ -30,11 +25,18 @@ class EncodeFieldsMapper(SingleBaseMapper):
     is_split_into_words: bool
     fields_to_encode: Dict[str, None]
 
+    # We use this as maximum length for the tokenizer in case we are not
+    # truncating; we need this otherwise huggingface prints a warning.
+    # Using sys.maxsize from here: https://stackoverflow.com/a/7604981/938048
+    INT_MAX_LENGTH: int = sys.maxsize
+
     def __init__(
         self,
         fields_to_encode: Sequence[str],
         tokenizer: PreTrainedTokenizerBase,
         is_split_into_words: bool = False,
+        fields_to_return_offset_mapping: Union[Sequence[str], bool] = False,
+        offset_prefix: str = "offset",
     ):
         """
         Args:
@@ -43,45 +45,91 @@ class EncodeFieldsMapper(SingleBaseMapper):
                 to use for encoding.
             is_split_into_words (bool, optional): Whether the input fields
                 are already split into words. Defaults to False.
+            fields_to_return_offset_mapping (Union[Sequence[str], bool],
+                optional): The fields to return the offset mapping for.
+                If True, offset mapping will be returned for all fields;
+                if False, no offset mapping will be returned; if a sequence,
+                offset mapping will be returned for the fields in the sequence.
+                For each field the offset mapping is requested, two additional
+                fields will be returned: one with the start offsets and one
+                with the end offsets. The name of these additional fields is
+                controlled by the `start_offset_prefix` and `end_offset_prefix`
+                arguments. Defaults to False.
+            offset_prefix (str, optional): The prefix to use for the
+                new field with offsets. Defaults to "pos_start".
         """
+
+        if fields_to_return_offset_mapping and not isinstance(
+            tokenizer, PreTrainedTokenizerFast
+        ):
+            raise TypeError(
+                "return_offsets_mapping is only supported for fast tokenizers,"
+                " i.e. those that inherit from PreTrainedTokenizerFast."
+            )
+
+        if isinstance(fields_to_return_offset_mapping, bool):
+            # if user provides true, it means they want to return the
+            # offsets mapping for all fields; if it is false, they
+            # don't want to return it for any field
+            fields_to_return_offset_mapping = (
+                fields_to_encode if fields_to_return_offset_mapping else []
+            )
 
         self.tokenizer = tokenizer
         self.is_split_into_words = is_split_into_words
+        self.offset_mapping_fields = set(fields_to_return_offset_mapping)
+        self.offset_prefix = offset_prefix
+
         # @soldni: using `dict.fromkeys` in place of `frozenset` to avoid
         # issues with hashability: sets are not guaranteed to have the
         # same hash, which causes issues when trying to cache through
         # huggingface datasets.
         self.fields_to_encode = dict.fromkeys(fields_to_encode)
 
+        output_fields = list(self.fields_to_encode) + [
+            f"{self.offset_prefix}_{field}"
+            for field in self.offset_mapping_fields
+        ]
+
         super().__init__(
-            input_fields=fields_to_encode,
-            output_fields=fields_to_encode,
+            input_fields=self.fields_to_encode,
+            output_fields=output_fields,
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        tokenized = {
-            name: (
-                self.tokenizer(
-                    field,
-                    # we are not really truncating given the value of
-                    # max length, but we need to pass something to avoid
-                    # a warning from huggingface
-                    truncation=True,
-                    max_length=INT_MAX_LENGTH,
-                    add_special_tokens=False,
-                    return_attention_mask=False,
-                    return_token_type_ids=False,
-                    is_split_into_words=self.is_split_into_words,
-                ).input_ids
-                if name in self.fields_to_encode
-                else field
+        updated = {}
+
+        for field in self.fields_to_encode:
+            return_offset_for_this_field = field in self.offset_mapping_fields
+
+            batch_encoding = self.tokenizer(
+                data[field],
+                # we are not really truncating given the value of
+                # max length, but we need to pass something to avoid
+                # a warning from huggingface
+                truncation=True,
+                max_length=self.INT_MAX_LENGTH,
+                add_special_tokens=False,
+                return_attention_mask=False,
+                return_token_type_ids=False,
+                return_offsets_mapping=return_offset_for_this_field,
+                is_split_into_words=self.is_split_into_words,
             )
-            for name, field in data.items()
-        }
-        return tokenized
+
+            # this is work the word ids
+            updated[field] = batch_encoding.input_ids
+
+            if return_offset_for_this_field:
+                # by default these are returned as tuples, but some
+                # interfaces, like huggingface, would probably complain
+                updated[f"{self.offset_prefix}_{field}"] = [
+                    list(e) for e in batch_encoding.offset_mapping
+                ]
+
+        return updated
 
 
-class TruncateNFieldsMapper(SingleBaseMapper):
+class TruncateMultipleFieldsMapper(SingleBaseMapper):
     """Truncate n encoded sequences (a.k.a. list of integers)
     to a maximum length."""
 
@@ -315,7 +363,7 @@ class PromptSegment:
         else:
             return len(self.prompt_token_ids)
 
-    def fill_encoded(self, data: Dict[str, List[int]]) -> List[int]:
+    def fill_encoded(self, data: TransformElementType) -> List[int]:
         if self.prompt_token_ids is None:
             raise ValueError(
                 "Cannot fill encoded prompt segment that was initialized"
@@ -401,13 +449,7 @@ class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
     def transform(self, data: TransformElementType) -> TransformElementType:
         encoded_prompt = (
             self.bos_token_ids
-            + sum(
-                (
-                    ps.fill_encoded(cast(Dict[str, List[int]], data))
-                    for ps in self.prompt
-                ),
-                [],
-            )
+            + sum((ps.fill_encoded(data) for ps in self.prompt), [])
             + self.eos_token_ids
         )
 

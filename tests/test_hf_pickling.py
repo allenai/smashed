@@ -1,11 +1,15 @@
 import pickle
 import unittest
+from uuid import uuid4
 
 from necessary import necessary
 
+from smashed.contrib.squad import ConcatenateContextMapper
 from smashed.mappers import (
+    EnumerateFieldMapper,
+    JinjaPromptsourceMapper,
     TokenizerMapper,
-    TruncateNFieldsMapper,
+    TruncateMultipleFieldsMapper,
     UnpackingMapper,
 )
 from smashed.mappers.debug import MockMapper
@@ -95,12 +99,66 @@ class TestPickling(unittest.TestCase):
         self.assertEqual(len(hashes), 1)
 
     def test_truncate_fingerprint(self):
-        mp = TruncateNFieldsMapper(fields_to_truncate=["a", "b"], max_length=2)
+        mp = TruncateMultipleFieldsMapper(
+            fields_to_truncate=["a", "b"], max_length=2
+        )
 
         dataset = Dataset.from_dict({"a": [[1, 2, 3]], "b": [[4, 5, 6]]})
 
         hashes = set()
         for _ in range(100):
+            processed_dataset = mp.map(dataset)
+            hashes.add(processed_dataset._fingerprint)
+
+        self.assertEqual(len(hashes), 1)
+
+    def test_concat_context(self):
+        mp = ConcatenateContextMapper()
+        dataset = Dataset.from_dict(
+            {
+                "context": [
+                    ["hello world", "my name is john doe"],
+                    ["simple string"],
+                ]
+            }
+        )
+
+        hashes = set()
+        for _ in range(100):
+            processed_dataset = mp.map(dataset)
+            hashes.add(processed_dataset._fingerprint)
+
+        self.assertEqual(len(hashes), 1)
+
+    def test_enumerate(self):
+        mp = EnumerateFieldMapper("answers")
+        dataset = Dataset.from_dict(
+            {"answers": [uuid4().hex for _ in range(20)] * 2}
+        )
+
+        hashes = set()
+        for _ in range(20):
+            processed_dataset = mp.map(dataset)
+            hashes.add(processed_dataset._fingerprint)
+
+        self.assertEqual(len(hashes), 1)
+        self.assertEqual(
+            mp.map(dataset)["answers"],
+            [i for i in range(20)] + [i for i in range(20)],
+        )
+
+    def test_promptsource(self):
+        mp = JinjaPromptsourceMapper(jinja="hello {{world}}")
+
+        dataset = Dataset.from_dict(
+            {"world": [uuid4().hex for _ in range(20)] * 2}
+        )
+
+        # make sure that serialization works both ways
+        mp = dill.loads(dill.dumps(mp))
+
+        hashes = set()
+        for _ in range(20):
             processed_dataset = mp.map(dataset)
             hashes.add(processed_dataset._fingerprint)
 

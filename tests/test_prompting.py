@@ -1,14 +1,14 @@
 import unittest
 from tempfile import NamedTemporaryFile
 
-from transformers.models.bert import BertTokenizer
+from transformers.models.bert import BertTokenizerFast
 
 from smashed.mappers.prompting import (
     EncodeFieldsMapper,
     FillEncodedPromptMapper,
-    TruncateNFieldsMapper,
+    TruncateMultipleFieldsMapper,
 )
-from smashed.recipes.prompting import PromptingMapperRecipe
+from smashed.recipes.prompting import PromptingRecipe
 
 
 class TestTruncate(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestTruncate(unittest.TestCase):
         max_len = 20
         truncated = [6, 5, 4, 2, 1]
         self.assertEqual(
-            TruncateNFieldsMapper._find_truncated_lens_uniform(
+            TruncateMultipleFieldsMapper._find_truncated_lens_uniform(
                 lens=lens, max_len=max_len
             ),
             truncated,
@@ -27,7 +27,7 @@ class TestTruncate(unittest.TestCase):
         max_len = 20
         truncated = [10, 8, 0, 0, 0]
         self.assertEqual(
-            TruncateNFieldsMapper._find_truncated_lens_uniform(
+            TruncateMultipleFieldsMapper._find_truncated_lens_uniform(
                 lens=lens, max_len=max_len
             ),
             truncated,
@@ -38,7 +38,7 @@ class TestTruncate(unittest.TestCase):
         max_len = 20
         truncated = [5, 4, 4, 4, 2]
         self.assertEqual(
-            TruncateNFieldsMapper._find_truncated_lens_longest(
+            TruncateMultipleFieldsMapper._find_truncated_lens_longest(
                 lens=lens, max_len=max_len
             ),
             truncated,
@@ -48,13 +48,13 @@ class TestTruncate(unittest.TestCase):
         max_len = 20
         truncated = [9, 7, 1, 1, 1]
         self.assertEqual(
-            TruncateNFieldsMapper._find_truncated_lens_longest(
+            TruncateMultipleFieldsMapper._find_truncated_lens_longest(
                 lens=lens, max_len=max_len
             ),
             truncated,
         )
 
-    def _make_tokenizer(self) -> BertTokenizer:
+    def _make_tokenizer(self) -> BertTokenizerFast:
         with NamedTemporaryFile(mode="r+") as f:
             vocab = [
                 "[PAD]",
@@ -77,10 +77,34 @@ class TestTruncate(unittest.TestCase):
             ]
             f.write("\n".join(vocab))
             f.flush()
-            tokenizer = BertTokenizer(f.name, do_lower_case=True)
+            tokenizer = BertTokenizerFast(f.name, do_lower_case=True)
 
         tokenizer.model_max_length = 32
         return tokenizer
+
+    def test_encode_offset(self):
+        tokenizer = self._make_tokenizer()
+
+        mapper = EncodeFieldsMapper(
+            fields_to_encode=["a", "b", "c"],
+            tokenizer=tokenizer,
+            fields_to_return_offset_mapping=("a",),
+        )
+        data = [
+            {
+                "a": "many  hello world",
+                "b": "hiii there",
+                "c": "this is a test",
+            }
+        ]
+
+        data = mapper.map(data)
+
+        self.assertIn("offset_a", data[0])
+        self.assertEqual(
+            data[0]["offset_a"],
+            [[0, 4], [6, 11], [12, 17]],
+        )
 
     def test_encode(self):
         tokenizer = self._make_tokenizer()
@@ -88,7 +112,7 @@ class TestTruncate(unittest.TestCase):
         mapper = EncodeFieldsMapper(
             fields_to_encode=["a", "b", "c"],
             tokenizer=tokenizer,
-        ) >> TruncateNFieldsMapper(
+        ) >> TruncateMultipleFieldsMapper(
             fields_to_truncate=["a", "b"],
             fields_to_preserve=["c"],
             max_length=16,
@@ -130,7 +154,7 @@ class TestTruncate(unittest.TestCase):
                 fields_to_encode=["a", "b", "c"],
                 tokenizer=tokenizer,
             )
-            >> TruncateNFieldsMapper(
+            >> TruncateMultipleFieldsMapper(
                 fields_to_truncate=["a", "b"],
                 fields_to_preserve=["c"],
                 max_length=16,
@@ -181,7 +205,7 @@ class TestTruncate(unittest.TestCase):
 
     def test_recipe(self):
         tokenizer = self._make_tokenizer()
-        recipe = PromptingMapperRecipe(
+        recipe = PromptingRecipe(
             tokenizer=tokenizer,
             source_template="{a} is a {b} with the help of {c}.",
             max_source_length=22,

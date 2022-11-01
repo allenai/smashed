@@ -5,7 +5,7 @@ Bunch of tokenization mappers for the smashed library.
 
 """
 import unicodedata
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
@@ -15,6 +15,7 @@ __all__ = [
     "PaddingMapper",
     "TokenizerMapper",
     "ValidUnicodeMapper",
+    "TruncateSingleFieldMapper",
 ]
 
 
@@ -290,3 +291,14 @@ class PaddingMapper(SingleBaseMapper):
             k: v if k not in fields_to_pad else _pad(v)
             for k, v in data.items()
         }
+
+
+class TruncateSingleFieldMapper(SingleBaseMapper):
+    def __init__(self, fields_to_truncate: Dict[str, int]) -> None:
+        self.fields_to_truncate = fields_to_truncate
+        super().__init__(
+            input_fields=fields_to_truncate, output_fields=fields_to_truncate
+        )
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        return {k: data[k][:v] for k, v in self.fields_to_truncate.items()}

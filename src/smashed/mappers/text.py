@@ -1,9 +1,15 @@
 import inspect
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Literal, Sequence, Union, cast
 
 from ftfy import TextFixerConfig, fix_text
 
 from ..base import SingleBaseMapper, TransformElementType
+from ..utils.wordsplitter import (
+    BaseWordSplitter,
+    BlingFireSplitter,
+    WhitespacePlusSplitter,
+    WhitespaceSplitter,
+)
 
 
 class FtfyMapper(SingleBaseMapper):
@@ -55,3 +61,53 @@ class FtfyMapper(SingleBaseMapper):
             )
             for field, value in data.items()
         }
+
+
+class TextToWordsMapper(SingleBaseMapper):
+    splitter: BaseWordSplitter
+
+    def __init__(
+        self,
+        fields: Union[str, Sequence[str]],
+        splitter: Literal[
+            "blingfire", "whitespace", "whitespace_plus"
+        ] = "whitespace",
+    ):
+        if splitter == "blingfire":
+            self.splitter = BlingFireSplitter()
+        elif splitter == "whitespace_plus":
+            self.splitter = WhitespacePlusSplitter()
+        elif splitter == "whitespace":
+            self.splitter = WhitespaceSplitter()
+        else:
+            raise ValueError(f"Unknown splitter: {splitter}")
+
+        fields = [fields] if isinstance(fields, str) else fields
+
+        super().__init__(input_fields=fields, output_fields=fields)
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        return {
+            field: self.splitter(data[field]) for field in self.input_fields
+        }
+
+
+class WordsToTextMapper(SingleBaseMapper):
+    def __init__(
+        self,
+        fields: Union[str, Sequence[str]],
+        joiner: str = " ",
+    ):
+        fields = [fields] if isinstance(fields, str) else fields
+        self.joiner = joiner
+
+        super().__init__(input_fields=fields, output_fields=fields)
+
+    def _join(self, words: Union[Sequence[str], Sequence[Sequence[str]]]):
+        if isinstance(words[0], str):
+            return self.joiner.join(cast(Sequence[str], words))
+        else:
+            return [self.joiner.join(w) for w in words]
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        return {field: self._join(data[field]) for field in self.input_fields}

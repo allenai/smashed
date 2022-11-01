@@ -1,5 +1,5 @@
-from ...base.mappers import SingleBaseMapper
-from ...base.types import TransformElementType
+from smashed.base.mappers import SingleBaseMapper
+from smashed.base.types import TransformElementType
 
 
 class OneVsOtherAnnotatorMapper(SingleBaseMapper):

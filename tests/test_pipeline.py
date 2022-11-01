@@ -8,8 +8,8 @@ Email:  lucas@allenai.org
 import copy
 import unittest
 
+from smashed.base import make_pipeline
 from smashed.mappers.debug import MockMapper
-from smashed.utils import make_pipeline
 
 
 class TestPipeline(unittest.TestCase):

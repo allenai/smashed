@@ -1,5 +1,5 @@
-from .utils import get_version
-from .utils import make_pipeline as pipeline
+from .base import make_pipeline as pipeline
+from .utils.version import get_version
 
 __version__ = get_version()
 

@@ -14,15 +14,15 @@ from .abstract import (
 from .interfaces import MapMethodInterfaceMixIn
 from .types import TransformElementType
 
-P = TypeVar("P", bound="PipelineFingerprintMixIn")
+P = TypeVar("P", bound="ChainableMapper")
 
 
-class PipelineFingerprintMixIn(AbstractBaseMapper):
+class ChainableMapper(AbstractBaseMapper):
 
     input_fields: Tuple[str, ...]
     output_fields: Tuple[str, ...]
     fingerprint: str
-    pipeline: Union["PipelineFingerprintMixIn", None]
+    pipeline: Union["ChainableMapper", None]
 
     def __init__(
         self,
@@ -47,7 +47,7 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         self.pipeline = None
 
     def chain(
-        self: P, next_mapper: "PipelineFingerprintMixIn", inplace: bool = True
+        self: P, next_mapper: "ChainableMapper", inplace: bool = True
     ) -> P:
         """Create a pipeline by combining this mapper with another.
 
@@ -82,7 +82,7 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
         self << other."""
         return prev_mapper.chain(self, inplace=False)
 
-    def __rshift__(self: P, next_mapper: "PipelineFingerprintMixIn") -> P:
+    def __rshift__(self: P, next_mapper: "ChainableMapper") -> P:
         """Create a pipeline by combining this mapper with another. This is
         equivalent to self.chain(other, inplace=False), but with notation
         self >> other."""
@@ -95,9 +95,7 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
             r += f" >> {self.pipeline}"
         return r
 
-    def __deepcopy__(
-        self, memo: Optional[dict] = None
-    ) -> "PipelineFingerprintMixIn":
+    def __deepcopy__(self, memo: Optional[dict] = None) -> "ChainableMapper":
         result = self.detach(memo)
         if self.pipeline is not None:
             result.pipeline = copy.deepcopy(self.pipeline, memo)
@@ -210,7 +208,7 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
             """Small helper function to get the name of the class from
             the frame info."""
             cls_ = frame_ext_info.arg_info.locals.get(
-                "__class__", PipelineFingerprintMixIn
+                "__class__", ChainableMapper
             )
             return f"{cls_.__module__}.{cls_.__name__}"
 
@@ -231,7 +229,7 @@ class PipelineFingerprintMixIn(AbstractBaseMapper):
 
 class SingleBaseMapper(
     MapMethodInterfaceMixIn,
-    PipelineFingerprintMixIn,
+    ChainableMapper,
     AbstractSingleBaseMapper,
 ):
     """An abstract implementation of a Mapper that operates on a single
@@ -264,7 +262,7 @@ class SingleBaseMapper(
 
 class BatchedBaseMapper(
     MapMethodInterfaceMixIn,
-    PipelineFingerprintMixIn,
+    ChainableMapper,
     AbstractBatchedBaseMapper,
 ):
     """An abstract implementation of a Mapper that operates on a batch of

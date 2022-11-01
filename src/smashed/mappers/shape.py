@@ -1,23 +1,35 @@
 from itertools import chain
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 from ..base import BatchedBaseMapper, SingleBaseMapper, TransformElementType
 
 
 class FlattenMapper(SingleBaseMapper):
-    def __init__(self, field: str) -> None:
-        super().__init__(input_fields=[field], output_fields=[field])
+    """Flattens a list of lists into a single list."""
+
+    def __init__(self, field: Union[str, Sequence[str]]) -> None:
+        """
+        Args:
+            field (str, Sequence[str]): the name of the field or multiple
+                fields to flatten.
+        """
+        self.fields_to_flatten = [field] if isinstance(field, str) else field
+        super().__init__(
+            input_fields=self.fields_to_flatten,
+            output_fields=self.fields_to_flatten,
+        )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        field_name, *_ = self.input_fields
+        output: Dict[str, List[Any]] = {}
 
-        flattened_field = data[field_name]
+        for field in self.fields_to_flatten:
+            to_flatten = data[field]
+            if len(to_flatten) > 0:
+                while isinstance(to_flatten[0], list):
+                    to_flatten = list(chain.from_iterable(to_flatten))
+            output[field] = to_flatten
 
-        if len(flattened_field) > 0:
-            while isinstance(flattened_field[0], list):
-                flattened_field = list(chain.from_iterable(flattened_field))
-
-        return {field_name: flattened_field}
+        return output
 
 
 class UnpackingMapper(BatchedBaseMapper):
@@ -33,8 +45,8 @@ class UnpackingMapper(BatchedBaseMapper):
 
     def __init__(
         self,
-        fields_to_unpack: Optional[List[str]] = None,
-        fields_to_ignore: Optional[List[str]] = None,
+        fields_to_unpack: Optional[Sequence[str]] = None,
+        fields_to_ignore: Optional[Sequence[str]] = None,
         ignored_behavior: Optional[str] = None,
     ) -> None:
         """
@@ -92,10 +104,8 @@ class UnpackingMapper(BatchedBaseMapper):
 
         self.ignore_behavior = ignored_behavior
 
-        super().__init__(
-            input_fields=(fields_to_unpack or []) + (fields_to_ignore or []),
-            output_fields=(fields_to_unpack or []) + (fields_to_ignore or []),
-        )
+        io_fields = (*(fields_to_unpack or []), *(fields_to_ignore or []))
+        super().__init__(input_fields=io_fields, output_fields=io_fields)
 
     def _check_wether_to_unpack(self, field_name: str) -> bool:
         if self.fields_to_unpack is not None:
@@ -171,13 +181,14 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
 
     def __init__(
         self,
-        field_to_stride: str,
+        field_to_stride: Union[str, Sequence[str]],
         max_length: int,
         stride: Optional[int] = None,
     ):
         """
         Args:
-            field_to_stride (str): Name of the field to stride.
+            field_to_stride (str, List[str]): Name of the field or fields to
+                stride.
             max_length (int): Maximum length for each sequence; if a sequence
                 is longer than this, it will be split into multiple sequences.
             stride (Optional[int], optional): Step to use when striding. If not
@@ -185,32 +196,42 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
                 will create non-overlapping sequences. Defaults to None.
         """
 
-        self.field_to_stride = field_to_stride
+        self.fields_to_stride = dict.fromkeys(
+            [field_to_stride]
+            if isinstance(field_to_stride, str)
+            else field_to_stride
+        )
         self.max_length = max_length
         self.stride = stride or max_length
 
         super().__init__(
-            input_fields=[field_to_stride],
-            output_fields=[field_to_stride],
+            input_fields=self.fields_to_stride,
+            output_fields=self.fields_to_stride,
         )
 
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
 
-        for sample in data:
-            field_to_stride = sample[self.field_to_stride]
+        if len(self.fields_to_stride) < 1:
+            # no fields to stride
+            yield from data
 
-            if len(field_to_stride) > self.max_length:
-                for i in range(
-                    0, len(field_to_stride) - self.max_length + 1, self.stride
-                ):
-                    new_sample = {
-                        **sample,
-                        self.field_to_stride: field_to_stride[
-                            i : i + self.max_length
-                        ],
-                    }
-                    yield new_sample
-            else:
+        a_field_to_stride = next(iter(self.fields_to_stride))
+
+        for sample in data:
+            seq_len = len(sample[a_field_to_stride])
+            if seq_len < self.max_length:
+                # data is too short
                 yield sample
+
+            for i in range(0, seq_len - self.max_length + 1, self.stride):
+                new_sample = {
+                    name: (
+                        values[i : i + self.max_length]
+                        if name in self.fields_to_stride
+                        else values
+                    )
+                    for name, values in sample.items()
+                }
+                yield new_sample

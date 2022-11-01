@@ -76,13 +76,14 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         if not reverse_membership_check:
             for field in expected_fields:
                 if field not in provided_fields_set:
-                    raise ValueError(f"Field '{field}' not found in dataset")
+                    raise ValueError(
+                        f"{self.name}: field '{field}' not found in dataset"
+                    )
         else:
             for field in provided_fields_set:
                 if field not in expected_fields:
                     raise ValueError(
-                        f"Field '{field}' not supported by mapper "
-                        f"{type(self).__name__}"
+                        f"{self.name} field '{field}' not supported"
                     )
 
     def _get_iterator_and_column_names_list_dataset(

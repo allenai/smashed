@@ -1,3 +1,8 @@
-from .prompting import PromptingMapperRecipe
+from .collators import CollatorRecipe, SlowCollatorRecipe
+from .prompting import PromptingRecipe
 
-__all__ = ["PromptingMapperRecipe"]
+__all__ = [
+    "CollatorRecipe",
+    "PromptingRecipe",
+    "SlowCollatorRecipe",
+]
