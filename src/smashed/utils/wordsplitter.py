@@ -11,9 +11,6 @@ with necessary("blingfire", soft=True) as BLINGFIRE_AVAILABLE:
 __all__ = ["WhitespaceSplitter", "BlingFireSplitter"]
 
 
-BLINGFIRE_MESSAGE = ()
-
-
 class BaseWordSplitter:
     def __init__(self, language: str = "en"):
         self.language = language

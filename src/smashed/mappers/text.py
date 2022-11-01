@@ -1,9 +1,14 @@
 import inspect
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Literal, Sequence, Union
 
 from ftfy import TextFixerConfig, fix_text
 
 from ..base import SingleBaseMapper, TransformElementType
+from ..utils.wordsplitter import (
+    BaseWordSplitter,
+    BlingFireSplitter,
+    WhitespaceSplitter,
+)
 
 
 class FtfyMapper(SingleBaseMapper):
@@ -54,4 +59,44 @@ class FtfyMapper(SingleBaseMapper):
                 else value
             )
             for field, value in data.items()
+        }
+
+
+class TextToWordsMapper(SingleBaseMapper):
+    splitter: BaseWordSplitter
+
+    def __init__(
+        self,
+        fields: Union[str, Sequence[str]],
+        splitter: Literal["blingfire", "whitespace"] = "blingfire",
+    ):
+        if splitter == "blingfire":
+            self.splitter = BlingFireSplitter()
+        elif splitter == "whitespace":
+            self.splitter = WhitespaceSplitter()
+        else:
+            raise ValueError(f"Unknown splitter: {splitter}")
+
+        fields = [fields] if isinstance(fields, str) else fields
+
+        super().__init__(input_fields=fields, output_fields=fields)
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        return {field: self.splitter(value) for field, value in data.items()}
+
+
+class WordsToTextMapper(SingleBaseMapper):
+    def __init__(
+        self,
+        fields: Union[str, Sequence[str]],
+        joiner: str = " ",
+    ):
+        fields = [fields] if isinstance(fields, str) else fields
+        self.joiner = joiner
+
+        super().__init__(input_fields=fields, output_fields=fields)
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        return {
+            field: self.joiner.join(value) for field, value in data.items()
         }

@@ -8,7 +8,7 @@ from ..mappers.fields import RenameFieldsMapper
 from ..mappers.prompting import (
     EncodeFieldsMapper,
     FillEncodedPromptMapper,
-    TruncateNFieldsMapper,
+    TruncateMultipleFieldsMapper,
 )
 from ..mappers.shape import SingleSequenceStriderMapper
 
@@ -26,8 +26,8 @@ class PromptingRecipe(BaseRecipe):
     def prompt_mapper(self, **kwargs) -> FillEncodedPromptMapper:
         return FillEncodedPromptMapper(**kwargs)
 
-    def truncate_mapper(self, **kwargs) -> TruncateNFieldsMapper:
-        return TruncateNFieldsMapper(**kwargs)
+    def truncate_mapper(self, **kwargs) -> TruncateMultipleFieldsMapper:
+        return TruncateMultipleFieldsMapper(**kwargs)
 
     def strider_mapper(self, **kwargs) -> SingleSequenceStriderMapper:
         return SingleSequenceStriderMapper(**kwargs)

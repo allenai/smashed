@@ -36,12 +36,11 @@ from .multiseq import (
     TokensSequencesPaddingMapper,
     TokenTypeIdsSequencePaddingMapper,
 )
-from .nested import TextTruncateMapper, WordsTruncateMapper
 from .prompting import (
     EncodeFieldsMapper,
     FillEncodedPromptMapper,
     FillTextPromptMapper,
-    TruncateNFieldsMapper,
+    TruncateMultipleFieldsMapper,
 )
 from .promptsource import (
     DatasetPromptsourceMapper,
@@ -49,8 +48,13 @@ from .promptsource import (
     PromptsourceMapper,
 )
 from .shape import FlattenMapper, SingleSequenceStriderMapper, UnpackingMapper
-from .text import FtfyMapper
-from .tokenize import PaddingMapper, TokenizerMapper, ValidUnicodeMapper
+from .text import FtfyMapper, TextToWordsMapper, WordsToTextMapper
+from .tokenize import (
+    PaddingMapper,
+    TokenizerMapper,
+    TruncateSingleFieldMapper,
+    ValidUnicodeMapper,
+)
 from .types import BinarizerMapper, CastMapper, LookupMapper, OneHotMapper
 
 __all__ = [
@@ -59,6 +63,7 @@ __all__ = [
     "CastMapper",
     "ChangeFieldsMapper",
     "CsvLoaderMapper",
+    "DatasetPromptsourceMapper",
     "DebugBatchedMapper",
     "DebugSingleMapper",
     "EncodeFieldsMapper",
@@ -74,6 +79,7 @@ __all__ = [
     "FtfyMapper",
     "HuggingFaceDatasetLoaderMapper",
     "IndicesToMaskMapper",
+    "JinjaPromptsourceMapper",
     "JsonlLoaderMapper",
     "LabelsMaskerMapper",
     "ListCollatorMapper",
@@ -85,6 +91,7 @@ __all__ = [
     "MultiSequenceStriderMapper",
     "OneHotMapper",
     "PaddingMapper",
+    "PromptsourceMapper",
     "Python2TorchMapper",
     "RangeToMaskMapper",
     "RenameFieldsMapper",
@@ -93,13 +100,14 @@ __all__ = [
     "SingleValueToSequenceMapper",
     "StartCachingMapper",
     "TensorCollatorMapper",
-    "TextTruncateMapper",
+    "TextToWordsMapper",
     "TokenizerMapper",
     "TokensSequencesPaddingMapper",
     "TokenTypeIdsSequencePaddingMapper",
     "Torch2PythonMapper",
-    "TruncateNFieldsMapper",
+    "TruncateMultipleFieldsMapper",
+    "TruncateSingleFieldMapper",
     "UnpackingMapper",
     "ValidUnicodeMapper",
-    "WordsTruncateMapper",
+    "WordsToTextMapper",
 ]

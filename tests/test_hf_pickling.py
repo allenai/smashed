@@ -8,7 +8,7 @@ from smashed.contrib.squad import ConcatenateContextMapper
 from smashed.mappers import (
     EnumerateFieldMapper,
     TokenizerMapper,
-    TruncateNFieldsMapper,
+    TruncateMultipleFieldsMapper,
     UnpackingMapper,
 )
 from smashed.mappers.debug import MockMapper
@@ -98,7 +98,9 @@ class TestPickling(unittest.TestCase):
         self.assertEqual(len(hashes), 1)
 
     def test_truncate_fingerprint(self):
-        mp = TruncateNFieldsMapper(fields_to_truncate=["a", "b"], max_length=2)
+        mp = TruncateMultipleFieldsMapper(
+            fields_to_truncate=["a", "b"], max_length=2
+        )
 
         dataset = Dataset.from_dict({"a": [[1, 2, 3]], "b": [[4, 5, 6]]})
 

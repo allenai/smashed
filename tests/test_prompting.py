@@ -6,7 +6,7 @@ from transformers.models.bert import BertTokenizerFast
 from smashed.mappers.prompting import (
     EncodeFieldsMapper,
     FillEncodedPromptMapper,
-    TruncateNFieldsMapper,
+    TruncateMultipleFieldsMapper,
 )
 from smashed.recipes.prompting import PromptingRecipe
 
@@ -17,7 +17,7 @@ class TestTruncate(unittest.TestCase):
         max_len = 20
         truncated = [6, 5, 4, 2, 1]
         self.assertEqual(
-            TruncateNFieldsMapper._find_truncated_lens_uniform(
+            TruncateMultipleFieldsMapper._find_truncated_lens_uniform(
                 lens=lens, max_len=max_len
             ),
             truncated,
@@ -27,7 +27,7 @@ class TestTruncate(unittest.TestCase):
         max_len = 20
         truncated = [10, 8, 0, 0, 0]
         self.assertEqual(
-            TruncateNFieldsMapper._find_truncated_lens_uniform(
+            TruncateMultipleFieldsMapper._find_truncated_lens_uniform(
                 lens=lens, max_len=max_len
             ),
             truncated,
@@ -38,7 +38,7 @@ class TestTruncate(unittest.TestCase):
         max_len = 20
         truncated = [5, 4, 4, 4, 2]
         self.assertEqual(
-            TruncateNFieldsMapper._find_truncated_lens_longest(
+            TruncateMultipleFieldsMapper._find_truncated_lens_longest(
                 lens=lens, max_len=max_len
             ),
             truncated,
@@ -48,7 +48,7 @@ class TestTruncate(unittest.TestCase):
         max_len = 20
         truncated = [9, 7, 1, 1, 1]
         self.assertEqual(
-            TruncateNFieldsMapper._find_truncated_lens_longest(
+            TruncateMultipleFieldsMapper._find_truncated_lens_longest(
                 lens=lens, max_len=max_len
             ),
             truncated,
@@ -112,7 +112,7 @@ class TestTruncate(unittest.TestCase):
         mapper = EncodeFieldsMapper(
             fields_to_encode=["a", "b", "c"],
             tokenizer=tokenizer,
-        ) >> TruncateNFieldsMapper(
+        ) >> TruncateMultipleFieldsMapper(
             fields_to_truncate=["a", "b"],
             fields_to_preserve=["c"],
             max_length=16,
@@ -154,7 +154,7 @@ class TestTruncate(unittest.TestCase):
                 fields_to_encode=["a", "b", "c"],
                 tokenizer=tokenizer,
             )
-            >> TruncateNFieldsMapper(
+            >> TruncateMultipleFieldsMapper(
                 fields_to_truncate=["a", "b"],
                 fields_to_preserve=["c"],
                 max_length=16,

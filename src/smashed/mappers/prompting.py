@@ -14,7 +14,7 @@ __all__ = [
     "EncodeFieldsMapper",
     "FillEncodedPromptMapper",
     "FillTextPromptMapper",
-    "TruncateNFieldsMapper",
+    "TruncateMultipleFieldsMapper",
 ]
 
 
@@ -129,7 +129,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
         return updated
 
 
-class TruncateNFieldsMapper(SingleBaseMapper):
+class TruncateMultipleFieldsMapper(SingleBaseMapper):
     """Truncate n encoded sequences (a.k.a. list of integers)
     to a maximum length."""
 

@@ -40,6 +40,18 @@ class DataRowView(abc.Mapping, Generic[K, V]):
     def __setitem__(self, key: K, value: V):
         self._dbv._data[key][self._idx] = value
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, DataRowView):
+            return False
+
+        for k in (*self.keys(), *other.keys()):
+            if k not in other or k not in self:
+                return False
+            if self[k] != other[k]:
+                return False
+
+        return True
+
     def keys(self) -> KeysView[K]:
         return cast(KeysView[K], self._dbv._keys)
 
