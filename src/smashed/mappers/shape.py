@@ -1,3 +1,4 @@
+from functools import cached_property
 from itertools import chain
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
@@ -209,6 +210,31 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
             output_fields=self.fields_to_stride,
         )
 
+    @cached_property
+    def ref_field(self) -> str:
+        return next(iter(self.fields_to_stride))
+
+    def _transform_single(
+        self,
+        sample: TransformElementType,
+    ) -> Iterable[TransformElementType]:
+        seq_len = len(sample[self.ref_field])
+
+        if seq_len < self.max_length:
+            # data is too short
+            yield sample
+
+        for i in range(0, seq_len, self.stride):
+            new_sample = {
+                name: (
+                    values[i : i + self.max_length]
+                    if name in self.fields_to_stride
+                    else values
+                )
+                for name, values in sample.items()
+            }
+            yield new_sample
+
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
@@ -217,21 +243,51 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
             # no fields to stride
             yield from data
 
-        a_field_to_stride = next(iter(self.fields_to_stride))
-
         for sample in data:
-            seq_len = len(sample[a_field_to_stride])
-            if seq_len < self.max_length:
-                # data is too short
-                yield sample
+            yield from self._transform_single(sample)
 
-            for i in range(0, seq_len - self.max_length + 1, self.stride):
-                new_sample = {
-                    name: (
-                        values[i : i + self.max_length]
-                        if name in self.fields_to_stride
-                        else values
-                    )
-                    for name, values in sample.items()
-                }
-                yield new_sample
+
+class SingleSequenceStriderMapperWithLocations(SingleSequenceStriderMapper):
+    def __init__(
+        self,
+        field_to_stride: Union[str, Sequence[str]],
+        max_length: int,
+        field_with_locations: str,
+        fields_replacement_map: Optional[Dict[str, Any]] = None,
+        stride: Optional[int] = None
+    ):
+        super().__init__(
+            field_to_stride=field_to_stride,
+            max_length=max_length,
+            stride=stride
+        )
+        self.field_with_locations = field_with_locations
+        self.fields_replacement_map = fields_replacement_map or {}
+
+        self.input_fields += (
+            self.field_with_locations, *self.fields_replacement_map
+        )
+        self.output_fields += (
+            self.field_with_locations, *self.fields_replacement_map
+        )
+
+    def _transform_single(
+        self,
+        sample: TransformElementType,
+    ) -> Iterable[TransformElementType]:
+        cum_len = 0
+        for new_sample in super()._transform_single(sample):
+            end_stride = cum_len + len(new_sample[self.ref_field])
+
+            stride_is_in_locations = any(
+                cum_len <= start < end_stride
+                or cum_len < end <= end_stride
+                for start, end in new_sample[self.field_with_locations]
+            )
+
+            if not stride_is_in_locations:
+                # if the stride is not in the locations, we skip it
+                new_sample.update(self.fields_replacement_map)
+
+            cum_len = end_stride
+            yield new_sample
