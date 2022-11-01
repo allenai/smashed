@@ -46,7 +46,8 @@ class PromptsourceMapper(SingleBaseMapper):
         # to find all fields that are required by the template
         ast = Environment().parse(self.template.jinja)
         input_fields = sorted(
-            var_name for var_name in meta.find_undeclared_variables(ast)
+            var_name
+            for var_name in meta.find_undeclared_variables(ast)
             if var_name not in self.extra_vars
         )
 

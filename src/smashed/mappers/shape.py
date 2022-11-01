@@ -185,6 +185,7 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
         field_to_stride: Union[str, Sequence[str]],
         max_length: int,
         stride: Optional[int] = None,
+        keep_last: bool = False,
     ):
         """
         Args:
@@ -203,6 +204,7 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
             else field_to_stride
         )
         self.max_length = max_length
+        self.keep_last = keep_last
         self.stride = stride or max_length
 
         super().__init__(
@@ -224,7 +226,9 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
             # data is too short
             yield sample
 
-        for i in range(0, seq_len, self.stride):
+        tail_elements = 0 if self.keep_last else self.max_length
+        for i in range(0, seq_len - tail_elements + 1, self.stride):
+
             new_sample = {
                 name: (
                     values[i : i + self.max_length]
@@ -254,21 +258,23 @@ class SingleSequenceStriderMapperWithLocations(SingleSequenceStriderMapper):
         max_length: int,
         field_with_locations: str,
         fields_replacement_map: Optional[Dict[str, Any]] = None,
-        stride: Optional[int] = None
+        stride: Optional[int] = None,
     ):
         super().__init__(
             field_to_stride=field_to_stride,
             max_length=max_length,
-            stride=stride
+            stride=stride,
         )
         self.field_with_locations = field_with_locations
         self.fields_replacement_map = fields_replacement_map or {}
 
         self.input_fields += (
-            self.field_with_locations, *self.fields_replacement_map
+            self.field_with_locations,
+            *self.fields_replacement_map,
         )
         self.output_fields += (
-            self.field_with_locations, *self.fields_replacement_map
+            self.field_with_locations,
+            *self.fields_replacement_map,
         )
 
     def _transform_single(
@@ -280,8 +286,7 @@ class SingleSequenceStriderMapperWithLocations(SingleSequenceStriderMapper):
             end_stride = cum_len + len(new_sample[self.ref_field])
 
             stride_is_in_locations = any(
-                cum_len <= start < end_stride
-                or cum_len < end <= end_stride
+                cum_len <= start < end_stride or cum_len < end <= end_stride
                 for start, end in new_sample[self.field_with_locations]
             )
 

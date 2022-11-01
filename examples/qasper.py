@@ -1,4 +1,5 @@
 from typing import List, Tuple
+
 from datasets.load import load_dataset
 
 import smashed.mappers as sm
@@ -10,34 +11,34 @@ class QasperChooseAnswerMapper(SingleBaseMapper):
         answers: List[str] = []
         locs: List[Tuple[int, int]] = []
 
-        for i, unanswerable in enumerate(data['unanswerable']):
+        for i, unanswerable in enumerate(data["unanswerable"]):
             if unanswerable:
-                answers.append('Unanswerable')
+                answers.append("Unanswerable")
                 locs.append((-1, -1))
             else:
-                for evidence in data['evidence'][i]:
-                    start = data['context'].find(evidence)
+                for evidence in data["evidence"][i]:
+                    start = data["context"].find(evidence)
                     end = start + len(evidence) if start >= 0 else -1
                     locs.append((start, end))
 
-                if (ans := data['free_form_answer'][i]) != '':
+                if (ans := data["free_form_answer"][i]) != "":
                     if isinstance(ans, list):
                         answers.extend(t for s in ans if (t := s.strip()))
                     else:
                         answers.append(ans)
-                elif data['yes_no'][i] is not None:
-                    answers.append('Yes' if data['yes_no'][i] else 'No')
-                elif (ans := data['extractive_spans'][i]):
+                elif data["yes_no"][i] is not None:
+                    answers.append("Yes" if data["yes_no"][i] else "No")
+                elif ans := data["extractive_spans"][i]:
                     if isinstance(ans, list):
                         answers.extend(t for s in ans if (t := s.strip()))
                     else:
                         answers.append(ans)
                 else:
-                    raise ValueError('No answer found')
+                    raise ValueError("No answer found")
 
         return {
-            'answers': answers,
-            'locs': locs,
+            "answers": answers,
+            "locs": locs,
         }
 
 
@@ -74,20 +75,26 @@ def main():
             spec_fields={
                 "question": "qas.question",
                 "evidence": (
-                    "qas", "answers", [("answer", [("highlighted_evidence",)])]
+                    "qas",
+                    "answers",
+                    [("answer", [("highlighted_evidence",)])],
                 ),
                 "free_form_answer": (
-                    "qas", "answers", [("answer", [("free_form_answer",)])]
+                    "qas",
+                    "answers",
+                    [("answer", [("free_form_answer",)])],
                 ),
                 "extractive_spans": (
-                    "qas", "answers", [("answer", [("extractive_spans",)])]
+                    "qas",
+                    "answers",
+                    [("answer", [("extractive_spans",)])],
                 ),
                 "unanswerable": (
-                    "qas", "answers", [("answer", [("unanswerable",)])]
+                    "qas",
+                    "answers",
+                    [("answer", [("unanswerable",)])],
                 ),
-                "yes_no": (
-                    "qas", "answers", [("answer", [("yes_no",)])]
-                )
+                "yes_no": ("qas", "answers", [("answer", [("yes_no",)])]),
             }
         )
         # this removes fields that are no longer necessary.
@@ -99,7 +106,7 @@ def main():
                 "extractive_spans",
                 "unanswerable",
                 "yes_no",
-                "context"
+                "context",
             ]
         )
         # this unpacks by question, meaning that the same paper gets
@@ -123,7 +130,7 @@ def main():
             field_to_stride=["context"],
             max_length=300,
             stride=100,
-            field_with_locations='locs',
+            field_with_locations="locs",
             fields_replacement_map={"answers": [["Unanswerable"]]},
         )
         >> sm.TruncateSingleFieldMapper(
@@ -149,7 +156,7 @@ def main():
 
     i = 0
     for row in mapped_data:
-        if row["target"] != ['Unanswerable']:
+        if row["target"] != ["Unanswerable"]:
             print(row["source"])
             print(row["target"])
             print()

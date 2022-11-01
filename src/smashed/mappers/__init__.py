@@ -52,7 +52,7 @@ from .shape import (
     FlattenMapper,
     SingleSequenceStriderMapper,
     SingleSequenceStriderMapperWithLocations,
-    UnpackingMapper
+    UnpackingMapper,
 )
 from .text import FtfyMapper, TextToWordsMapper, WordsToTextMapper
 from .tokenize import (
