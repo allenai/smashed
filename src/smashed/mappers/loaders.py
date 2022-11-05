@@ -11,7 +11,6 @@ from typing import (
     Optional,
     TypeVar,
     Union,
-    cast,
 )
 
 from necessary import necessary
@@ -22,6 +21,7 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
         from datasets.arrow_dataset import Dataset
         from datasets.combine import concatenate_datasets, interleave_datasets
+        from datasets.dataset_dict import DatasetDict, IterableDatasetDict
         from datasets.iterable_dataset import IterableDataset
         from datasets.load import load_dataset
 
@@ -39,9 +39,8 @@ class HuggingFaceDatasetLoaderMapper(BatchedBaseMapper):
         self,
         combine_strategy: Union[
             Literal["concatenate"], Literal["interleave"]
-        ] = "concatenate",
+        ] = "interleave",
         fields_to_keep: Optional[List[str]] = None,
-        **kwargs,
     ):
         if not HUGGINGFACE_DATASET_AVAILABLE:
             raise ImportError(
@@ -85,28 +84,49 @@ class HuggingFaceDatasetLoaderMapper(BatchedBaseMapper):
             self, data: Iterable[TransformElementType]
         ) -> Union[Dataset, IterableDataset]:
 
+            signature = inspect.signature(load_dataset)
+
             datasets_accumulator = []
             for dataset_spec in data:
 
+                try:
+                    arguments = signature.bind(**dataset_spec).arguments
+                except Exception as e:
+                    raise ValueError(
+                        "Invalid dataset specification. Please make sure that "
+                        "the dataset specification is a dictionary with the "
+                        f"following keys: {signature.parameters.keys()}."
+                    ) from e
+
                 # load this specific dataset
-                dataset = load_dataset(**dataset_spec)
+                dataset = load_dataset(**arguments)
+
+                if isinstance(dataset, (DatasetDict, IterableDatasetDict)):
+                    raise ValueError(
+                        "Dataset specification must be a single dataset, "
+                        "not a dataset dictionary. Hint: provide a split "
+                        "to the dataset specification."
+                    )
 
                 # if the user has provided some output fields, we need to check
-                # if (1) they are
+                # if they all are in dataset we just loaded. We also remove the
+                # fields that are not in output fields.
                 if (
                     self.output_fields
                     and getattr(dataset, "features", None) is not None
                 ):
-                    features = cast(dict, dataset.features)  # pyright: ignore
-
-                    if all(f in features for f in self.output_fields):
+                    if all(f in dataset.features for f in self.output_fields):
                         raise ValueError(
-                            f"Dataset {dataset_spec} does not have the "
-                            "following fields:  {self.output_fields}"
+                            f"Dataset {dataset_spec} does not have the all "
+                            f"the following fields: {self.output_fields}"
                         )
 
                     dataset = dataset.remove_columns(
-                        [f for f in features if f not in self.output_fields]
+                        [
+                            f
+                            for f in dataset.features
+                            if f not in self.output_fields
+                        ]
                     )
 
                 datasets_accumulator.append(dataset)

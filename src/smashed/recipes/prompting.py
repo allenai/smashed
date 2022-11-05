@@ -2,7 +2,7 @@ from typing import Dict, Literal, Optional, Sequence, TypeVar, Union
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
-from ..base.mappers import ChainableMapper
+from ..base.mappers import ChainableMapperMixIn
 from ..base.recipes import BaseRecipe
 from ..mappers.fields import RenameFieldsMapper
 from ..mappers.prompting import (
@@ -12,7 +12,7 @@ from ..mappers.prompting import (
 )
 from ..mappers.shape import SingleSequenceStriderMapper
 
-C = TypeVar("C", bound=ChainableMapper)
+C = TypeVar("C", bound=ChainableMapperMixIn)
 
 
 class PromptingRecipe(BaseRecipe):
@@ -156,7 +156,7 @@ class PromptingRecipe(BaseRecipe):
 
         # this sets up the encoder for all the fields we have to put in
         # the source and target prompts
-        pipeline: ChainableMapper = self.encoder_mapper(
+        pipeline: ChainableMapperMixIn = self.encoder_mapper(
             fields_to_encode=fields_to_encode,
             tokenizer=tokenizer,
             is_split_into_words=is_split_into_words,

@@ -14,15 +14,15 @@ from .abstract import (
 from .interfaces import MapMethodInterfaceMixIn
 from .types import TransformElementType
 
-P = TypeVar("P", bound="ChainableMapper")
+P = TypeVar("P", bound="ChainableMapperMixIn")
 
 
-class ChainableMapper(AbstractBaseMapper):
+class ChainableMapperMixIn(AbstractBaseMapper):
 
     input_fields: Tuple[str, ...]
     output_fields: Tuple[str, ...]
     fingerprint: str
-    pipeline: Union["ChainableMapper", None]
+    pipeline: Union["ChainableMapperMixIn", None]
 
     def __init__(
         self,
@@ -47,7 +47,7 @@ class ChainableMapper(AbstractBaseMapper):
         self.pipeline = None
 
     def chain(
-        self: P, next_mapper: "ChainableMapper", inplace: bool = True
+        self: P, next_mapper: "ChainableMapperMixIn", inplace: bool = True
     ) -> P:
         """Create a pipeline by combining this mapper with another.
 
@@ -82,7 +82,7 @@ class ChainableMapper(AbstractBaseMapper):
         self << other."""
         return prev_mapper.chain(self, inplace=False)
 
-    def __rshift__(self: P, next_mapper: "ChainableMapper") -> P:
+    def __rshift__(self: P, next_mapper: "ChainableMapperMixIn") -> P:
         """Create a pipeline by combining this mapper with another. This is
         equivalent to self.chain(other, inplace=False), but with notation
         self >> other."""
@@ -95,7 +95,9 @@ class ChainableMapper(AbstractBaseMapper):
             r += f" >> {self.pipeline}"
         return r
 
-    def __deepcopy__(self, memo: Optional[dict] = None) -> "ChainableMapper":
+    def __deepcopy__(
+        self, memo: Optional[dict] = None
+    ) -> "ChainableMapperMixIn":
         result = self.detach(memo)
         if self.pipeline is not None:
             result.pipeline = copy.deepcopy(self.pipeline, memo)
@@ -208,7 +210,7 @@ class ChainableMapper(AbstractBaseMapper):
             """Small helper function to get the name of the class from
             the frame info."""
             cls_ = frame_ext_info.arg_info.locals.get(
-                "__class__", ChainableMapper
+                "__class__", ChainableMapperMixIn
             )
             return f"{cls_.__module__}.{cls_.__name__}"
 
@@ -229,7 +231,7 @@ class ChainableMapper(AbstractBaseMapper):
 
 class SingleBaseMapper(
     MapMethodInterfaceMixIn,
-    ChainableMapper,
+    ChainableMapperMixIn,
     AbstractSingleBaseMapper,
 ):
     """An abstract implementation of a Mapper that operates on a single
@@ -262,7 +264,7 @@ class SingleBaseMapper(
 
 class BatchedBaseMapper(
     MapMethodInterfaceMixIn,
-    ChainableMapper,
+    ChainableMapperMixIn,
     AbstractBatchedBaseMapper,
 ):
     """An abstract implementation of a Mapper that operates on a batch of

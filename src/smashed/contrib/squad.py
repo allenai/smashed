@@ -4,7 +4,7 @@ from typing import Any, Literal, Optional, Sequence, Tuple, TypeVar, Union
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from smashed.base import BaseRecipe, SingleBaseMapper, TransformElementType
-from smashed.base.mappers import ChainableMapper
+from smashed.base.mappers import ChainableMapperMixIn
 from smashed.mappers import (
     ChangeFieldsMapper,
     EncodeFieldsMapper,
@@ -328,7 +328,7 @@ class _SquadPromptingRecipe(PromptingRecipe):
         super().__init__(*args, **kwargs)
 
 
-C = TypeVar("C", bound=ChainableMapper)
+C = TypeVar("C", bound=ChainableMapperMixIn)
 
 
 class SquadPromptTrainRecipe(BaseRecipe):
