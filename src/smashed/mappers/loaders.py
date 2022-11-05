@@ -83,23 +83,17 @@ class HuggingFaceDatasetLoaderMapper(BatchedBaseMapper):
         def transform(
             self, data: Iterable[TransformElementType]
         ) -> Union[Dataset, IterableDataset]:
-
-            signature = inspect.signature(load_dataset)
-
             datasets_accumulator = []
             for dataset_spec in data:
 
-                try:
-                    arguments = signature.bind(**dataset_spec).arguments
-                except Exception as e:
-                    raise ValueError(
-                        "Invalid dataset specification. Please make sure that "
-                        "the dataset specification is a dictionary with the "
-                        f"following keys: {signature.parameters.keys()}."
-                    ) from e
-
                 # load this specific dataset
-                dataset = load_dataset(**arguments)
+                try:
+                    dataset = load_dataset(**dataset_spec)
+                except Exception as e:
+                    raise type(e)(
+                        f"Couldn't load dataset with spec {dataset_spec}: "
+                        " ".join(e.args)
+                    ) from e
 
                 if isinstance(dataset, (DatasetDict, IterableDatasetDict)):
                     raise ValueError(
