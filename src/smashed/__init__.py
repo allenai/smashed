@@ -1,6 +1,14 @@
-from .base import make_pipeline as pipeline
-from .utils.version import get_version
+from . import base, contrib, mappers, recipes, utils
 
-__version__ = get_version()
+pipeline = base.make_pipeline
 
-__all__ = ["pipeline"]
+__version__ = utils.get_version()
+
+__all__ = [
+    "base",
+    "contrib",
+    "mappers",
+    "recipes",
+    "pipeline",
+    "utils",
+]
