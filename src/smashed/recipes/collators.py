@@ -18,7 +18,7 @@ class CollateFnMixIn(SingleBaseMapper):
         self.do_not_collate = dict.fromkeys(do_not_collate or [])
         super().__init__()
 
-    def collate(self, batch: Dict[str, List[Any]]) -> Dict[str, List[Any]]:
+    def collate(self, batch: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
         # we extract the fields that are not to be collated; we will
         # reinsert them later
 
