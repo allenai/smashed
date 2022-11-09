@@ -21,8 +21,11 @@ class CollateFnMixIn(SingleBaseMapper):
     def collate(self, batch: Dict[str, List[Any]]) -> Dict[str, List[Any]]:
         # we extract the fields that are not to be collated; we will
         # reinsert them later
+
+        # skip fields that do not support collation as tensors; we will
+        # reinsert them later as lists in each batch
         skipped = {
-            [b.pop(field, []) for b in batch[field]]
+            [sample.pop(field) for sample in batch]
             for field in self.do_not_collate
         }
 
@@ -34,6 +37,16 @@ class CollateFnMixIn(SingleBaseMapper):
         collated_batch.update(skipped)
 
         return collated_batch
+
+    def get_tensorizer(self) -> Python2TorchMapper:
+        # this turns lists of ints/floats into tensors
+        return Python2TorchMapper()
+
+    def get_batcher(self, keep_last: bool) -> FixedBatchSizeMapper:
+        # the collator already receives the "right" number of samples
+        # in a list (that is, the batch size), so we do not need to
+        # split it further; rather, the fixed size batcher will
+        return FixedBatchSizeMapper(batch_size="max", keep_last=keep_last)
 
 
 class CollatorRecipe(CollateFnMixIn, BaseRecipe):
@@ -48,27 +61,30 @@ class CollatorRecipe(CollateFnMixIn, BaseRecipe):
     ) -> None:
         super().__init__(do_not_collate=do_not_collate)
 
-        fields_pad_ids = fields_pad_ids or {}
+        self.chain(self.get_tensorizer())
+        self.chain(self.get_batcher(keep_last=keep_last))
 
-        tensorizer = Python2TorchMapper()
-        batcher = FixedBatchSizeMapper(batch_size="max", keep_last=keep_last)
-
-        collator: TensorCollatorMapper
         if tokenizer:
-            collator = FromTokenizerTensorCollatorMapper(
-                tokenizer=tokenizer,
-                fields_pad_ids=fields_pad_ids,
-                unk_fields_pad_id=unk_fields_pad_id,
-                pad_to_length=pad_to_length,
+            self.chain(
+                FromTokenizerTensorCollatorMapper(
+                    tokenizer=tokenizer,
+                    fields_pad_ids=(fields_pad_ids or {}),
+                    unk_fields_pad_id=unk_fields_pad_id,
+                    pad_to_length=pad_to_length,
+                )
             )
         else:
-            collator = TensorCollatorMapper(
-                fields_pad_ids=fields_pad_ids,
-                unk_fields_pad_id=unk_fields_pad_id,
-                pad_to_length=pad_to_length,
+            if fields_pad_ids is None:
+                raise ValueError(
+                    "fields_pad_ids must be provided when no tokenizer!"
+                )
+            self.chain(
+                TensorCollatorMapper(
+                    fields_pad_ids=fields_pad_ids,
+                    unk_fields_pad_id=unk_fields_pad_id,
+                    pad_to_length=pad_to_length,
+                )
             )
-
-        self.chain(tensorizer >> batcher >> collator)
 
 
 class SlowCollatorRecipe(CollateFnMixIn, BaseRecipe):
@@ -83,24 +99,28 @@ class SlowCollatorRecipe(CollateFnMixIn, BaseRecipe):
     ) -> None:
         super().__init__(do_not_collate=do_not_collate)
 
-        fields_pad_ids = fields_pad_ids or {}
+        self.chain(self.get_batcher(keep_last=keep_last))
 
-        tensorizer = Python2TorchMapper()
-        batcher = FixedBatchSizeMapper(batch_size="max", keep_last=keep_last)
-
-        collator: ListCollatorMapper
         if tokenizer:
-            collator = FromTokenizerListCollatorMapper(
-                tokenizer=tokenizer,
-                fields_pad_ids=fields_pad_ids,
-                unk_fields_pad_id=unk_fields_pad_id,
-                pad_to_length=pad_to_length,
+            self.chain(
+                FromTokenizerListCollatorMapper(
+                    tokenizer=tokenizer,
+                    fields_pad_ids=(fields_pad_ids or {}),
+                    unk_fields_pad_id=unk_fields_pad_id,
+                    pad_to_length=pad_to_length,
+                )
             )
         else:
-            collator = ListCollatorMapper(
-                fields_pad_ids=fields_pad_ids,
-                unk_fields_pad_id=unk_fields_pad_id,
-                pad_to_length=pad_to_length,
+            if fields_pad_ids is None:
+                raise ValueError(
+                    "fields_pad_ids must be provided when no tokenizer!"
+                )
+            self.chain(
+                ListCollatorMapper(
+                    fields_pad_ids=fields_pad_ids,
+                    unk_fields_pad_id=unk_fields_pad_id,
+                    pad_to_length=pad_to_length,
+                )
             )
 
-        self.chain(batcher >> collator >> tensorizer)
+        self.chain(self.get_tensorizer())

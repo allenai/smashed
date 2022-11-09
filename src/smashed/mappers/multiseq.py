@@ -292,6 +292,7 @@ class MultiSequenceStriderMapper(BatchedBaseMapper):
         self,
         max_stride_count: int,
         length_reference_field: str,
+        fields_to_stride: Optional[List[str]] = None,
         max_length: Optional[int] = None,
         extra_length_per_seq: Optional[int] = None,
         tokenizer: Optional[PreTrainedTokenizerBase] = None,
@@ -310,6 +311,10 @@ class MultiSequenceStriderMapper(BatchedBaseMapper):
                 in each subset sequence of sequences.
             length_reference_field (str): The field to use to determine the
                 rolling length of a subset sequence.
+            fields_to_stride (List[str], optional): The fields to stride.
+                If None, all fields are strided; if a subset is provided,
+                then the fields not in the list are duplicated across all
+                subset sequences. Defaults to None.
             max_length (int, optional): The maximum length of units in
                 the subset sequence. Defaults to None (i.e., not used).
             extra_length_per_seq (int, optional): Optional field in case
@@ -329,6 +334,9 @@ class MultiSequenceStriderMapper(BatchedBaseMapper):
             output_fields=[length_reference_field],
         )
 
+        self.fields_to_stride = (
+            dict.fromkeys(fields_to_stride) if fields_to_stride else None
+        )
         self.max_stride_count = max_stride_count
         self.max_length = max_length or float("inf")
 
@@ -389,7 +397,21 @@ class MultiSequenceStriderMapper(BatchedBaseMapper):
 
                 if stride_too_long or stride_has_too_many_seqs:
                     yield {
-                        k: v[seq_pos_start:seq_pos_end]
+                        k: (
+                            # if a list of fields to strides has been provided,
+                            # then only stride this field if it is in the list
+                            # (and duplicate if it is not);  if no list of
+                            # fields to stride has been provided, then stride
+                            # all fields.
+                            v[seq_pos_start:seq_pos_end]
+                            if (
+                                # no list provided!
+                                self.fields_to_stride is None
+                                # list provided, and this field is in the list
+                                or k in self.fields_to_stride
+                            )
+                            else v
+                        )
                         for k, v in sample.items()
                     }
 
@@ -403,10 +425,6 @@ class MultiSequenceStriderMapper(BatchedBaseMapper):
             # yield the last sequence
             out = {k: v[seq_pos_start:] for k, v in sample.items()}
 
-            if len(out[ref_field_name]) < 1:
-                import ipdb
-
-                ipdb.set_trace()
             yield out
 
 
@@ -441,12 +459,15 @@ class SingleValueToSequenceMapper(SingleBaseMapper):
                     of the new sequence; the padding_id will be ignored.
             padding_id: id to use for the padding token. Default is -100.
         """
-        super().__init__(
-            input_fields=[single_value_field, like_field],
-            output_fields=[single_value_field],
-        )
+        self.like_field_name = like_field
+        self.labels_field_name = single_value_field
         self.strategy = strategy
         self.padding_id = padding_id
+
+        super().__init__(
+            input_fields=(self.labels_field_name, self.like_field_name),
+            output_fields=(self.labels_field_name, self.like_field_name),
+        )
 
     def _make_sequence_from_value(
         self, value: Union[int, float], like_seq: Sequence[Any]
@@ -466,13 +487,11 @@ class SingleValueToSequenceMapper(SingleBaseMapper):
             raise ValueError(f"Strategy {self.strategy} is not supported")
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        labels_field_name, like_field_name, *_ = self.input_fields
-
-        data[labels_field_name] = [
+        data[self.labels_field_name] = [
             self._make_sequence_from_value(
-                value=label, like_seq=data[like_field_name][i]
+                value=label, like_seq=data[self.like_field_name][i]
             )
-            for i, label in enumerate(data[labels_field_name])
+            for i, label in enumerate(data[self.labels_field_name])
         ]
         return data
 
