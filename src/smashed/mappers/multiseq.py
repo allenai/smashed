@@ -396,6 +396,7 @@ class MultiSequenceStriderMapper(BatchedBaseMapper):
                 ) >= self.max_stride_count
 
                 if stride_too_long or stride_has_too_many_seqs:
+
                     yield {
                         k: (
                             # if a list of fields to strides has been provided,
@@ -423,7 +424,21 @@ class MultiSequenceStriderMapper(BatchedBaseMapper):
                 cumulative_stride_length += current_seq_length
 
             # yield the last sequence
-            out = {k: v[seq_pos_start:] for k, v in sample.items()}
+            out = {
+                k: (
+                    # same logic as above: if a list of fields to strides
+                    # has been provided, then only stride this field if it
+                    # is in the list and duplicate if it is not;  if no list
+                    # of fields to stride has been provided, then stride all.
+                    v[seq_pos_start:]
+                    if (
+                        self.fields_to_stride is None
+                        or k in self.fields_to_stride
+                    )
+                    else v
+                )
+                for k, v in sample.items()
+            }
 
             yield out
 
@@ -434,7 +449,7 @@ class SingleValueToSequenceMapper(SingleBaseMapper):
         single_value_field: str,
         like_field: str = "input_ids",
         strategy: Literal["first", "last", "all"] = "first",
-        padding_id: Union[int, float] = -100,
+        padding_id: Any = -100,
     ) -> None:
         """Mapper to create a sequence of values from single value.
         Useful when casting a sequence classification task to a sequence
