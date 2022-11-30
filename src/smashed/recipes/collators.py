@@ -25,7 +25,7 @@ class CollateFnMixIn(SingleBaseMapper):
         # skip fields that do not support collation as tensors; we will
         # reinsert them later as lists in each batch
         skipped: Dict[str, List[Any]] = {
-            field: [sample.pop(field) for sample in batch]
+            field: [sample.pop(field) for sample in batch if field in sample]
             for field in self.do_not_collate
         }
 
