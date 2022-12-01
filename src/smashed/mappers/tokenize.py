@@ -64,7 +64,7 @@ class GetTokenizerOutputFieldsAndNamesMixIn:
 
     def fname(self, field_or_dict: str) -> str:
         if self._output_prefix:
-            return f"{self._prefix}_{field_or_dict}"
+            return f"{self._output_prefix}_{field_or_dict}"
         elif self._output_rename_map:
             if field_or_dict in self._output_rename_map:
                 return self._output_rename_map[field_or_dict]
