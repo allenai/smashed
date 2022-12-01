@@ -8,7 +8,7 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 from ..base import SingleBaseMapper, TransformElementType
-from .tokenize import GetTokenizerOutputFieldsMixin
+from .tokenize import GetTokenizerOutputFieldsAndNamesMixIn
 
 __all__ = [
     "EncodeFieldsMapper",
@@ -401,42 +401,91 @@ class FillTextPromptMapper(SingleBaseMapper):
         return data
 
 
-class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
+class FillEncodedPromptMapper(
+    SingleBaseMapper,
+    GetTokenizerOutputFieldsAndNamesMixIn
+):
+    """Fills a prompt template with already encoded (i.e., tokenized and turned
+    into ids data."""
+
     def __init__(
         self,
         template: str,
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: Optional[PreTrainedTokenizerBase] = None,
         output_prefix: Optional[str] = None,
+        output_rename_map: Optional[Dict[str, str]] = None,
         return_attention_mask: bool = True,
         return_token_type_ids: bool = False,
         add_bos_token: bool = True,
         add_eos_token: bool = True,
     ) -> None:
-        self.tokenizer = tokenizer
-        self._prefix = output_prefix
+        """
+        Args:
+            template (str): The template to fill. It should be a string with
+                placeholders for the fields to fill.
+            tokenizer (Optional[PreTrainedTokenizerBase]): The tokenizer used
+                to encode the prompt. It is used to lookup the bos and eos
+                tokens. If add_bos_token or add_eos_token are False, this
+                can be None. Defaults to None.
+            output_prefix (Optional[str]): A prefix to add to all output
+                fields. Defaults to None. An error will be raised if both
+                output_prefix and output_rename_map are provided.
+            output_rename_map (Optional[Dict[str, str]]): A map that specifies
+                how fields in the tokenizers should be renamed. If None, the
+                fields will not be renamed. Defaults to None. An error will
+                be raised if both output_prefix and output_rename_map are
+                provided.
+            return_attention_mask (bool): Whether to return the attention mask.
+                Defaults to True.
+            return_token_type_ids (bool): Whether to return the token type ids.
+                Defaults to False.
+            add_bos_token (bool): Whether to add the bos token to the prompt.
+                Defaults to True.
+            add_eos_token (bool): Whether to add the eos token to the prompt.
+                Defaults to True.
+        """
+        GetTokenizerOutputFieldsAndNamesMixIn.__init__(
+            self,
+            output_rename_map=output_rename_map,
+            output_prefix=output_prefix,
+        )
 
         self.return_attention_mask = return_attention_mask
         self.return_token_type_ids = return_token_type_ids
 
-        self.bos_token_ids = (
-            []
-            if tokenizer.bos_token_id is None or not add_bos_token
-            else [tokenizer.bos_token_id]
-        )
-        self.eos_token_ids = (
-            []
-            if tokenizer.eos_token_id is None or not add_eos_token
-            else [tokenizer.eos_token_id]
-        )
+        if add_bos_token:
+            if tokenizer is None:
+                raise ValueError(
+                    "Cannot add bos token if no tokenizer is provided."
+                )
+            self.bos_token_ids = (
+                [tokenizer.bos_token_id]
+                if tokenizer.bos_token_id is not None else []
+            )
+        else:
+            self.bos_token_ids = []
+
+        if add_eos_token:
+            if tokenizer is None:
+                raise ValueError(
+                    "Cannot add eos token if no tokenizer is provided."
+                )
+            self.eos_token_ids = (
+                [tokenizer.eos_token_id]
+                if tokenizer.eos_token_id is not None else []
+            )
+        else:
+            self.eos_token_ids = []
 
         self.prompt = PromptSegment.from_template(
             template=template, tokenizer=tokenizer
         )
 
-        super().__init__(
+        SingleBaseMapper.__init__(
+            self,
             input_fields=[p.field_name for p in self.prompt if p.field_name],
             output_fields=[
-                self.prefix(field_name)
+                self.fname(field_name)
                 for field_name in self.output_fields_from_tokenizer_kwargs(
                     tokenizer_kwargs={
                         "return_attention_mask": return_attention_mask,
@@ -453,10 +502,10 @@ class FillEncodedPromptMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
             + self.eos_token_ids
         )
 
-        output = {self.prefix("input_ids"): encoded_prompt}
+        output = {self.fname("input_ids"): encoded_prompt}
         if self.return_attention_mask:
-            output[self.prefix("attention_mask")] = [1] * len(encoded_prompt)
+            output[self.fname("attention_mask")] = [1] * len(encoded_prompt)
         if self.return_token_type_ids:
-            output[self.prefix("token_type_ids")] = [0] * len(encoded_prompt)
+            output[self.fname("token_type_ids")] = [0] * len(encoded_prompt)
 
         return output
