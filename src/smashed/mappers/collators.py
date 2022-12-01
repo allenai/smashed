@@ -242,7 +242,7 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
                 sequence=list_of_tensors,
                 pad_value=self._get_padding_value(field_name=field_name),
                 pad_to_length=self.pad_to_length,
-                right_pad=(field_name not in self.left_pad_fields)
+                right_pad=(field_name not in self.left_pad_fields),
             )
             for field_name, list_of_tensors in data.items()
         }
@@ -305,7 +305,7 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
         sequence: List[Any],
         shape: Sequence[int],
         padding_symbol: Any,
-        pad_right: bool = True
+        pad_right: bool = True,
     ) -> List[Any]:
         """Recursively pads a list of [lists, ...].
 
@@ -354,8 +354,9 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
         sequence_with_brand_new_padding = (
             # the side we pad depends on wether pad_right is True or False
             sub_seq + [nested_pad_symbol] * (dim_to_pad_shape - len(sub_seq))
-            if pad_right else
-            [nested_pad_symbol] * (dim_to_pad_shape - len(sub_seq)) + sub_seq
+            if pad_right
+            else [nested_pad_symbol] * (dim_to_pad_shape - len(sub_seq))
+            + sub_seq
             for sub_seq in sequence
         )
 
@@ -376,7 +377,7 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
         self: "ListCollatorMapper",
         seq_of_seq_to_pad: List[Any],
         padding_symbol: Any,
-        pad_right: bool = True
+        pad_right: bool = True,
     ) -> List[Any]:
 
         padding_shape = self._get_list_shape_recursive(seq_of_seq_to_pad)
@@ -402,7 +403,7 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
             sequence=seq_of_seq_to_pad,
             shape=padding_shape,
             padding_symbol=padding_symbol,
-            pad_right=pad_right
+            pad_right=pad_right,
         )
         return padded_sequence
 
@@ -413,7 +414,7 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
             field_name: self._pad(
                 seq_of_seq_to_pad=field_value,
                 padding_symbol=self._get_padding_value(field_name=field_name),
-                pad_right=(field_name not in self.left_pad_fields)
+                pad_right=(field_name not in self.left_pad_fields),
             )
             for field_name, field_value in data.items()
         }

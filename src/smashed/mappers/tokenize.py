@@ -31,16 +31,16 @@ class GetTokenizerOutputFieldsAndNamesMixIn:
         output_prefix: Optional[str] = None,
         output_rename_map: Optional[Dict[str, str]] = None,
     ):
-        assert output_prefix is None or output_rename_map is None, (
-            "You cannot specify both output_prefix and output_rename_map."
-        )
+        assert (
+            output_prefix is None or output_rename_map is None
+        ), "You cannot specify both output_prefix and output_rename_map."
 
         self._output_prefix = output_prefix
         self._output_rename_map = output_rename_map
 
     @staticmethod
     def output_fields_from_tokenizer_kwargs(
-        tokenizer_kwargs: Optional[dict] = None
+        tokenizer_kwargs: Optional[dict] = None,
     ) -> List[str]:
 
         tokenizer_kwargs = tokenizer_kwargs or {}
@@ -142,7 +142,7 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsAndNamesMixIn):
         GetTokenizerOutputFieldsAndNamesMixIn.__init__(
             self,
             output_prefix=output_prefix,
-            output_rename_map=output_rename_map
+            output_rename_map=output_rename_map,
         )
 
         self.to_tokenize_filed = input_field

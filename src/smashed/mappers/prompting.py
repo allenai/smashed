@@ -402,8 +402,7 @@ class FillTextPromptMapper(SingleBaseMapper):
 
 
 class FillEncodedPromptMapper(
-    SingleBaseMapper,
-    GetTokenizerOutputFieldsAndNamesMixIn
+    SingleBaseMapper, GetTokenizerOutputFieldsAndNamesMixIn
 ):
     """Fills a prompt template with already encoded (i.e., tokenized and turned
     into ids data."""
@@ -460,7 +459,8 @@ class FillEncodedPromptMapper(
                 )
             self.bos_token_ids = (
                 [tokenizer.bos_token_id]
-                if tokenizer.bos_token_id is not None else []
+                if tokenizer.bos_token_id is not None
+                else []
             )
         else:
             self.bos_token_ids = []
@@ -472,7 +472,8 @@ class FillEncodedPromptMapper(
                 )
             self.eos_token_ids = (
                 [tokenizer.eos_token_id]
-                if tokenizer.eos_token_id is not None else []
+                if tokenizer.eos_token_id is not None
+                else []
             )
         else:
             self.eos_token_ids = []
