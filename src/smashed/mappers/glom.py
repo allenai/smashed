@@ -8,7 +8,13 @@ from ..base import DataRowView, SingleBaseMapper, TransformElementType
 
 with necessary("datasets", soft=True) as DATASETS_AVAILABLE:
     if DATASETS_AVAILABLE:
-        from datasets.arrow_dataset import Example
+        try:
+            from datasets.formatting.formatting import LazyRow
+        except ImportError:
+            # pre datasets 2.8.0
+            from datasets.arrow_dataset import (
+                Example as LazyRow,  # pyright: ignore
+            )
 
 
 class ExtendGlommerMixin:
@@ -26,10 +32,10 @@ class ExtendGlommerMixin:
 
         if DATASETS_AVAILABLE:
             glommer.register(
-                target_type=Example,
-                get=Example.__getitem__,
-                iter=Example.__iter__,
-                exact=Example.__eq__,
+                target_type=LazyRow,
+                get=LazyRow.__getitem__,
+                iter=LazyRow.__iter__,
+                exact=LazyRow.__eq__,
             )
 
         glommer.register(

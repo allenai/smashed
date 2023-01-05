@@ -28,7 +28,15 @@ from .views import DataBatchView
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
-        from datasets.arrow_dataset import Batch, Dataset
+        from datasets.arrow_dataset import Dataset
+
+        try:
+            from datasets.formatting.formatting import LazyBatch
+        except ImportError:
+            # pre datasets 2.8.0
+            from datasets.arrow_dataset import (
+                Batch as LazyBatch,  # pyright: ignore
+            )
         from datasets.iterable_dataset import IterableDataset
 
         HuggingFaceDataset = TypeVar(
@@ -284,12 +292,12 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
             else:
                 return transformed_dataset
 
-        @map.add_interface(dataset=Batch)
+        @map.add_interface(dataset=LazyBatch)
         def _map_huggingface_dataset_batch(
             self,
-            dataset: Batch,
+            dataset: LazyBatch,
             **map_kwargs: Any,
-        ) -> Batch:
+        ) -> LazyBatch:
             # explicitly casting to a boolean since this is all that is
             # supported by the simple mapper.
             # TODO[lucas]: maybe support specifying which fields to keep?
@@ -298,7 +306,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
                 or self.always_remove_columns
             )
 
-            dtview: DataBatchView[Batch, str, Any] = DataBatchView(dataset)
+            dtview: DataBatchView[LazyBatch, str, Any] = DataBatchView(dataset)
 
             self._check_fields_datasets(
                 provided_fields=dataset.keys(),

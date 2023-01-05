@@ -2,7 +2,13 @@ import unittest
 from copy import deepcopy
 from functools import partial
 
-from datasets.arrow_dataset import Batch, Dataset
+from datasets.arrow_dataset import Dataset
+
+try:
+    from datasets.formatting.formatting import LazyBatch
+except ImportError:
+    # pre datasets 2.8.0
+    from datasets.arrow_dataset import Batch as LazyBatch  # pyright: ignore
 
 from smashed.mappers.debug import MockMapper
 
@@ -13,7 +19,7 @@ class TestBatchInterface(unittest.TestCase):
 
         data = Dataset.from_list([{"a": i, "b": i ** 2} for i in range(100)])
 
-        def _batch_fn(data: Batch, mapper: MockMapper) -> Batch:
+        def _batch_fn(data: LazyBatch, mapper: MockMapper) -> LazyBatch:
             return mapper.map(deepcopy(data), remove_columns=remove_columns)
 
         fn = partial(_batch_fn, mapper=mapper)
