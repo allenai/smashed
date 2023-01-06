@@ -19,15 +19,28 @@ __all__ = [
 ]
 
 
-class GetTokenizerOutputFieldsMixin:
+class GetTokenizerOutputFieldsAndNamesMixIn:
     """A mixin class that figures out the output fields based on the arguments
     that will be passed a to tokenizer.__call__ method."""
 
     tokenizer: PreTrainedTokenizerBase
     _prefix: Optional[str]
 
+    def __init__(
+        self,
+        output_prefix: Optional[str] = None,
+        output_rename_map: Optional[Dict[str, str]] = None,
+    ):
+        assert (
+            output_prefix is None or output_rename_map is None
+        ), "You cannot specify both output_prefix and output_rename_map."
+
+        self._output_prefix = output_prefix
+        self._output_rename_map = output_rename_map
+
+    @staticmethod
     def output_fields_from_tokenizer_kwargs(
-        self, tokenizer_kwargs: Optional[dict] = None
+        tokenizer_kwargs: Optional[dict] = None,
     ) -> List[str]:
 
         tokenizer_kwargs = tokenizer_kwargs or {}
@@ -49,15 +62,21 @@ class GetTokenizerOutputFieldsMixin:
 
         return output_fields
 
-    def prefix(self, field_or_dict: str) -> str:
-        return (
-            f"{self._prefix}_{field_or_dict}"
-            if self._prefix
-            else field_or_dict
-        )
+    def fname(self, field_or_dict: str) -> str:
+        if self._output_prefix:
+            return f"{self._output_prefix}_{field_or_dict}"
+        elif self._output_rename_map:
+            if field_or_dict in self._output_rename_map:
+                return self._output_rename_map[field_or_dict]
+            else:
+                raise ValueError(
+                    f"Field '{field_or_dict}' is not in the rename map."
+                )
+        else:
+            return field_or_dict
 
 
-class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
+class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsAndNamesMixIn):
     """Tokenize a field using a tokenizer."""
 
     def __init__(
@@ -65,6 +84,7 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
         tokenizer: PreTrainedTokenizerBase,
         input_field: str,
         output_prefix: Optional[str] = None,
+        output_rename_map: Optional[Dict[str, str]] = None,
         add_special_tokens: Optional[bool] = True,
         max_length: Optional[int] = None,
         is_split_into_words: Optional[bool] = False,
@@ -84,7 +104,13 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
                 huggingface/transformers library.
             input_field (str): The field to tokenize.
             output_prefix (Optional[str], optional): A prefix to add to all
-                output fields. Defaults to None.
+                output fields. Defaults to None. An error will be raised if
+                both output_prefix and output_rename_map are provided.
+            output_rename_map (Optional[Dict[str, str]], optional): A map
+                that specifies how fields in the tokenizers should be renamed.
+                If None, the fields will not be renamed. Defaults to None.
+                An error will be raised if both output_prefix and
+                output_rename_map are provided.
             add_special_tokens (Optional[bool], optional): Whether or not to
                 add special tokens to the input. Defaults to True.
             max_length (Optional[int], optional): The maximum length of the
@@ -112,9 +138,15 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
                 to the tokenizer; these will override the above arguments.
         """
 
+        # this deal with names of fields to expect
+        GetTokenizerOutputFieldsAndNamesMixIn.__init__(
+            self,
+            output_prefix=output_prefix,
+            output_rename_map=output_rename_map,
+        )
+
         self.to_tokenize_filed = input_field
         self.tokenizer = tokenizer
-        self._prefix = output_prefix
 
         # arguments to be passed to the tokenizer __call__ function go here
         tokenizer_kwargs = {
@@ -147,9 +179,10 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
 
         self.tokenize_kwargs = tokenizer_kwargs
 
-        super().__init__(
+        SingleBaseMapper.__init__(
+            self,
             input_fields=[self.to_tokenize_filed],
-            output_fields=list(map(self.prefix, output_fields)),
+            output_fields=list(map(self.fname, output_fields)),
         )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
@@ -186,7 +219,7 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsMixin):
                 ]
 
         return {
-            self.prefix(field_name): field_value
+            self.fname(field_name): field_value
             for field_name, field_value in batch_encoding.items()
         }
 

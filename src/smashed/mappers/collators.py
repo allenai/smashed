@@ -23,6 +23,7 @@ class BaseCollator(AbstractBaseMapper):
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
+        left_pad_fields: Optional[Sequence[str]] = None,
     ):
         """Create a collator.
 
@@ -41,10 +42,14 @@ class BaseCollator(AbstractBaseMapper):
             unk_fields_pad_id (int, optional): The padding value to use for
                 any field that is not in fields_pad_ids. If not provided, an
                 error will be raised if a field is not in fields_pad_ids.
+            left_pad_fields (Sequence[str], optional): A list of fields to
+                pad from the left instead of the right. By default, all fields
+                are padded from the right.
         """
         self.fields_pad_ids = fields_pad_ids or {}
         self.pad_to_length = pad_to_length
         self.unk_fields_pad_id = unk_fields_pad_id
+        self.left_pad_fields = set(left_pad_fields or [])
 
         if self.unk_fields_pad_id is None and self.fields_pad_ids is None:
             raise ValueError(
@@ -145,7 +150,25 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
         pad_value: int,
         dim: int = 0,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
+        right_pad: bool = True,
     ) -> torch.Tensor:
+        """Pad a sequence of tensors to the same length.
+
+        Args:
+            sequence (Sequence[torch.Tensor]): The sequence of tensors to pad.
+                It is assumed that all tensors in the sequence have the same
+                type; if not an error might be raised somewhere.
+            pad_value (int): The value to use for padding.
+            dim (int, optional): The dimension we are collating on. Defaults
+                to 0.
+            pad_to_length (Union[int, Sequence[int]], optional): If provided,
+                pad all sequences to this length. If provided as a sequence,
+                we assume we should pad each dimension to the corresponding
+                length. If None, sequences will be padded to the length of the
+                longest sequence. Defaults to None.
+            right_pad (bool, optional): If True, pad to the right. If False,
+                pad to the left. Defaults to True.
+        """
 
         # make sure type of input is right
         if not (
@@ -192,13 +215,14 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
         pad_shapes = tuple(
             tuple(
                 chain.from_iterable(
-                    (0, m - s)
+                    (0, m - s) if right_pad else (m - s, 0)
                     for s, m in zip(t.size()[::-1], max_lengths[::-1])
                 )
             )
             # we do padding shapes for each tensor
             for t in sequence
         )
+
         # call each pad on each of the tensors with the appropriate padding
         to_stack = tuple(
             torch.nn.functional.pad(
@@ -218,6 +242,7 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
                 sequence=list_of_tensors,
                 pad_value=self._get_padding_value(field_name=field_name),
                 pad_to_length=self.pad_to_length,
+                right_pad=(field_name not in self.left_pad_fields),
             )
             for field_name, list_of_tensors in data.items()
         }
@@ -270,13 +295,17 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
         # this iterator will yield the shape of each element in the sequence
         inner_dims = (self._get_list_shape_recursive(s) for s in sequence)
 
-        # the acutal shape is the maximum of the inner dims
+        # the actual shape is the maximum of the inner dims
         inner_shape = tuple(max(dims) for dims in zip(*inner_dims))
 
         return (len(sequence), *inner_shape)
 
     def _pad_recursive(
-        self, sequence: List[Any], shape: Sequence[int], padding_symbol: Any
+        self,
+        sequence: List[Any],
+        shape: Sequence[int],
+        padding_symbol: Any,
+        pad_right: bool = True,
     ) -> List[Any]:
         """Recursively pads a list of [lists, ...].
 
@@ -284,9 +313,11 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
             sequence (List[Any]): The list to pad.
             shape (Sequence[int]): The shape to pad to.
             padding_symbol (Any): The symbol to pad with.
+            pad_right (bool, optional): If True, pads to the right. If False,
+                pads to the left. Defaults to True.
 
         Returns:
-            List[Any]: _description_
+            List[Any]: The padded list.
         """
 
         if len(shape) < 2:
@@ -321,7 +352,11 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
         #
         # We do that in the following line:
         sequence_with_brand_new_padding = (
+            # the side we pad depends on wether pad_right is True or False
             sub_seq + [nested_pad_symbol] * (dim_to_pad_shape - len(sub_seq))
+            if pad_right
+            else [nested_pad_symbol] * (dim_to_pad_shape - len(sub_seq))
+            + sub_seq
             for sub_seq in sequence
         )
 
@@ -342,6 +377,7 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
         self: "ListCollatorMapper",
         seq_of_seq_to_pad: List[Any],
         padding_symbol: Any,
+        pad_right: bool = True,
     ) -> List[Any]:
 
         padding_shape = self._get_list_shape_recursive(seq_of_seq_to_pad)
@@ -367,6 +403,7 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
             sequence=seq_of_seq_to_pad,
             shape=padding_shape,
             padding_symbol=padding_symbol,
+            pad_right=pad_right,
         )
         return padded_sequence
 
@@ -377,6 +414,7 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
             field_name: self._pad(
                 seq_of_seq_to_pad=field_value,
                 padding_symbol=self._get_padding_value(field_name=field_name),
+                pad_right=(field_name not in self.left_pad_fields),
             )
             for field_name, field_value in data.items()
         }

@@ -14,7 +14,7 @@ from smashed.mappers import (
 )
 from smashed.mappers.debug import MockMapper
 
-with necessary(("datasets", "dill")):
+with necessary(["datasets", "dill"]):
     import dill
     from datasets.arrow_dataset import Dataset
     from datasets.fingerprint import Hasher

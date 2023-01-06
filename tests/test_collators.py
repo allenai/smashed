@@ -84,6 +84,26 @@ class TestListCollators(unittest.TestCase):
         self.assertEqual(grouped_a[1][1], [5.0, 5.1, -1, -1, -1])
         self.assertEqual(grouped_a[1][2], [-1, -1, -1, -1, -1])
 
+    def test_left_padding(self):
+        dataset = [
+            {"a": [1, 2, 3]},
+            {"a": [4, 5]},
+            {"a": [6, 7, 8, 9, 10]},
+        ]
+        pipeline = FixedBatchSizeMapper(
+            batch_size="max"
+        ) >> ListCollatorMapper(
+            fields_pad_ids={"a": -1}, left_pad_fields=["a"]
+        )
+
+        output = pipeline.map(dataset)
+
+        self.assertEqual(len(output[0]["a"]), 3)
+        self.assertEqual([len(s) for s in output[0]["a"]], [5, 5, 5])
+        self.assertEqual(output[0]["a"][0], [-1, -1, 1, 2, 3])
+        self.assertEqual(output[0]["a"][1], [-1, -1, -1, 4, 5])
+        self.assertEqual(output[0]["a"][2], [6, 7, 8, 9, 10])
+
 
 class TestTensorCollators(unittest.TestCase):
     def test_base_collator(self):
@@ -134,3 +154,24 @@ class TestTensorCollators(unittest.TestCase):
 
         # same thing except attention mask uses 0 for padding
         self.assertEqual((collated_dataset[0]["attention_mask"] == 0).sum(), 4)
+
+    def test_left_padding(self):
+        dataset = [
+            {"a": [1, 2, 3]},
+            {"a": [4, 5]},
+            {"a": [6, 7, 8, 9, 10]},
+        ]
+        pipeline = (
+            Python2TorchMapper()
+            >> FixedBatchSizeMapper(batch_size="max")
+            >> TensorCollatorMapper(
+                fields_pad_ids={"a": -1}, left_pad_fields=["a"]
+            )
+        )
+
+        output = pipeline.map(dataset)
+
+        self.assertEqual(output[0]["a"].shape, (3, 5))
+        self.assertEqual(output[0]["a"][0].tolist(), [-1, -1, 1, 2, 3])
+        self.assertEqual(output[0]["a"][1].tolist(), [-1, -1, -1, 4, 5])
+        self.assertEqual(output[0]["a"][2].tolist(), [6, 7, 8, 9, 10])

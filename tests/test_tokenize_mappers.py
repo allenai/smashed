@@ -450,3 +450,53 @@ class TestTokenizerMapper(unittest.TestCase):
                 None,
             ],
         )
+
+    def test_prefix(self):
+        mapper = TokenizerMapper(
+            input_field="text",
+            tokenizer=self.tokenizer,
+            return_attention_mask=False,
+            output_prefix="test",
+        )
+
+        dataset = [
+            {"text": "This is a sentence."},
+        ]
+
+        new_dataset = mapper.map(dataset)
+        self.assertEqual("test_input_ids" in new_dataset[0], True)
+        self.assertEqual(
+            new_dataset[0]["test_input_ids"],
+            [102, 238, 165, 106, 8517, 205, 103],
+        )
+
+    def test_rename(self):
+        mapper = TokenizerMapper(
+            input_field="text",
+            tokenizer=self.tokenizer,
+            return_attention_mask=True,
+            output_rename_map={"input_ids": "foo", "attention_mask": "bar"},
+        )
+
+        dataset = [
+            {"text": "This is a sentence."},
+        ]
+
+        new_dataset = mapper.map(dataset)
+        self.assertTrue("foo" in new_dataset[0])
+        self.assertTrue("bar" in new_dataset[0])
+        self.assertFalse("input_ids" in new_dataset[0])
+        self.assertFalse("attention_mask" in new_dataset[0])
+
+        with self.assertRaises(ValueError):
+            mapper = TokenizerMapper(
+                input_field="text",
+                tokenizer=self.tokenizer,
+                return_attention_mask=True,
+                return_token_type_ids=True,
+                output_rename_map={
+                    "input_ids": "foo",
+                    "attention_mask": "bar",
+                },
+            )
+            mapper.map(dataset)

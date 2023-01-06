@@ -27,6 +27,7 @@ class ChangeFieldsMapper(SingleBaseMapper):
         self,
         keep_fields: Optional[List[str]] = None,
         drop_fields: Optional[List[str]] = None,
+        raise_on_missing: bool = True,
     ):
         """
         Args:
@@ -34,6 +35,8 @@ class ChangeFieldsMapper(SingleBaseMapper):
                 are dropped. Defaults to [].
             drop_fields (List[str]): Fields to drop, all other fields
                 are kept. Defaults to [].
+            raise_on_missing (bool): Whether to raise an error if a field
+                is missing. Defaults to True.
         """
 
         # xor between keep_fields and remove_fields
@@ -42,16 +45,22 @@ class ChangeFieldsMapper(SingleBaseMapper):
         ):
             raise ValueError("Must specify `keep_fields` or `drop_fields`")
 
-        super().__init__(input_fields=drop_fields, output_fields=keep_fields)
+        self.keep_fields = dict.fromkeys(keep_fields) if keep_fields else None
+        self.drop_fields = dict.fromkeys(drop_fields) if drop_fields else None
+
+        super().__init__(
+            input_fields=drop_fields if raise_on_missing else None,
+            output_fields=keep_fields if raise_on_missing else None,
+        )
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        if self.input_fields:
+        if self.drop_fields:
             new_data = {
-                k: v for k, v in data.items() if k not in self.input_fields
+                k: v for k, v in data.items() if k not in self.drop_fields
             }
 
-        elif self.output_fields:
-            new_data = {k: data[k] for k in self.output_fields}
+        elif self.keep_fields:
+            new_data = {k: data[k] for k in data if k in self.keep_fields}
 
         else:
             raise ValueError("Must specify `keep_fields` or `drop_fields`")

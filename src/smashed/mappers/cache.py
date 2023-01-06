@@ -13,7 +13,15 @@ from smashed.utils import get_cache_dir
 
 with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
     if HUGGINGFACE_DATASET_AVAILABLE or TYPE_CHECKING:
-        from datasets.arrow_dataset import Dataset, Batch
+        from datasets.arrow_dataset import Dataset
+
+        try:
+            from datasets.formatting.formatting import LazyBatch
+        except ImportError:
+            # pre datasets 2.8.0
+            from datasets.arrow_dataset import (
+                Batch as LazyBatch,  # pyright: ignore
+            )
         from datasets.iterable_dataset import IterableDataset
         from datasets.fingerprint import disable_caching, enable_caching
 
@@ -130,8 +138,8 @@ class CachePathContext:
             )
             return h.hexdigest()
 
-        @get_dataset_fingerprint.add_interface(dataset=Batch)
-        def get_dataset_fingerprint_hf_batch(self, dataset: Batch) -> str:
+        @get_dataset_fingerprint.add_interface(dataset=LazyBatch)
+        def get_dataset_fingerprint_hf_batch(self, dataset: LazyBatch) -> str:
             raise ValueError(
                 "Cannot cache a Batch of a HuggingFace Dataset; please "
                 "cache at the Dataset level instead."
@@ -198,7 +206,7 @@ class EndCachingMapper(SingleBaseMapper):
                 "Saving an IterableDataset is not implemented yet"
             )
 
-        @save_cache.add_interface(dataset=Batch)
+        @save_cache.add_interface(dataset=LazyBatch)
         def _save_hf_batch(self, dataset: Dataset, path: Path):
             raise ValueError(
                 "Cannot cache a Batch of a HuggingFace Dataset; please "
@@ -274,7 +282,9 @@ class StartCachingMapper(SingleBaseMapper):
 
     if HUGGINGFACE_DATASET_AVAILABLE:
 
-        @load_cache.add_interface(dataset=(IterableDataset, Dataset, Batch))
+        @load_cache.add_interface(
+            dataset=(IterableDataset, Dataset, LazyBatch)
+        )
         def _load_hf(
             self,
             path: Path,

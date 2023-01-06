@@ -25,7 +25,7 @@ class CollateFnMixIn(SingleBaseMapper):
         # skip fields that do not support collation as tensors; we will
         # reinsert them later as lists in each batch
         skipped: Dict[str, List[Any]] = {
-            field: [sample.pop(field) for sample in batch]
+            field: [sample.pop(field) for sample in batch if field in sample]
             for field in self.do_not_collate
         }
 
@@ -40,7 +40,9 @@ class CollateFnMixIn(SingleBaseMapper):
         collated_batch: Dict[str, List[Any]] = out[0]
 
         # here we reattach the answers to the batch
-        collated_batch.update(skipped)
+        # "if v" prevents us from adding empty lists,
+        # which correspond to fields that were not present in the batch
+        collated_batch.update({k: v for k, v in skipped.items() if v})
 
         return collated_batch
 
