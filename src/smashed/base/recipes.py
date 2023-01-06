@@ -2,7 +2,7 @@ from typing import Any
 
 from trouting import trouting
 
-from .mappers import SingleBaseMapper
+from .mappers import SingleBaseMapper, TransformElementType
 
 
 class BaseRecipe(SingleBaseMapper):
@@ -23,3 +23,7 @@ class BaseRecipe(SingleBaseMapper):
             return self.pipeline.map(dataset, **map_kwargs)
         else:
             return dataset
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        # Recipes don't do anything, so we just return the data
+        return data
