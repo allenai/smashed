@@ -42,8 +42,9 @@ class PromptsourceRecipe(BaseRecipe):
             truncation_strategy ("longest" or "uniform"], optional): how to
                 perform truncation if the source or target content is longer
                 than the maximum length. If "longest", the longest fields
-                specified in the template will be truncated first. If "uniform",
-                the fields will be truncated uniformly. Defaults to "longest".
+                specified in the template will be truncated first. If
+                "uniform", the fields will be truncated uniformly. Defaults
+                to "longest".
             use_words (bool, optional): When truncating, whether to use count
                 of words or count of characters. Defaults to True, which means
                 that we use count of words.
