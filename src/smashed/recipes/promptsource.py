@@ -40,7 +40,9 @@ class PromptsourceRecipe(BaseRecipe):
             )
             length_src_prompt = len(text_to_words.splitter(src_text))
             length_tgt_prompt = max(
-                len(text_to_words.splitter(t)) for t in tgt_text
+                [len(text_to_words.splitter(t)) for t in tgt_text]
+                # in case tgt_text is empty, we use 0 as a default value
+                or [0]
             )
             self.chain(text_to_words)
         else:
@@ -64,7 +66,7 @@ class PromptsourceRecipe(BaseRecipe):
                 )
             )
 
-        if max_target_content_length is not None:
+        if tgt_text and max_target_content_length:
             max_target_content_length -= length_tgt_prompt
             if max_target_content_length < 1:
                 raise ValueError(
