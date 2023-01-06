@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
 
+import torch
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from ..base import BaseRecipe, SingleBaseMapper
@@ -46,9 +47,13 @@ class CollateFnMixIn(SingleBaseMapper):
 
         return collated_batch
 
-    def get_tensorizer(self) -> Python2TorchMapper:
+    def get_tensorizer(
+        self,
+        field_cast_map: Optional[Mapping[str, Union[str, torch.dtype]]] = None,
+        device: Optional[Union[torch.device, str]] = None,
+    ) -> Python2TorchMapper:
         # this turns lists of ints/floats into tensors
-        return Python2TorchMapper()
+        return Python2TorchMapper(field_cast_map=field_cast_map, device=device)
 
     def get_batcher(self, keep_last: bool) -> FixedBatchSizeMapper:
         # the collator already receives the "right" number of samples
@@ -66,10 +71,14 @@ class CollatorRecipe(CollateFnMixIn, BaseRecipe):
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
+        field_cast_map: Optional[Mapping[str, Union[str, torch.dtype]]] = None,
+        device: Optional[Union[torch.device, str]] = None,
     ) -> None:
         super().__init__(do_not_collate=do_not_collate)
 
-        self.chain(self.get_tensorizer())
+        self.chain(
+            self.get_tensorizer(field_cast_map=field_cast_map, device=device)
+        )
         self.chain(self.get_batcher(keep_last=keep_last))
 
         if tokenizer:
