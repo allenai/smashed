@@ -1,4 +1,4 @@
-from typing import Dict, Type, Union, cast
+from typing import Dict, Type, Union
 
 import torch
 from transformers.modeling_utils import PreTrainedModel
