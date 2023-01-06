@@ -63,4 +63,10 @@ if __name__ == '__main__':
         template='translate English to French: {{ source }}</s>',
     )
     out = zero_shot({'source': 'my name is john'})
+    
     print(out)
+    # {
+    #     'input': ['translate English to French: my name is john'], 
+    #     'output': ["M'ai nom est john."]
+    # }
+    
