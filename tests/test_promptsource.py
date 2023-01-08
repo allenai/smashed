@@ -93,7 +93,7 @@ class TestPromptsource(unittest.TestCase):
             "Paris Paris Paris Paris Paris",
         )
 
-    def test_fewshot_jinja(self):
+    def _few_shot_data_prompt(self):
         dataset = [
             {
                 "question": "Who is Bill Gates?",
@@ -126,6 +126,12 @@ class TestPromptsource(unittest.TestCase):
             "A: </s>|||{{answer}}"
         )
 
+        return dataset, jinja_prompt
+
+    def test_fewshot_jinja(self):
+
+        dataset, jinja_prompt = self._few_shot_data_prompt()
+
         mapper = FewShotJinjaMapper(jinja=jinja_prompt, num_shots=2)
 
         mapped_dataset = mapper.map(dataset)
@@ -145,6 +151,9 @@ class TestPromptsource(unittest.TestCase):
             mapped_dataset[0]["target"],
             "John Doe is a fictional character.",
         )
+
+    def test_few_shot_jinja_zero_shots(self):
+        dataset, jinja_prompt = self._few_shot_data_prompt()
 
         mapper = FewShotJinjaMapper(jinja=jinja_prompt, num_shots=0)
 

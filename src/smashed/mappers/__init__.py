@@ -7,6 +7,7 @@ from .collators import (
     TensorCollatorMapper,
 )
 from .converters import Python2TorchMapper, Torch2PythonMapper
+from .decoding import DecodingMapper
 from .debug import DebugBatchedMapper, DebugSingleMapper
 from .fields import (
     ChangeFieldsMapper,
@@ -65,6 +66,7 @@ __all__ = [
     "CastMapper",
     "ChangeFieldsMapper",
     "CsvLoaderMapper",
+    "DecodingMapper",
     "DebugBatchedMapper",
     "DebugSingleMapper",
     "EncodeFieldsMapper",
