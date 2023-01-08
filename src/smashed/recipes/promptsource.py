@@ -23,7 +23,6 @@ class JinjaRecipe(BaseRecipe):
         source_fields: Optional[Sequence[str]] = None,
         target_fields: Optional[Sequence[str]] = None,
         additional_fields_to_keep: Optional[Sequence[str]] = None,
-
     ) -> None:
         """A recipe for a pipeline that uses promptsource to format data
         as source/target pairs for model prompting.
@@ -75,15 +74,14 @@ class JinjaRecipe(BaseRecipe):
 
         # if not provided, we try to infer the source and target fields
         source_fields = list(
-            source_fields or
-            template_mapper.approx_input_fields[0]
+            source_fields or template_mapper.approx_input_fields[0]
         )
         target_fields = list(
-            target_fields or
-            reduce(
+            target_fields
+            or reduce(
                 lambda t, s: t.union(s),
                 template_mapper.approx_input_fields[1:],
-                cast(Set[str], set())   # cast necessary for mypy
+                cast(Set[str], set()),  # cast necessary for mypy
             )
         )
 
@@ -162,9 +160,7 @@ class JinjaRecipe(BaseRecipe):
         if use_words:
             # if we used words, we need to convert the fields back to text
             # before filling the template.
-            self.chain(
-                WordsToTextMapper(fields=source_fields + target_fields)
-            )
+            self.chain(WordsToTextMapper(fields=source_fields + target_fields))
 
         # we only add the template here because we first need to truncate
         # the fields!

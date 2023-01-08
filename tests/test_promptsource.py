@@ -4,8 +4,8 @@ from transformers.models.auto import AutoTokenizer
 
 from smashed.mappers.promptsource import (
     FewShotJinjaMapper,
-    PromptsourceMapper,
     JinjaMapper,
+    PromptsourceMapper,
     SingleTransformPromptsourceMixin,
 )
 from smashed.recipes.promptsource import JinjaRecipe
@@ -96,25 +96,25 @@ class TestPromptsource(unittest.TestCase):
     def test_fewshot_jinja(self):
         dataset = [
             {
-                'question': 'Who is Bill Gates?',
-                'answer': 'Bill Gates is a billionaire.'
+                "question": "Who is Bill Gates?",
+                "answer": "Bill Gates is a billionaire.",
             },
             {
-                'question': "who is john lennon?",
-                'answer': 'John Lennon was a musician.'
+                "question": "who is john lennon?",
+                "answer": "John Lennon was a musician.",
             },
             {
-                'question': 'who is john doe?',
-                'answer': 'John Doe is a fictional character.'
+                "question": "who is john doe?",
+                "answer": "John Doe is a fictional character.",
             },
             {
-                'question': 'who is goldie hawn?',
-                'answer': 'Goldie Hawn is an actress.'
+                "question": "who is goldie hawn?",
+                "answer": "Goldie Hawn is an actress.",
             },
             {
-                'question': 'who is ru paul?',
-                'answer': 'Ru Paul is a drag queen.'
-            }
+                "question": "who is ru paul?",
+                "answer": "Ru Paul is a drag queen.",
+            },
         ]
         jinja_prompt = (
             "{% for shot in __shots__ %}"
@@ -133,16 +133,16 @@ class TestPromptsource(unittest.TestCase):
         self.assertEqual(len(mapped_dataset), 1)
 
         self.assertEqual(
-            mapped_dataset[0]['source'],
+            mapped_dataset[0]["source"],
             (
                 "Q: Who is Bill Gates?\nA: Bill Gates is a billionaire.\n\n"
                 "Q: who is john lennon?\nA: John Lennon was a musician.\n\n"
                 "Q: who is john doe?\nA: </s>"
-            )
+            ),
         )
 
         self.assertEqual(
-            mapped_dataset[0]['target'],
+            mapped_dataset[0]["target"],
             "John Doe is a fictional character.",
         )
 
@@ -153,20 +153,18 @@ class TestPromptsource(unittest.TestCase):
         self.assertEqual(len(mapped_dataset), 5)
 
         self.assertEqual(
-            mapped_dataset[0]['source'],
-            "Q: Who is Bill Gates?\nA: </s>"
+            mapped_dataset[0]["source"], "Q: Who is Bill Gates?\nA: </s>"
         )
 
         self.assertEqual(
-            mapped_dataset[0]['target'],
+            mapped_dataset[0]["target"],
             "Bill Gates is a billionaire.",
         )
 
         self.assertEqual(
-            mapped_dataset[1]['source'],
-            "Q: who is john lennon?\nA: </s>"
+            mapped_dataset[1]["source"], "Q: who is john lennon?\nA: </s>"
         )
         self.assertEqual(
-            mapped_dataset[1]['target'],
+            mapped_dataset[1]["target"],
             "John Lennon was a musician.",
         )

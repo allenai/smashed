@@ -438,7 +438,7 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
     @property
     def approx_input_fields(self) -> Tuple[Set[str], ...]:
         return tuple(
-            set(f for f in fields if f != '__shots__')
+            set(f for f in fields if f != "__shots__")
             for fields in super().approx_input_fields
         )
 
@@ -453,7 +453,7 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
                 accumulator.append(sample)
             else:
                 output = self.apply_template(
-                    {**sample, '__shots__': accumulator}
+                    {**sample, "__shots__": accumulator}
                 )
                 accumulator = []
                 yield self.format_output(output)
@@ -465,7 +465,5 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
             # use the last as the non-context sample
             *accumulator, sample = accumulator
 
-            output = self.apply_template(
-                {**sample, '__shots__': accumulator}
-            )
+            output = self.apply_template({**sample, "__shots__": accumulator})
             yield self.format_output(output)

@@ -43,11 +43,7 @@ from .prompting import (
     FillTextPromptMapper,
     TruncateMultipleFieldsMapper,
 )
-from .promptsource import (
-    PromptsourceMapper,
-    JinjaMapper,
-    FewShotJinjaMapper
-)
+from .promptsource import FewShotJinjaMapper, JinjaMapper, PromptsourceMapper
 from .shape import (
     FlattenMapper,
     SingleSequenceStriderMapper,
