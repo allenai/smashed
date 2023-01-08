@@ -18,6 +18,7 @@ class DecodingMapper(SingleBaseMapper):
         self,
         tokenizer: PreTrainedTokenizerBase,
         fields: Union[str, Sequence[str]],
+        decode_batch: bool = False,
         skip_special_tokens: bool = False,
         clean_up_tokenization_spaces: bool = True,
         extra_decode_kwargs: Optional[Dict[str, Any]] = None,
@@ -31,6 +32,11 @@ class DecodingMapper(SingleBaseMapper):
                 for tokenization.
             fields (Union[str, Sequence[str]]): The fields to decode; could
                 either be a single field or a sequence of fields.
+            decode_batch (bool, optional): If True, it assume each sample is
+                a sequence of sequences to decode and will use the tokenizer's
+                `batch_decode` method. If False, it assume each sample contains
+                a single sequence to decode and will use the tokenizer's
+                `decode` method. Defaults to False.
             skip_special_tokens (bool, optional): Whether to skip special
                 tokens (e.g., `[CLS]`, `</>`, etc) when decoding. Defaults to
                 False.
@@ -44,6 +50,7 @@ class DecodingMapper(SingleBaseMapper):
 
         self.tokenizer = tokenizer
         self.fields = [fields] if isinstance(fields, str) else fields
+        self.decode_batch = decode_batch
         self.skip_special_tokens = skip_special_tokens
         self.clean_up_tokenization_spaces = clean_up_tokenization_spaces
         self.extra_decode_kwargs = extra_decode_kwargs or {}
@@ -51,7 +58,11 @@ class DecodingMapper(SingleBaseMapper):
 
     def transform(self, data: TransformElementType) -> TransformElementType:
         return {
-            field: self.tokenizer.batch_decode(
+            field: (
+                self.tokenizer.batch_decode
+                if self.decode_batch
+                else self.tokenizer.decode
+            )(
                 data[field],
                 skip_special_tokens=self.skip_special_tokens,
                 clean_up_tokenization_spaces=self.clean_up_tokenization_spaces,
