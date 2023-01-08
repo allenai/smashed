@@ -35,7 +35,7 @@ class ZeroShotPrompting:
 
         self.max_generation_length = max_generation_length
 
-        self.recipe = smashed.recipes.PromptsourceRecipe(
+        self.recipe = smashed.recipes.JinjaRecipe(
             tokenizer=self.tokenizer,
             jinja_template=template,
             max_source_content_length=max_source_content_length,

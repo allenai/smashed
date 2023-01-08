@@ -48,7 +48,7 @@ def main():
     pipeline = (
         # concatenate the full text into a single string; use
         # title_sep, para_sep, sec_sep, and abs_sep to manage separators
-        sm.JinjaPromptsourceMapper(
+        sm.JinjaMapper(
             jinja=(
                 "{{title}}{{abs_sep}}"
                 "{{abstract}}{{abs_sep}}"
@@ -143,7 +143,7 @@ def main():
         >> sm.WordsToTextMapper(
             fields=["question", "context", "answers"],
         )
-        >> sm.JinjaPromptsourceMapper(
+        >> sm.JinjaMapper(
             jinja=(
                 "Q:{{question}}\nC:{{context}}\nA: "
                 "{% for answer in answers %}|||{{answer}}{% endfor %}"

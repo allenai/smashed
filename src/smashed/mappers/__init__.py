@@ -44,9 +44,9 @@ from .prompting import (
     TruncateMultipleFieldsMapper,
 )
 from .promptsource import (
-    DatasetPromptsourceMapper,
-    JinjaPromptsourceMapper,
     PromptsourceMapper,
+    JinjaMapper,
+    FewShotJinjaMapper
 )
 from .shape import (
     FlattenMapper,
@@ -69,12 +69,12 @@ __all__ = [
     "CastMapper",
     "ChangeFieldsMapper",
     "CsvLoaderMapper",
-    "DatasetPromptsourceMapper",
     "DebugBatchedMapper",
     "DebugSingleMapper",
     "EncodeFieldsMapper",
     "EndCachingMapper",
     "EnumerateFieldMapper",
+    "FewShotJinjaMapper",
     "FillEncodedPromptMapper",
     "FillTextPromptMapper",
     "FilterMapper",
@@ -86,7 +86,7 @@ __all__ = [
     "GlomMapper",
     "HuggingFaceDatasetLoaderMapper",
     "IndicesToMaskMapper",
-    "JinjaPromptsourceMapper",
+    "JinjaMapper",
     "JsonlLoaderMapper",
     "LabelsMaskerMapper",
     "ListCollatorMapper",
