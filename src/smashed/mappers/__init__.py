@@ -7,8 +7,8 @@ from .collators import (
     TensorCollatorMapper,
 )
 from .converters import Python2TorchMapper, Torch2PythonMapper
-from .decoding import DecodingMapper
 from .debug import DebugBatchedMapper, DebugSingleMapper
+from .decoding import DecodingMapper
 from .fields import (
     ChangeFieldsMapper,
     EnumerateFieldMapper,

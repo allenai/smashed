@@ -10,9 +10,7 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from ..base import SingleBaseMapper, TransformElementType
 
-__all__ = [
-    "DecodingMapper"
-]
+__all__ = ["DecodingMapper"]
 
 
 class DecodingMapper(SingleBaseMapper):
@@ -24,6 +22,26 @@ class DecodingMapper(SingleBaseMapper):
         clean_up_tokenization_spaces: bool = True,
         extra_decode_kwargs: Optional[Dict[str, Any]] = None,
     ):
+        """A mapper that decodes one or more of tokenized sequences in
+        for the provided fields.
+
+        Args:
+            tokenizer (PreTrainedTokenizerBase): The tokenizer to use for
+                decoding; typically, this is the same tokenizer that was used
+                for tokenization.
+            fields (Union[str, Sequence[str]]): The fields to decode; could
+                either be a single field or a sequence of fields.
+            skip_special_tokens (bool, optional): Whether to skip special
+                tokens (e.g., `[CLS]`, `</>`, etc) when decoding. Defaults to
+                False.
+            clean_up_tokenization_spaces (bool, optional): Whether to clean
+                up redundant spaces when decoding. Defaults to True.
+            extra_decode_kwargs (Optional[Dict[str, Any]], optional): Any
+                tokenizer-specific arguments to pass to the tokenizer's
+                `batch_decode` method. If not provided, no extra arguments
+                will be passed. Defaults to None.
+        """
+
         self.tokenizer = tokenizer
         self.fields = [fields] if isinstance(fields, str) else fields
         self.skip_special_tokens = skip_special_tokens
