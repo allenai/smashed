@@ -16,7 +16,7 @@ class JinjaRecipe(BaseRecipe):
         self,
         tokenizer: PreTrainedTokenizerBase,
         jinja_template: str,
-        num_shots: int = 0,
+        num_shots: Union[int, Literal["max"]] = 0,
         max_source_content_length: Optional[int] = None,
         max_target_content_length: Optional[int] = None,
         truncation_strategy: Literal["longest", "uniform"] = "longest",

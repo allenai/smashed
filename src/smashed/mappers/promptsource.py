@@ -5,6 +5,7 @@ from typing import (
     Dict,
     Iterable,
     List,
+    Literal,
     Optional,
     Sequence,
     Set,
@@ -354,7 +355,7 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
     def __init__(
         self,
         jinja: str,
-        num_shots: int,
+        num_shots: Union[int, Literal["max"]],
         name: Optional[str] = None,
         reference: Optional[str] = None,
         metadata: Optional["Template.Metadata"] = None,
@@ -378,7 +379,9 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
                 are available as variables in the template. A special
                 variable __shots__ is available, which contains all the shots
                 for the sample.
-            num_shots (int): the number of shots to generate for each sample.
+            num_shots (Union[int, Literal['max']]): the number of samples to
+                use for each sample. If set to 'max', then all the samples
+                in the dataset are used.
             name (Optional[str], optional): the name of the template. Defaults
                 to None.
             reference (Optional[str], optional): the reference ID for the
@@ -408,9 +411,11 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
                 of extra variables that will be passed to the promptsource
                 template. Defaults to None.
         """
-        if not (isinstance(num_shots, int) and num_shots >= 0):
+        if num_shots != "max" and not (
+            isinstance(num_shots, int) and num_shots >= 0
+        ):
             raise ValueError(
-                "number_of_shots must be a non-negative integer, "
+                "number_of_shots must be a non-negative integer or 'max', "
                 f"but got {num_shots}"
             )
 
@@ -426,8 +431,12 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
             metadata=metadata,
         )
 
-        self.num_shots = num_shots
-        self.keep_last = keep_last
+        # mypy complains if we don't retype num_shots
+        self.num_shots: Union[int, Literal["max"]] = num_shots
+
+        # due to how "max" works, we always need to keep the batch
+        # when in "max" mode, otherwise we will return an empty dataset
+        self.keep_last: bool = keep_last or num_shots == "max"
 
         super().__init__(
             template=template,
@@ -453,7 +462,7 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
         accumulator: List[TransformElementType] = []
 
         for sample in data:
-            if len(accumulator) < self.num_shots:
+            if self.num_shots == "max" or len(accumulator) < self.num_shots:
                 accumulator.append(sample)
             else:
                 output = self.apply_template({**sample, VARSHOTS: accumulator})
