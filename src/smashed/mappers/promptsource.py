@@ -39,6 +39,8 @@ __all__ = [
     "FewShotJinjaMapper",
 ]
 
+VARSHOTS = "__shots__"
+
 
 @Necessary(
     "promptsource",
@@ -112,6 +114,10 @@ class PromptsourceMixin(ChainableMapperMixIn):
             input_fields=input_fields, output_fields=output_fields
         )
 
+    @staticmethod
+    def get_vars_from_txt(text: str) -> Set[str]:
+        return meta.find_undeclared_variables(Environment().parse(text))
+
     @property
     def approx_input_fields(self) -> Tuple[Set[str], ...]:
         """A tuple of sets of input fields that are required by the
@@ -129,9 +135,7 @@ class PromptsourceMixin(ChainableMapperMixIn):
         return tuple(
             set(
                 field
-                for field in meta.find_undeclared_variables(
-                    Environment().parse(t)
-                )
+                for field in self.get_vars_from_txt(t)
                 if field not in self.extra_vars
             )
             for t in self.template.jinja.split("|||")
@@ -404,15 +408,15 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
                 of extra variables that will be passed to the promptsource
                 template. Defaults to None.
         """
-        if not isinstance(num_shots, int) and num_shots >= 0:
+        if not (isinstance(num_shots, int) and num_shots >= 0):
             raise ValueError(
                 "number_of_shots must be a non-negative integer, "
                 f"but got {num_shots}"
             )
 
-        if not re.search(r"\b__shots__\b", jinja):
-            raise ValueError(
-                "the jinja template must contain the variable __shots__"
+        if VARSHOTS not in self.get_vars_from_txt(jinja):
+            raise KeyError(
+                f"the jinja template must contain the variable {VARSHOTS}"
             )
 
         template = Template(
@@ -438,7 +442,7 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
     @property
     def approx_input_fields(self) -> Tuple[Set[str], ...]:
         return tuple(
-            set(f for f in fields if f != "__shots__")
+            set(f for f in fields if f != VARSHOTS)
             for fields in super().approx_input_fields
         )
 
@@ -452,9 +456,7 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
             if len(accumulator) < self.num_shots:
                 accumulator.append(sample)
             else:
-                output = self.apply_template(
-                    {**sample, "__shots__": accumulator}
-                )
+                output = self.apply_template({**sample, VARSHOTS: accumulator})
                 accumulator = []
                 yield self.format_output(output)
 
@@ -465,5 +467,5 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
             # use the last as the non-context sample
             *accumulator, sample = accumulator
 
-            output = self.apply_template({**sample, "__shots__": accumulator})
+            output = self.apply_template({**sample, VARSHOTS: accumulator})
             yield self.format_output(output)

@@ -177,3 +177,12 @@ class TestPromptsource(unittest.TestCase):
             mapped_dataset[1]["target"],
             "John Lennon was a musician.",
         )
+
+    def test_few_shot_exception(self):
+        with self.assertRaises(KeyError):
+            FewShotJinjaMapper(
+                jinja="Q: {{question}}\nA: {{answer}}", num_shots=2
+            )
+
+        with self.assertRaises(ValueError):
+            FewShotJinjaMapper("{{ __shots__ }}", num_shots=-2)
