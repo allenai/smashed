@@ -146,6 +146,24 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
 
         return transformed_batch
 
+    def one(self, **sample: TransformElementType) -> TransformElementType:
+        """Transform a single sample. A convenience method that is
+        equivalent to self.map([sample])[0].
+
+        Args:
+            sample (TransformElementType): The sample to transform.
+
+        Returns:
+            TransformElementType: The transformed sample.
+        """
+
+        out = self.map([sample])
+        if len(out) != 1:
+            raise ValueError(
+                f"Expected one sample, got {len(out)} samples instead."
+            )
+        return out[0]
+
     @trouting
     def map(self, dataset: Any, **map_kwargs: Any) -> Any:
         """Transform a dataset by applying this mapper's transform method.
@@ -168,7 +186,6 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         dataset: Sequence[TransformElementType],
         **map_kwargs: Any,
     ) -> Sequence[TransformElementType]:
-
         # explicitly casting to a boolean since this is all that is
         # supported by the simple mapper.
         # TODO[lucas]: maybe support specifying which fields to keep?

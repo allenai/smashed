@@ -1,12 +1,12 @@
 from functools import reduce
-from typing import Literal, Optional, Sequence, Set, cast
+from typing import Literal, Optional, Sequence, Set, Union, cast
 
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from ..base.recipes import BaseRecipe
 from ..mappers.fields import ChangeFieldsMapper
 from ..mappers.prompting import TruncateMultipleFieldsMapper
-from ..mappers.promptsource import JinjaMapper
+from ..mappers.promptsource import VARSHOTS, FewShotJinjaMapper, JinjaMapper
 from ..mappers.text import TextToWordsMapper, WordsToTextMapper
 from ..mappers.tokenize import TokenizerMapper
 
@@ -16,6 +16,7 @@ class JinjaRecipe(BaseRecipe):
         self,
         tokenizer: PreTrainedTokenizerBase,
         jinja_template: str,
+        num_shots: Union[int, Literal["max"]] = 0,
         max_source_content_length: Optional[int] = None,
         max_target_content_length: Optional[int] = None,
         truncation_strategy: Literal["longest", "uniform"] = "longest",
@@ -64,13 +65,23 @@ class JinjaRecipe(BaseRecipe):
                 Defaults to None.
         """
 
+        # must run init before we start using `chain` function to add mappers
         super().__init__()
 
         # we instantiate the template mapper early on so we can get the text
         # in the prompt that is not variable placeholders; however, we will
         # wait till truncation mappers are added to the pipeline before
         # instantiating the template mapper.
-        template_mapper = JinjaMapper(jinja=jinja_template)
+
+        # The mapper could be a FewShotJinjaMapper or a JinjaMapper, depending
+        # on whether it contains the variable `__shots__`.
+        template_mapper: Union[JinjaMapper, FewShotJinjaMapper]
+        if VARSHOTS in JinjaMapper.get_vars_from_txt(jinja_template):
+            template_mapper = FewShotJinjaMapper(
+                jinja=jinja_template, num_shots=num_shots
+            )
+        else:
+            template_mapper = JinjaMapper(jinja=jinja_template)
 
         # if not provided, we try to infer the source and target fields
         source_fields = list(
