@@ -1,9 +1,26 @@
-from itertools import chain
-from typing import Any, Dict, List, Optional, Tuple, cast
+import re
+from functools import reduce
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from necessary import Necessary, necessary
 
-from ..base import SingleBaseMapper, TransformElementType
+from ..base.mappers import (
+    BatchedBaseMapper,
+    ChainableMapperMixIn,
+    SingleBaseMapper,
+    TransformElementType,
+)
 from ..utils import get_name_and_version
 
 with necessary("promptsource", soft=True) as PROMPTSOURCE_AVAILABLE:
@@ -16,16 +33,23 @@ with necessary("jinja2", soft=True) as JINJA_AVAILABLE:
         from jinja2 import Environment, meta
 
 
+__all__ = [
+    "PromptsourceMapper",
+    "JinjaMapper",
+    "FewShotJinjaMapper",
+]
+
+
 @Necessary(
     "promptsource",
     message="{module_name} missing. Fix with 'pip install smashed[prompting]'",
 )
-class PromptsourceMapper(SingleBaseMapper):
+class PromptsourceMixin(ChainableMapperMixIn):
     def __init__(
         self,
         template: "Template",
-        source_field_name: str = "source",
-        target_field_name: str = "target",
+        output_source_field_name: str = "source",
+        output_target_field_name: str = "target",
         truncate: bool = False,
         highlight_variables: bool = False,
         return_multiple_targets: bool = False,
@@ -39,12 +63,12 @@ class PromptsourceMapper(SingleBaseMapper):
         Args:
             template (promptsource.templates.Template): the promptsource
                 template to use.
-            source_field_name (str, optional): the name of the field in the
-                returned dictionary of samples that will contain the source
-                sequence. Defaults to "source".
-            target_field_name (str, optional): the name of the field in the
-                returned dictionary of samples that will contain the target
-                sequence. Defaults to "target".
+            output_source_field_name (str, optional): the name of the field
+                in the returned dictionary of samples that will contain the
+                source sequence. Defaults to "source".
+            output_target_field_name (str, optional): the name of the field
+                in the returned dictionary of samples that will contain the
+                target sequence. Defaults to "target".
             truncate (bool, optional): whether to truncate the source and
                 target sequences to the maximum length allowed by
                 the promptsource library. Defaults to False.
@@ -63,72 +87,68 @@ class PromptsourceMapper(SingleBaseMapper):
         self.template = template
         self.truncate = truncate
         self.highlight_vars = highlight_variables
-        self.src_fld_name = source_field_name
-        self.tgt_fld_name = target_field_name
-        self.return_multi_tgt = return_multiple_targets
-        self.extra_vars = extra_variables or {}
 
         # override the id for the template because by default it uses
         # a randomly generated uuid which makes hashing impossible
         setattr(self.template, "id", 0)
 
-        # abstract syntax tree for the jinja template; we will use it
-        # to find all fields that are required by the template
+        self.src_fld_name = output_source_field_name
+        self.tgt_fld_name = output_target_field_name
+        self.return_multiple_targets = return_multiple_targets
+        self.extra_vars = extra_variables or {}
 
+        # merge all fields from source and targets portion of the template
+        input_fields: Set[str] = reduce(
+            lambda t, s: t.union(s), self.approx_input_fields, set()
+        )
+
+        # the output field only contains the target field if the template
+        # has a target portion.
         output_fields = [self.src_fld_name]
         if "|||" in self.template.jinja:
             output_fields.append(self.tgt_fld_name)
 
-        input_src_fields, input_tgt_fields = self.approximate_input_fields
         super().__init__(
-            input_fields=set(input_src_fields + input_tgt_fields),
-            output_fields=output_fields,
-        )
-
-    def _approximate_input_fields(self, jinja_txt: str) -> List[str]:
-        ast = Environment().parse(jinja_txt)
-        return sorted(
-            var_name
-            for var_name in meta.find_undeclared_variables(ast)
-            if var_name not in self.extra_vars
+            input_fields=input_fields, output_fields=output_fields
         )
 
     @property
-    def approximate_input_fields(self) -> Tuple[List[str], List[str]]:
-        """Input fields that are likely to be required by the template;
-        It is approximate because we ignore nested variables."""
+    def approx_input_fields(self) -> Tuple[Set[str], ...]:
+        """A tuple of sets of input fields that are required by the
+        template.
 
-        source_template, *target_templates = self.template.jinja.split("|||")
-        source_fields = self._approximate_input_fields(source_template)
-        target_fields = sorted(
+        The first set contains input fields that are
+        in the source part of the template (i.e. before the control
+        sequence `|||`); subsequent sets contain input fields that
+        are in the targets.
+
+        This is a conservative estimate of the input fields required,
+        since we can't parse out cases where for loops or if statements
+        are used, nor cases where members of a variable are accessed.
+        """
+        return tuple(
             set(
-                chain.from_iterable(
-                    self._approximate_input_fields(template)
-                    for template in target_templates
+                field
+                for field in meta.find_undeclared_variables(
+                    Environment().parse(t)
                 )
+                if field not in self.extra_vars
             )
+            for t in self.template.jinja.split("|||")
         )
-        return source_fields, target_fields
-
-    def _approximate_text_from_template(self, txt: str) -> str:
-        return "".join(part.split("}}")[-1] for part in txt.split("{{"))
 
     @property
-    def approximate_prompt_text(self) -> Tuple[str, List[str]]:
-        """The prompt without the variables; it is approximate because
-        we might not be able to remove all variables."""
-
-        source_template, *target_templates = self.template.jinja.split("|||")
-
-        source_str = self._approximate_text_from_template(source_template)
-        target_str = [
-            self._approximate_text_from_template(template)
-            for template in target_templates
-        ]
-        return source_str, target_str
+    def template_text(self) -> Tuple[str, ...]:
+        """The text of the template, with all variables and
+        control sequences removed."""
+        return tuple(
+            re.sub(r"\{(%|\{|#).+?(#|%|\})\}", "", t)
+            for t in self.template.jinja.split("|||")
+        )
 
     @property
     def has_target(self) -> bool:
+        """Whether the template has one or more target sequence."""
         return "|||" in self.template.jinja
 
     def __getstate__(self) -> dict:
@@ -146,33 +166,58 @@ class PromptsourceMapper(SingleBaseMapper):
             state["__dict__"]["template"], Loader=yaml.FullLoader
         )
 
-    def transform(self, data: TransformElementType) -> TransformElementType:
+    def apply_template(self, data: Dict[str, Any]) -> Sequence[str]:
+        """Given a dictionary of data, apply the template to generate
+        source sequence and target sequence(s)."""
+
         if self.extra_vars:
             # add any extra variables to the data
             data = {**data, **self.extra_vars}
 
-        src, *tgt = self.template.apply(
+        return self.template.apply(
             data,
             truncate=self.truncate,
             highlight_variables=self.highlight_vars,
         )
-        if self.return_multi_tgt:
+
+    def format_output(
+        self, output: Sequence[str]
+    ) -> Dict[str, Union[str, List[str]]]:
+        """Given a list of source and target sequences, format the output
+        as a dictionary of samples; if `return_multiple_targets` is True,
+        then the target field will be a list of strings, otherwise it will
+        be a single string."""
+
+        # unpack for convenience; we will have to slice anyway later
+        src, *tgt = output
+
+        if self.return_multiple_targets:
+            # ok to return multiple targets, so we return a list
             return {self.src_fld_name: src, self.tgt_fld_name: tgt}
-        elif len(tgt) == 0:
+
+        if len(tgt) == 0:
+            # no target, so just return the source
             return {self.src_fld_name: src}
-        elif len(tgt) > 1:
+
+        if len(tgt) > 1:
+            # we want to return a single target, but there are multiple!
+            # therefore, we raise an error.
             raise ValueError(
                 "Multiple targets, but `return_multiple_targets` is False"
             )
-        else:
-            return {self.src_fld_name: src, self.tgt_fld_name: tgt[0]}
+
+        return {self.src_fld_name: src, self.tgt_fld_name: tgt[0]}
 
 
-@Necessary(
-    "promptsource",
-    message="{module_name} missing. Fix with 'pip install smashed[prompting]'",
-)
-class DatasetPromptsourceMapper(PromptsourceMapper):
+class SingleTransformPromptsourceMixin(PromptsourceMixin, SingleBaseMapper):
+    # We need this class pretty much just so that we can inherit from
+    # SingleBaseMapper.
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        encoded = self.apply_template(data)  # type: ignore
+        return self.format_output(encoded)
+
+
+class PromptsourceMapper(SingleTransformPromptsourceMixin):
     def __init__(
         self,
         dataset_name: str,
@@ -227,8 +272,8 @@ class DatasetPromptsourceMapper(PromptsourceMapper):
 
         super().__init__(
             template=template,
-            source_field_name=source_field_name,
-            target_field_name=target_field_name,
+            output_source_field_name=source_field_name,
+            output_target_field_name=target_field_name,
             truncate=truncate,
             highlight_variables=highlight_variables,
             return_multiple_targets=return_multiple_targets,
@@ -236,11 +281,7 @@ class DatasetPromptsourceMapper(PromptsourceMapper):
         )
 
 
-@Necessary(
-    "promptsource",
-    message="{module_name} missing. Fix with 'pip install smashed[prompting]'",
-)
-class JinjaPromptsourceMapper(PromptsourceMapper):
+class JinjaMapper(SingleTransformPromptsourceMixin):
     def __init__(
         self,
         jinja: str,
@@ -290,16 +331,139 @@ class JinjaPromptsourceMapper(PromptsourceMapper):
         """
         template = Template(
             jinja=jinja,
-            name=(name or self.name),
+            name=name,
             reference=(reference or get_name_and_version()),
             metadata=metadata,
         )
         super().__init__(
             template=template,
-            source_field_name=source_field_name,
-            target_field_name=target_field_name,
+            output_source_field_name=source_field_name,
+            output_target_field_name=target_field_name,
             truncate=truncate,
             highlight_variables=highlight_variables,
             return_multiple_targets=return_multiple_targets,
             extra_variables=extra_variables,
         )
+
+
+class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
+    def __init__(
+        self,
+        jinja: str,
+        num_shots: int,
+        name: Optional[str] = None,
+        reference: Optional[str] = None,
+        metadata: Optional["Template.Metadata"] = None,
+        keep_last: bool = False,
+        output_source_field_name: str = "source",
+        output_target_field_name: str = "target",
+        truncate: bool = False,
+        highlight_variables: bool = False,
+        return_multiple_targets: bool = False,
+        extra_variables: Optional[Dict[str, Any]] = None,
+    ):
+        """Uses a jinja to generate source and target sequence;
+        in the returned dictionary of samples, the source sequence is stored
+        under the key `source_field_name` and the target sequence is stored
+        under the key `target_field_name`. If the template does not contain
+        the control sequence `|||`, then no target sequence is generated.
+
+        Args:
+            jinja (str): the jinja template to use. The template can access
+                the data in each sample; the name of fields in the datasets
+                are available as variables in the template. A special
+                variable __shots__ is available, which contains all the shots
+                for the sample.
+            num_shots (int): the number of shots to generate for each sample.
+            name (Optional[str], optional): the name of the template. Defaults
+                to None.
+            reference (Optional[str], optional): the reference ID for the
+                template. Defaults to None.
+            metadata (Optional["Template.Metadata"], optional): the metadata
+                for the template. Defaults to None.
+            keep_last (bool, optional): whether to keep the last shot in the
+                dataset if we have leftover samples less than the number of
+                shots. Defaults to False.
+            output_source_field_name (str, optional): the name of the field
+                in the returned dictionary of samples that will contain the
+                source sequence. Defaults to "source".
+            output_target_field_name (str, optional): the name of the field
+                in the returned dictionary of samples that will contain the
+                target sequence. Defaults to "target".
+            truncate (bool, optional): whether to truncate the source and
+                target sequences to the maximum length allowed by
+                the promptsource library. Defaults to False.
+            highlight_variables (bool, optional): whether to highlight the
+                variables in the source and target sequences with special
+                html tags. Defaults to False.
+            return_multiple_targets (bool, optional): whether to return
+                a list of target sequences for each sample. Defaults to False.
+                If the template returns multiple targets, but this argument
+                is set to False, then only the first target is returned.
+            extra_variables (Optional[Dict[str, Any]], optional): a dictionary
+                of extra variables that will be passed to the promptsource
+                template. Defaults to None.
+        """
+        if not isinstance(num_shots, int) and num_shots >= 0:
+            raise ValueError(
+                "number_of_shots must be a non-negative integer, "
+                f"but got {num_shots}"
+            )
+
+        if not re.search(r"\b__shots__\b", jinja):
+            raise ValueError(
+                "the jinja template must contain the variable __shots__"
+            )
+
+        template = Template(
+            jinja=jinja,
+            name=name,
+            reference=(reference or get_name_and_version()),
+            metadata=metadata,
+        )
+
+        self.num_shots = num_shots
+        self.keep_last = keep_last
+
+        super().__init__(
+            template=template,
+            output_source_field_name=output_source_field_name,
+            output_target_field_name=output_target_field_name,
+            truncate=truncate,
+            highlight_variables=highlight_variables,
+            return_multiple_targets=return_multiple_targets,
+            extra_variables=extra_variables,
+        )
+
+    @property
+    def approx_input_fields(self) -> Tuple[Set[str], ...]:
+        return tuple(
+            set(f for f in fields if f != "__shots__")
+            for fields in super().approx_input_fields
+        )
+
+    def transform(
+        self, data: Iterable[TransformElementType]
+    ) -> Iterable[TransformElementType]:
+
+        accumulator: List[TransformElementType] = []
+
+        for sample in data:
+            if len(accumulator) < self.num_shots:
+                accumulator.append(sample)
+            else:
+                output = self.apply_template(
+                    {**sample, "__shots__": accumulator}
+                )
+                accumulator = []
+                yield self.format_output(output)
+
+        if self.keep_last and len(accumulator) > 0:
+            # we yield the last bit of the dataset; might have
+            # fewer than self.num_shots samples
+
+            # use the last as the non-context sample
+            *accumulator, sample = accumulator
+
+            output = self.apply_template({**sample, "__shots__": accumulator})
+            yield self.format_output(output)

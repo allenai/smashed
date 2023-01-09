@@ -3,16 +3,17 @@ import unittest
 from transformers.models.auto import AutoTokenizer
 
 from smashed.mappers.promptsource import (
-    DatasetPromptsourceMapper,
-    JinjaPromptsourceMapper,
+    FewShotJinjaMapper,
+    JinjaMapper,
     PromptsourceMapper,
+    SingleTransformPromptsourceMixin,
 )
-from smashed.recipes.promptsource import PromptsourceRecipe
+from smashed.recipes.promptsource import JinjaRecipe
 
 
 class TestPromptsource(unittest.TestCase):
     def test_jinja_prompt_source_mapper(self):
-        mapper = JinjaPromptsourceMapper(
+        mapper = JinjaMapper(
             jinja="Q: {{question}}\nA: |||{{answers.text[0]}}"
         )
         dataset = [
@@ -30,7 +31,7 @@ class TestPromptsource(unittest.TestCase):
         self.assertEqual(mapped_dataset[0]["target"], "Paris")
 
     def test_dataset_prompt_source_mapper(self):
-        mapper = DatasetPromptsourceMapper(
+        mapper = PromptsourceMapper(
             dataset_name="squad",
             template_name="given_context_answer_question_variation",
         )
@@ -55,14 +56,14 @@ class TestPromptsource(unittest.TestCase):
         )
         self.assertEqual(mapped_dataset[0]["target"], "Paris")
 
-        mapper2 = PromptsourceMapper(mapper.template)
+        mapper2 = SingleTransformPromptsourceMixin(mapper.template)
         mapped_dataset2 = mapper2.map(dataset, remove_columns=True)
         self.assertEqual(mapped_dataset, mapped_dataset2)
 
     def test_promptsource_recipe(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
 
-        recipe = PromptsourceRecipe(
+        recipe = JinjaRecipe(
             tokenizer=AutoTokenizer.from_pretrained("bert-base-cased"),
             jinja_template="Q: {{question}}\nC: {{context}}\nA: |||{{answer}}",
             max_source_content_length=15,
@@ -90,4 +91,89 @@ class TestPromptsource(unittest.TestCase):
         self.assertEqual(
             tokenizer.decode(mapped_dataset["labels"]),
             "Paris Paris Paris Paris Paris",
+        )
+
+    def _few_shot_data_prompt(self):
+        dataset = [
+            {
+                "question": "Who is Bill Gates?",
+                "answer": "Bill Gates is a billionaire.",
+            },
+            {
+                "question": "who is john lennon?",
+                "answer": "John Lennon was a musician.",
+            },
+            {
+                "question": "who is john doe?",
+                "answer": "John Doe is a fictional character.",
+            },
+            {
+                "question": "who is goldie hawn?",
+                "answer": "Goldie Hawn is an actress.",
+            },
+            {
+                "question": "who is ru paul?",
+                "answer": "Ru Paul is a drag queen.",
+            },
+        ]
+        jinja_prompt = (
+            "{% for shot in __shots__ %}"
+            "Q: {{shot.question}}\n"
+            "A: {{shot.answer}}\n"
+            "\n"
+            "{% endfor %}"
+            "Q: {{question}}\n"
+            "A: </s>|||{{answer}}"
+        )
+
+        return dataset, jinja_prompt
+
+    def test_fewshot_jinja(self):
+
+        dataset, jinja_prompt = self._few_shot_data_prompt()
+
+        mapper = FewShotJinjaMapper(jinja=jinja_prompt, num_shots=2)
+
+        mapped_dataset = mapper.map(dataset)
+
+        self.assertEqual(len(mapped_dataset), 1)
+
+        self.assertEqual(
+            mapped_dataset[0]["source"],
+            (
+                "Q: Who is Bill Gates?\nA: Bill Gates is a billionaire.\n\n"
+                "Q: who is john lennon?\nA: John Lennon was a musician.\n\n"
+                "Q: who is john doe?\nA: </s>"
+            ),
+        )
+
+        self.assertEqual(
+            mapped_dataset[0]["target"],
+            "John Doe is a fictional character.",
+        )
+
+    def test_few_shot_jinja_zero_shots(self):
+        dataset, jinja_prompt = self._few_shot_data_prompt()
+
+        mapper = FewShotJinjaMapper(jinja=jinja_prompt, num_shots=0)
+
+        mapped_dataset = mapper.map(dataset)
+
+        self.assertEqual(len(mapped_dataset), 5)
+
+        self.assertEqual(
+            mapped_dataset[0]["source"], "Q: Who is Bill Gates?\nA: </s>"
+        )
+
+        self.assertEqual(
+            mapped_dataset[0]["target"],
+            "Bill Gates is a billionaire.",
+        )
+
+        self.assertEqual(
+            mapped_dataset[1]["source"], "Q: who is john lennon?\nA: </s>"
+        )
+        self.assertEqual(
+            mapped_dataset[1]["target"],
+            "John Lennon was a musician.",
         )

@@ -1,10 +1,10 @@
 from .collators import CollatorRecipe, SlowCollatorRecipe
 from .prompting import PromptingRecipe
-from .promptsource import PromptsourceRecipe
+from .promptsource import JinjaRecipe
 
 __all__ = [
     "CollatorRecipe",
     "PromptingRecipe",
-    "PromptsourceRecipe",
+    "JinjaRecipe",
     "SlowCollatorRecipe",
 ]

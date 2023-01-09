@@ -8,6 +8,7 @@ from .collators import (
 )
 from .converters import Python2TorchMapper, Torch2PythonMapper
 from .debug import DebugBatchedMapper, DebugSingleMapper
+from .decoding import DecodingMapper
 from .fields import (
     ChangeFieldsMapper,
     EnumerateFieldMapper,
@@ -43,11 +44,7 @@ from .prompting import (
     FillTextPromptMapper,
     TruncateMultipleFieldsMapper,
 )
-from .promptsource import (
-    DatasetPromptsourceMapper,
-    JinjaPromptsourceMapper,
-    PromptsourceMapper,
-)
+from .promptsource import FewShotJinjaMapper, JinjaMapper, PromptsourceMapper
 from .shape import (
     FlattenMapper,
     SingleSequenceStriderMapper,
@@ -69,12 +66,13 @@ __all__ = [
     "CastMapper",
     "ChangeFieldsMapper",
     "CsvLoaderMapper",
-    "DatasetPromptsourceMapper",
+    "DecodingMapper",
     "DebugBatchedMapper",
     "DebugSingleMapper",
     "EncodeFieldsMapper",
     "EndCachingMapper",
     "EnumerateFieldMapper",
+    "FewShotJinjaMapper",
     "FillEncodedPromptMapper",
     "FillTextPromptMapper",
     "FilterMapper",
@@ -86,7 +84,7 @@ __all__ = [
     "GlomMapper",
     "HuggingFaceDatasetLoaderMapper",
     "IndicesToMaskMapper",
-    "JinjaPromptsourceMapper",
+    "JinjaMapper",
     "JsonlLoaderMapper",
     "LabelsMaskerMapper",
     "ListCollatorMapper",

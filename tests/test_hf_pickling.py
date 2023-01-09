@@ -7,7 +7,7 @@ from necessary import necessary
 from smashed.contrib.squad import ConcatenateContextMapper
 from smashed.mappers import (
     EnumerateFieldMapper,
-    JinjaPromptsourceMapper,
+    JinjaMapper,
     TokenizerMapper,
     TruncateMultipleFieldsMapper,
     UnpackingMapper,
@@ -148,7 +148,7 @@ class TestPickling(unittest.TestCase):
         )
 
     def test_promptsource(self):
-        mp = JinjaPromptsourceMapper(jinja="hello {{world}}")
+        mp = JinjaMapper(jinja="hello {{world}}")
 
         dataset = Dataset.from_dict(
             {"world": [uuid4().hex for _ in range(20)] * 2}
