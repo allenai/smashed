@@ -78,7 +78,13 @@ def get_client_if_needed(path: PathType) -> ClientType:
 
     if parse.scheme == "s3":
         # necessary here will raise an error if boto3 is not installed.
-        with necessary("boto3"):
+        with necessary(
+            "boto3",
+            message=(
+                "{module_name} is required for S3 support;"
+                "run 'pip install smashed[remote]' or 'pip install boto3'."
+            ),
+        ):
             return boto3.client("s3")  # pyright: ignore
     elif parse.scheme == "file" or parse.scheme == "":
         return None  # pyright: ignore
