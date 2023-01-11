@@ -1,11 +1,12 @@
 import shutil
-from contextlib import ExitStack, contextmanager
+from contextlib import AbstractContextManager, ExitStack, contextmanager
+from functools import partial
 from logging import INFO, Logger, getLogger
 from os import remove as remove_local_file
 from os import stat as stat_local_file
 from os import walk as local_walk
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -20,7 +21,8 @@ from typing import (
 )
 from urllib.parse import ParseResult, urlparse
 
-from necessary import Necessary, necessary
+from necessary import necessary
+from typing_extensions import Concatenate, ParamSpec
 
 with necessary("boto3", soft=True) as BOTO_AVAILABLE:
     if TYPE_CHECKING or BOTO_AVAILABLE:
@@ -29,14 +31,17 @@ with necessary("boto3", soft=True) as BOTO_AVAILABLE:
 
 
 __all__ = [
+    "copy_directory",
     "open_file_for_read",
     "open_file_for_write",
     "recursively_list_files",
     "remove_directory",
+    "remove_file",
+    "upload_on_success",
 ]
 
 PathType = Union[str, Path, ParseResult]
-ClientType = Union[BaseClient, None]
+ClientType = Union["BaseClient", None]
 
 
 def uri_stringify(uri: PathType) -> str:
@@ -65,7 +70,6 @@ def get_logger() -> Logger:
 
 
 def get_client_if_needed(path: PathType) -> ClientType:
-
     parse = (
         urlparse(uri_stringify(path))
         if not isinstance(path, ParseResult)
@@ -73,14 +77,15 @@ def get_client_if_needed(path: PathType) -> ClientType:
     )
 
     if parse.scheme == "s3":
-        return boto3.client("s3")  # pyright: ignore
+        # necessary here will raise an error if boto3 is not installed.
+        with necessary("boto3"):
+            return boto3.client("s3")  # pyright: ignore
     elif parse.scheme == "file" or parse.scheme == "":
         return None  # pyright: ignore
     else:
         raise ValueError(f"Unsupported scheme {parse.scheme}")
 
 
-@Necessary("boto3")
 @contextmanager
 def open_file_for_read(
     path: Union[str, Path],
@@ -135,7 +140,6 @@ def open_file_for_read(
             remove_local_file(path)
 
 
-@Necessary("boto3")
 @contextmanager
 def open_file_for_write(
     path: Union[str, Path],
@@ -201,7 +205,6 @@ def open_file_for_write(
             raise ValueError(f"Unsupported scheme {parse.scheme}")
 
 
-@Necessary("boto3")
 def recursively_list_files(
     path: Union[str, Path],
     ignore_hidden_files: bool = True,
@@ -246,7 +249,6 @@ def recursively_list_files(
         raise NotImplementedError(f"Unknown scheme: {parse.scheme}")
 
 
-@Necessary("boto3")
 def copy_directory(
     src: Union[str, Path],
     dst: Union[str, Path],
@@ -304,7 +306,6 @@ def copy_directory(
         cnt += 1
 
 
-@Necessary("boto3")
 def remove_file(path: Union[str, Path], client: Optional[ClientType] = None):
     """Remove a file at the provided path."""
 
@@ -321,7 +322,6 @@ def remove_file(path: Union[str, Path], client: Optional[ClientType] = None):
         raise NotImplementedError(f"Unknown scheme: {parse.scheme}")
 
 
-@Necessary("boto3")
 def remove_directory(
     path: Union[str, Path], client: Optional[ClientType] = None
 ):
@@ -341,3 +341,106 @@ def remove_directory(
         shutil.rmtree(path, ignore_errors=True)
     else:
         raise NotImplementedError(f"Unknown scheme: {parse.scheme}")
+
+
+T = TypeVar("T")
+P = ParamSpec("P")
+
+
+class upload_on_success(AbstractContextManager):
+    """Context manager to upload a directory of results to a remote
+    location if the execution in the context manager is successful.
+
+    You can use this class in two ways:
+
+    1. As a context manager
+
+        ```python
+
+        with upload_on_success('s3://my-bucket/my-results') as path:
+            # run training, save temporary results in `path`
+            ...
+        ```
+
+    2. As a function decorator
+
+        ```python
+        @upload_on_success('s3://my-bucket/my-results')
+        def my_function(path: str, ...)
+            # run training, save temporary results in `path`
+        ```
+
+    You can specify a local destination by passing `local_path` to
+    `upload_on_success`. Otherwise, a temporary directory is created for  you.
+    """
+
+    def __init__(
+        self,
+        remote_path: PathType,
+        local_path: Optional[PathType] = None,
+        keep_local: bool = False,
+    ) -> None:
+        """Constructor for upload_on_success context manager
+
+        Args:
+            remote_path (str or urllib.parse.ParseResult): The remote location
+                to upload to (e.g., an S3 prefix for a bucket you have
+                access to).
+            local_path (str or Path): The local path where to temporarily
+                store files before upload. If not provided, a temporary
+                directory is created for you and returned by the context
+                manager. It will be deleted at the end of the context
+                (unless keep_local is set to True). Defaults to None
+            keep_local (bool, optional): Whether to keep the local results
+                as well as uploading to the remote path. Only available
+                if `local_path` is provided.
+        """
+
+        self._ctx = ExitStack()
+        self.remote_path = remote_path
+        self.local_path = (
+            uri_stringify(local_path)
+            if local_path is not None
+            else self._ctx.enter_context(TemporaryDirectory())
+        )
+        if local_path is None and keep_local:
+            raise ValueError(
+                "Cannot keep local destination if `local_path` is None"
+            )
+        self.keep_local = keep_local
+
+        super().__init__()
+
+    def _decorated(
+        self,
+        func: Callable[Concatenate[str, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        with type(self)(
+            local_path=self.local_path,
+            remote_path=self.remote_path,
+            keep_local=self.keep_local,
+        ) as path:
+            output = func(path, *args, **kwargs)
+        return output
+
+    def __call__(
+        self, func: Callable[Concatenate[str, P], T]
+    ) -> Callable[P, T]:
+        return partial(self._decorated, func=func)  # type: ignore
+
+    def __enter__(self):
+        return self.local_path
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None:
+            # all went well, so we copy the local directory to the remote
+            copy_directory(
+                src=self.local_path, dst=self.remote_path  # pyright: ignore
+            )
+
+        if not self.keep_local:
+            remove_directory(self.local_path)
+
+        self._ctx.close()
