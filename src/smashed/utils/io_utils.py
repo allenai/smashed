@@ -25,10 +25,10 @@ with necessary("boto3", soft=True) as BOTO_AVAILABLE:
 
 
 __all__ = [
-    'open_file_for_read',
-    'open_file_for_write',
-    'recursively_list_files',
-    'remove_directory',
+    "open_file_for_read",
+    "open_file_for_write",
+    "recursively_list_files",
+    "remove_directory",
 ]
 
 
@@ -223,9 +223,7 @@ def copy_directory(
     for source_path in recursively_list_files(
         src, ignore_hidden_files=ignore_hidden_files
     ):
-        destination = dst / Path(source_path).relative_to(
-            src
-        )
+        destination = dst / Path(source_path).relative_to(src)
 
         logger.info(f"Copying {source_path} to {destination}; {cnt:,} so far")
 
