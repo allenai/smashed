@@ -17,8 +17,8 @@ class JinjaRecipe(BaseRecipe):
         tokenizer: PreTrainedTokenizerBase,
         jinja_template: str,
         num_shots: int = 0,
-        max_source_content_length: Optional[int] = None,
-        max_target_content_length: Optional[int] = None,
+        max_source_length_per_shot: Optional[int] = None,
+        max_target_length_per_shot: Optional[int] = None,
         truncation_strategy: Literal["longest", "uniform"] = "longest",
         use_words: bool = True,
         source_fields: Optional[Sequence[str]] = None,
@@ -35,14 +35,15 @@ class JinjaRecipe(BaseRecipe):
                 the source and target; we use promptsource to parse the
                 template and extract the source and target fields; please
                 see the promptsource documentation for more details.
-            max_source_content_length (Optional[int], optional): the maximum
-                length of the source content (i.e., the content that is given
-                as input to the model). If not provided, no truncation will
-                be performed. Defaults to None.
+            max_source_length_per_shot (Optional[int], optional): the maximum
+                length of all the fields that are part of the source in a
+                prompting shot. If not provided, no truncation will be
+                performed. Defaults to None
             max_target_content_length (Optional[int], optional): the maximum
-                length of the target content (i.e., the content that is
-                expected as output from the model). If not provided, no
-                truncation will be performed. Defaults to None.
+                length of all the fields that are part of the target in a
+                prompting shot (that is, the text the model is asked to
+                generate). If not provided, no truncation will be performed.
+                Defaults to None.
             truncation_strategy ("longest" or "uniform"], optional): how to
                 perform truncation if the source or target content is longer
                 than the maximum length. If "longest", the longest fields
@@ -124,17 +125,42 @@ class JinjaRecipe(BaseRecipe):
             # if we don't use words, we just use the length of the prompt
             # in characters.
             length_src_prompt = len(source_text)
-            length_tgt_prompt = len(target_text)
+            # for target, we actually take the max in case there are multiple,
+            # and 0 if there are none.
+            length_tgt_prompt = max([len(t) for t in target_text] or [0])
 
-        if max_source_content_length is not None:
+        # one liner to round to ceil. avoid import of math.ceil
+        def ceil(x):
+            return int(x + (1 if x % 1 else 0))  # noqa: E731
+
+        if max_source_length_per_shot is not None:
             # in case a max length for the source is provided, we need to
-            # truncate; first, we decrease the max length by the length of
-            # prompt text.
-            max_source_content_length -= length_src_prompt
+            # truncate. The total max_length for source data in each shot
+            # needs to be reduce by (a) the length of the target prompt
+            # text when doing few-shot, and (b) the length of text of
+            # the prompt.
+            #
+            # For both (a) and (b), we need to distribute the length by
+            # the number of shorts:
+            #   (a): recall that each prompt will contain n shots + the
+            #        prompt for the sequence we care about. So when doing
+            #        n shot, we are adding n target sequences, but are
+            #        truncating n + 1 target sequences. Therefore, we multiply
+            #        target length by n but divide by (n + 1)
+            #   (b): the text that is part of the prompt but is not variables
+            #        (e.g., instructions) must be divided over n + 1 sources.
+            actual_source_context_length = (
+                max_source_length_per_shot
+                - ceil(
+                    (max_target_length_per_shot or 0)
+                    * (num_shots / (num_shots + 1))
+                )
+                - ceil(length_src_prompt / (num_shots + 1))
+            )
 
             # we raise if the max length is less than one after accounting
             # for the length of the prompt text.
-            if max_source_content_length < 1:
+            if actual_source_context_length < 1:
                 raise ValueError(
                     f"max_source_content_length must be at least equal to "
                     f"the length of the source prompt ({length_src_prompt})!"
@@ -144,17 +170,17 @@ class JinjaRecipe(BaseRecipe):
             self.chain(
                 TruncateMultipleFieldsMapper(
                     fields_to_truncate=source_fields,
-                    max_length=max_source_content_length,
+                    max_length=actual_source_context_length,
                     strategy=truncation_strategy,
                 )
             )
 
-        if len(target_text) > 0 and max_target_content_length:
+        if len(target_text) > 0 and max_target_length_per_shot:
             # we operate here in the same way as for the source, but we
             # only do it if there is a target prompt.
-            max_target_content_length -= length_tgt_prompt
+            max_target_length_per_shot -= length_tgt_prompt
 
-            if max_target_content_length < 1:
+            if max_target_length_per_shot < 1:
                 raise ValueError(
                     f"max_target_content_length must be at least equal to "
                     f"the length of the target prompt ({length_tgt_prompt})!"
@@ -163,7 +189,7 @@ class JinjaRecipe(BaseRecipe):
             self.chain(
                 TruncateMultipleFieldsMapper(
                     fields_to_truncate=target_fields,
-                    max_length=max_target_content_length,
+                    max_length=max_target_length_per_shot,
                     strategy=truncation_strategy,
                 )
             )
