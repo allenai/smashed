@@ -1,12 +1,11 @@
 import unittest
 
 from smashed.mappers.promptsource import (
+    FewShotJinjaMapper,
     JinjaMapper,
     PromptsourceMapper,
     SingleTransformPromptsourceMixin,
-    FewShotJinjaMapper
 )
-
 
 FEW_SHOT_DATASET = [
     {
@@ -111,7 +110,7 @@ class TestPromptsource(unittest.TestCase):
 
         self.assertEqual(
             mapped_dataset[0]["target"],
-            FEW_SHOT_DATASET[2]['answer'],
+            FEW_SHOT_DATASET[2]["answer"],
         )
 
     def test_few_shot_jinja_zero_shots(self):
@@ -129,7 +128,7 @@ class TestPromptsource(unittest.TestCase):
 
             self.assertEqual(
                 mapped_dataset[i]["target"],
-                FEW_SHOT_DATASET[i]['answer'],
+                FEW_SHOT_DATASET[i]["answer"],
             )
 
     def test_few_shot_exception(self):

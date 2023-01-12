@@ -1,8 +1,8 @@
 import unittest
 
 from transformers.models.auto import AutoTokenizer
-from smashed.recipes.promptsource import JinjaRecipe
 
+from smashed.recipes.promptsource import JinjaRecipe
 
 FEW_SHOT_DATASET = [
     {
@@ -28,7 +28,7 @@ FEW_SHOT_DATASET = [
     {
         "question": "who is john wayne?",
         "answer": "John Wayne was an actor; he's dead!",
-    }
+    },
 ]
 
 FEW_SHOT_PROMPT = (
@@ -44,7 +44,9 @@ FEW_SHOT_PROMPT = (
 
 class TestPromptsource(unittest.TestCase):
     def setUp(self) -> None:
-        self.tokenizer = AutoTokenizer.from_pretrained("t5-small")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            "t5-small", model_max_length=512
+        )
 
     def test_promptsource_recipe(self):
         recipe = JinjaRecipe(
@@ -85,7 +87,7 @@ class TestPromptsource(unittest.TestCase):
             num_shots=2,
             max_source_length_per_shot=31,
             max_target_length_per_shot=14,
-            use_words=False
+            use_words=False,
         )
 
         mapped_dataset = mapper.map(FEW_SHOT_DATASET)
@@ -111,11 +113,11 @@ class TestPromptsource(unittest.TestCase):
                 f"A: {FEW_SHOT_DATASET[1]['answer'][:14].rstrip()} "
                 f"Q: {FEW_SHOT_DATASET[2]['question'][:14].rstrip()} "
                 "A:</s>"
-            )
+            ),
         )
         self.assertEqual(
             self.tokenizer.decode(mapped_dataset[0]["labels"]),
-            FEW_SHOT_DATASET[2]['answer'][:14].rstrip()
+            FEW_SHOT_DATASET[2]["answer"][:14].rstrip(),
         )
 
         # do it for the other few shot sample.
@@ -128,10 +130,10 @@ class TestPromptsource(unittest.TestCase):
                 f"A: {FEW_SHOT_DATASET[4]['answer'][:14].rstrip()} "
                 f"Q: {FEW_SHOT_DATASET[5]['question'][:14].rstrip()} "
                 "A:</s>"
-            )
+            ),
         )
 
         self.assertEqual(
             self.tokenizer.decode(mapped_dataset[1]["labels"]),
-            FEW_SHOT_DATASET[5]['answer'][:14].rstrip()
+            FEW_SHOT_DATASET[5]["answer"][:14].rstrip(),
         )
