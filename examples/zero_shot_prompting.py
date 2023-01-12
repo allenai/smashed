@@ -38,8 +38,8 @@ class ZeroShotPrompting:
         self.recipe = smashed.recipes.JinjaRecipe(
             tokenizer=self.tokenizer,
             jinja_template=template,
-            max_source_content_length=max_source_content_length,
-            max_target_content_length=max_target_content_length,
+            max_source_length_per_shot=max_source_content_length,
+            max_target_length_per_shot=max_target_content_length,
         ) >> smashed.recipes.CollatorRecipe(
             tokenizer=self.tokenizer,
             device=device,

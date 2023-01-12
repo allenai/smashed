@@ -245,7 +245,6 @@ class TruncateMultipleFieldsMapper(SingleBaseMapper):
         redistributed_extra_len = cls._find_truncated_lens_uniform(
             lens=longer_than_average,
             max_len=extra_len_to_redistribute,
-            # max_length=max_len,
         )
 
         # we figure out new lengths by adding the redistributed extra length
