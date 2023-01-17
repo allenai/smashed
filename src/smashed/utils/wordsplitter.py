@@ -33,7 +33,7 @@ class BaseWordSplitter:
         "{module_name} missing. Fix with 'pip install smashed[prompting]'"
         "or, if you are on a Mac with Apple Silicon chip, "
         "'python -m smashed.utils.install_blingfire_macos'."
-    )
+    ),
 )
 class BlingFireSplitter(BaseWordSplitter):
     def tokenize(self, text: str) -> List[str]:

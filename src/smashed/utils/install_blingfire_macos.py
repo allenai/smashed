@@ -2,7 +2,7 @@
 
 from subprocess import call
 
-BASH_SCRIPT = '''
+BASH_SCRIPT = """
 #! /usr/bin/env bash
 
 # path to the current directory
@@ -35,7 +35,7 @@ pip install --force-reinstall dist/blingfire-*-py3-none-any.whl
 # cleanup
 cd $CURRENT_DIR
 rm -rf $TMP_DIR
-'''
+"""
 
 
 def main():

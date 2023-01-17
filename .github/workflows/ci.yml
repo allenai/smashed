@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: [3.8]
+        python: [3.9]
         task:
           - name: Style
             run: |
@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v4.5.0
+        uses: actions/setup-python@v4.4.0
         with:
           python-version: ${{ matrix.python }}
 
@@ -75,10 +75,13 @@ jobs:
 
       - name: Setup virtual environment (no cache hit)
         if: steps.virtualenv-cache.outputs.cache-hit != 'true'
+        # we run pip install twice because otherwise we get stuck into
+        # backtracking for pytorch. if we got for the first install, we
+        # will automatically get the latest version of pytorch.
         run: |
           test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
           . .venv/bin/activate
-          pip install -e .[all]
+          pip install . && rm -rf build && pip install -e .[all]
 
       - name: Setup virtual environment (cache hit)
         if: steps.virtualenv-cache.outputs.cache-hit == 'true'
