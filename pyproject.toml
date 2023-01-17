@@ -17,8 +17,8 @@ requires-python = ">=3.9"
 dependencies = [
     "torch>=1.9",
     "transformers>=4.5",
-    "necessary>=0.3.2",
-    "trouting>=0.3.2",
+    "necessary>=0.3.3",
+    "trouting>=0.3.3",
     "ftfy>=6.1.1",
     "platformdirs>=2.5.0",
     "glom>=21.0.0",
