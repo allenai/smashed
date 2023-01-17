@@ -11,5 +11,5 @@ def make_pipeline(
 ) -> M:
     """Make a pipeline of mappers."""
     for mapper in rest_mappers:
-        first_mapper = first_mapper.chain(mapper)
+        first_mapper.chain(mapper)
     return first_mapper

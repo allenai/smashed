@@ -24,17 +24,15 @@ class ChainableMapperMixIn(AbstractBaseMapper):
     fingerprint: str
     pipeline: Union["ChainableMapperMixIn", None]
 
-    def pip(self, n: Optional[int] = None):
+    def __getitem__(self, n: int) -> "ChainableMapperMixIn":
         """Return the n-th mapper in the pipeline, or the next if
         n is not provided. If n is 0, return this mapper."""
-        if n is None:
-            return self.pipeline
-        elif n == 0:
+        if n == 0:
             return self
         elif self.pipeline is None:
             raise IndexError("Pipeline index out of range")
         else:
-            return self.pipeline.pip(n - 1)
+            return self.pipeline[n - 1]
 
     def __init__(
         self,
