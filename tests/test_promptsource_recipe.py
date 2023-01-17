@@ -52,12 +52,15 @@ class TestPromptsource(unittest.TestCase):
         recipe = JinjaRecipe(
             tokenizer=self.tokenizer,
             jinja_template="Q: {{question}}\nC: {{context}}\nA: |||{{answer}}",
-            max_source_length_per_shot=15,
+            # this used to be 15, but now using 'whitespace_plus' tokenizer
+            # as default, which means that we have a few more tokens in the
+            # non-variables part of the prompt.
+            max_source_length_per_shot=18,
             max_target_length_per_shot=5,
         )
         dataset = [
             {
-                "question": "What is the capital of France?",
+                "question": "What is the capital of France",
                 "context": "Paris is the capital of " + ("France " * 10),
                 "answer": "Paris " * 10,
             }
@@ -68,7 +71,7 @@ class TestPromptsource(unittest.TestCase):
         self.assertEqual(
             self.tokenizer.decode(mapped_dataset["input_ids"]),
             (
-                "Q: What is the capital of France? "
+                "Q: What is the capital of France "
                 "C: Paris is the capital of France "
                 "A:"
             ),

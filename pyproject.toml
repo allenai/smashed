@@ -1,14 +1,19 @@
 [project]
 name = "smashed"
-    version = "0.15.4"
-description = "Sequential MAppers for Sequences of HEterogeneous Dictionaries is a set of Python interfaces designed to apply transformations to samples in datasets, which are often implemented as sequences of dictionaries."
-authors = [
-    {name = "Allen Institute for Artificial Intelligence", email = "contact@allenai.org" },
-    {name = "Luca Soldaini", email = "luca@soldaini.net"}
-]
+version = "0.15.5"
+description = """\
+SMASHED is a toolkit designed to apply transformations to samples in \
+datasets, such as fields extraction, tokenization, prompting, batching, \
+and more. Supports datasets from Huggingface, torchdata iterables, or \
+simple lists of dictionaries.\
+"""
+# authors = [
+#     {name = "Allen Institute for Artificial Intelligence", email = "contact@allenai.org"},
+#     {name = "Luca Soldaini", email = "luca@soldaini.net"}
+# ]
 license = {text = "Apache-2.0"}
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "torch>=1.9",
     "transformers>=4.5",
@@ -17,6 +22,7 @@ dependencies = [
     "ftfy>=6.1.1",
     "platformdirs>=2.5.0",
     "glom>=21.0.0",
+    "Jinja2>=3.0.3",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -32,20 +38,35 @@ keywords = [
     "mappers",
     "pytorch",
     "torch",
-    "huggingfae",
+    "huggingface",
     "transformers",
     "datasets",
     "dict",
-    "datset",
     "pipeline",
     "preprocessing",
     "nlp",
     "natural language processing",
     "text",
-    "prompting"
+    "prompting",
+    "prefix tuning",
+    "in context learning"
 ]
 
+[[project.authors]]
+name = "Allen Institute for Artificial Intelligence"
+email = "contact@allenai.org"
 
+[[project.authors]]
+name = "Luca Soldaini"
+email = "luca@soldaini.net"
+
+[[project.authors]]
+name = "Kyle Lo"
+email = "kylel@allenai.org"
+
+[[project.maintainers]]
+name = "Luca Soldaini"
+email = "luca@soldaini.net"
 
 [project.urls]
 "Homepage" = "https://github.com/allenai/smashed"
@@ -70,7 +91,7 @@ requires = [
 
 [project.optional-dependencies]
 dev = [
-    "springs>=1.8.3",
+    "springs>=1.9.1",
     "black[jupyter]>=21.12b0",
     "isort>=5.8.0",
     "mypy>=0.971",
@@ -87,17 +108,16 @@ remote = [
     "boto3>=1.25.5",
 ]
 datasets = [
-  "datasets>=2.4.0",
+  "datasets>=2.8.0",
   "dill>=0.3.0",
 ]
 prompting = [
     "promptsource>=0.2.3",
     "blingfire>=0.1.8",
-    "PyYAML>=6.0.0",
 ]
 torchdata = [
-  "torch>=1.12.1",
-  "torchdata>=0.4.1"
+  "torch>=1.13.1",
+  "torchdata>=0.5.1"
 ]
 all = [
     "smashed[dev]",

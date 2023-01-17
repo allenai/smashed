@@ -1,16 +1,15 @@
+#! /usr/bin/env python3
+
+from subprocess import call
+
+BASH_SCRIPT = '''
 #! /usr/bin/env bash
 
-# get script directory
-SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
-  SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
-  SOURCE="$(readlink "$SOURCE")"
-  # if $SOURCE was a relative symlink, we need to resolve it
-  # relative to the path where the symlink file was located
-  [[ $SOURCE != /* ]] && SOURCE="$SCRIPT_DIR/$SOURCE"
-done
-SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+# path to the current directory
 CURRENT_DIR="$(pwd)"
+
+# remove any existing blingfire installation
+pip uninstall -y blingfire 2>/dev/null
 
 # clone blingfire repo to a temp directory
 TMP_DIR=$(mktemp -d)
@@ -36,3 +35,12 @@ pip install --force-reinstall dist/blingfire-*-py3-none-any.whl
 # cleanup
 cd $CURRENT_DIR
 rm -rf $TMP_DIR
+'''
+
+
+def main():
+    call(BASH_SCRIPT.strip(), shell=True)
+
+
+if __name__ == "__main__":
+    main()
