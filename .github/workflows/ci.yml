@@ -75,10 +75,13 @@ jobs:
 
       - name: Setup virtual environment (no cache hit)
         if: steps.virtualenv-cache.outputs.cache-hit != 'true'
+        # we run pip install twice because otherwise we get stuck into
+        # backtracking for pytorch. if we got for the first install, we
+        # will automatically get the latest version of pytorch.
         run: |
           test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
           . .venv/bin/activate
-          pip install . && pip install -e .[all]
+          pip install . && rm -rf build && pip install -e .[all]
 
       - name: Setup virtual environment (cache hit)
         if: steps.virtualenv-cache.outputs.cache-hit == 'true'
