@@ -52,7 +52,9 @@ class TestPromptsource(unittest.TestCase):
         recipe = JinjaRecipe(
             tokenizer=self.tokenizer,
             jinja_template="Q: {{question}}\nC: {{context}}\nA: |||{{answer}}",
-            max_source_length_per_shot=15,
+            # this used to be 15, but now using 'whitespace_plus' tokenizer
+            # as default, so it's 19.
+            max_source_length_per_shot=19,
             max_target_length_per_shot=5,
         )
         dataset = [

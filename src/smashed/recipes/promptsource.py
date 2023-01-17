@@ -151,10 +151,12 @@ class JinjaRecipe(BaseRecipe):
             #        (e.g., instructions) must be divided over n + 1 sources.
             actual_source_context_length = (
                 max_source_length_per_shot
+                # this is (a) from above
                 - ceil(
                     (max_target_length_per_shot or 0)
                     * (num_shots / (num_shots + 1))
                 )
+                # this is (b) from above
                 - ceil(length_src_prompt / (num_shots + 1))
             )
 

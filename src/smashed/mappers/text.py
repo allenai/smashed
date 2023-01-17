@@ -71,7 +71,7 @@ class TextToWordsMapper(SingleBaseMapper):
         fields: Union[str, Sequence[str]],
         splitter: Literal[
             "blingfire", "whitespace", "whitespace_plus"
-        ] = "whitespace",
+        ] = "whitespace_plus",
     ):
         if splitter == "blingfire":
             self.splitter = BlingFireSplitter()
