@@ -7,13 +7,9 @@ datasets, such as fields extraction, tokenization, prompting, batching, \
 and more. Supports datasets from Huggingface, torchdata iterables, or \
 simple lists of dictionaries.\
 """
-# authors = [
-#     {name = "Allen Institute for Artificial Intelligence", email = "contact@allenai.org"},
-#     {name = "Luca Soldaini", email = "luca@soldaini.net"}
-# ]
 license = {text = "Apache-2.0"}
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 dependencies = [
     "torch>=1.9",
     "transformers>=4.5",
