@@ -9,6 +9,8 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 from ..base import SingleBaseMapper, TransformElementType
 from .tokenize import GetTokenizerOutputFieldsAndNamesMixIn
+from ..utils.shape_utils import flatten_with_indices, reconstruct_from_indices
+
 
 __all__ = [
     "EncodeFieldsMapper",
@@ -288,6 +290,30 @@ class TruncateMultipleFieldsMapper(SingleBaseMapper):
         # we add back to the output the fields that we are not truncating
         output.update({k: data[k] for k in self.fields_to_preserve})
 
+        return output
+
+
+class TruncateMultipleNestedFieldsMapper(TruncateMultipleFieldsMapper):
+    """Like TruncateMultipleFieldsMapper, but works on nested fields."""
+
+    def transform(self, data: TransformElementType) -> TransformElementType:
+        # gather fields to truncate in flatted_data, keep track of
+        # the indices of the fields in flatted_index
+        flatted_index: dict = {}
+        flatted_data: dict = {}
+
+        for k in self.input_fields:
+            flatted_data[k], flatted_index[k] = flatten_with_indices(data[k])
+
+        flatted_output = super().transform(flatted_data)
+
+        output = {
+            k: (
+                reconstruct_from_indices(flatted_output[k], flatted_index[k])
+                if k in flatted_output else data[k]
+            )
+            for k in data
+        }
         return output
 
 
