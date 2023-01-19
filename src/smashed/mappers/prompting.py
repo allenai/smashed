@@ -8,9 +8,8 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 from ..base import SingleBaseMapper, TransformElementType
-from .tokenize import GetTokenizerOutputFieldsAndNamesMixIn
 from ..utils.shape_utils import flatten_with_indices, reconstruct_from_indices
-
+from .tokenize import GetTokenizerOutputFieldsAndNamesMixIn
 
 __all__ = [
     "EncodeFieldsMapper",
@@ -310,7 +309,8 @@ class TruncateMultipleNestedFieldsMapper(TruncateMultipleFieldsMapper):
         output = {
             k: (
                 reconstruct_from_indices(flatted_output[k], flatted_index[k])
-                if k in flatted_output else data[k]
+                if k in flatted_output
+                else data[k]
             )
             for k in data
         }
