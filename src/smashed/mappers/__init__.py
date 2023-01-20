@@ -43,6 +43,7 @@ from .prompting import (
     FillEncodedPromptMapper,
     FillTextPromptMapper,
     TruncateMultipleFieldsMapper,
+    TruncateMultipleNestedFieldsMapper,
 )
 from .promptsource import FewShotJinjaMapper, JinjaMapper, PromptsourceMapper
 from .shape import (
@@ -112,6 +113,7 @@ __all__ = [
     "TokenTypeIdsSequencePaddingMapper",
     "Torch2PythonMapper",
     "TruncateMultipleFieldsMapper",
+    "TruncateMultipleNestedFieldsMapper",
     "TruncateSingleFieldMapper",
     "UnpackingMapper",
     "ValidUnicodeMapper",
