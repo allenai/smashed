@@ -16,6 +16,7 @@ __all__ = [
     "FillEncodedPromptMapper",
     "FillTextPromptMapper",
     "TruncateMultipleFieldsMapper",
+    "TruncateMultipleNestedFieldsMapper"
 ]
 
 
