@@ -43,7 +43,7 @@ from .prompting import (
     FillEncodedPromptMapper,
     FillTextPromptMapper,
     TruncateMultipleFieldsMapper,
-    TruncateMultipleNestedFieldsMapper
+    TruncateMultipleNestedFieldsMapper,
 )
 from .promptsource import FewShotJinjaMapper, JinjaMapper, PromptsourceMapper
 from .shape import (
