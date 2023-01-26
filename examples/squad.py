@@ -14,7 +14,7 @@ pipeline = (
     )
     >> sm.TextToWordsMapper(
         fields=["question", "context", "answers"],
-        splitter="whitespace",
+        splitter="ws",
     )
     >> sm.SingleSequenceStriderMapper(
         field_to_stride=["context"],
