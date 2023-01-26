@@ -8,7 +8,12 @@ with necessary("blingfire", soft=True) as BLINGFIRE_AVAILABLE:
         from blingfire import text_to_words
 
 
-__all__ = ["WhitespaceSplitter", "BlingFireSplitter"]
+__all__ = [
+    "WhitespaceSplitter",
+    "BlingFireSplitter",
+    "WhitespacePlusSplitter",
+    "WhitespaceTrailSplitter",
+]
 
 
 class BaseWordSplitter:
@@ -53,3 +58,14 @@ class WhitespacePlusSplitter(WhitespaceSplitter):
     def __init__(self, language: str = "en"):
         super().__init__(language)
         self.tokenizer = Whitespace()
+
+
+class WhitespaceTrailSplitter(WhitespacePlusSplitter):
+    def tokenize(self, text: str) -> List[str]:
+        # the start of each token
+        locs = [s for _, (s, _) in self.tokenizer.pre_tokenize_str(text)]
+
+        # we include any trailing whitespace in the token
+        return [text[locs[i] : locs[i + 1]] for i in range(len(locs) - 1)] + [
+            text[locs[-1] :]
+        ]

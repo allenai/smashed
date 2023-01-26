@@ -9,6 +9,7 @@ from ..utils.wordsplitter import (
     BlingFireSplitter,
     WhitespacePlusSplitter,
     WhitespaceSplitter,
+    WhitespaceTrailSplitter,
 )
 
 
@@ -69,15 +70,15 @@ class TextToWordsMapper(SingleBaseMapper):
     def __init__(
         self,
         fields: Union[str, Sequence[str]],
-        splitter: Literal[
-            "blingfire", "whitespace", "whitespace_plus"
-        ] = "whitespace_plus",
+        splitter: Literal["blingfire", "ws", "plus", "trail"] = "plus",
     ):
         if splitter == "blingfire":
             self.splitter = BlingFireSplitter()
-        elif splitter == "whitespace_plus":
+        elif splitter == "plus":
             self.splitter = WhitespacePlusSplitter()
-        elif splitter == "whitespace":
+        elif splitter == "trail":
+            self.splitter = WhitespaceTrailSplitter()
+        elif splitter == "ws":
             self.splitter = WhitespaceSplitter()
         else:
             raise ValueError(f"Unknown splitter: {splitter}")
