@@ -1,7 +1,7 @@
 import re
 import shutil
-from dataclasses import dataclass
 from contextlib import AbstractContextManager, ExitStack, contextmanager
+from dataclasses import dataclass
 from functools import partial, reduce
 from logging import INFO, Logger, getLogger
 from os import remove as remove_local_file
@@ -26,7 +26,6 @@ from urllib.parse import urlparse
 from necessary import necessary
 from typing_extensions import Concatenate, ParamSpec
 
-
 with necessary("boto3", soft=True) as BOTO_AVAILABLE:
     if TYPE_CHECKING or BOTO_AVAILABLE:
         import boto3
@@ -43,27 +42,28 @@ __all__ = [
     "upload_on_success",
 ]
 
-PathType = Union[str, Path, 'MultiPath']
+PathType = Union[str, Path, "MultiPath"]
 ClientType = Union["BaseClient", None]
 
 
 @dataclass
 class MultiPath:
     """A path object that can handle both local and remote paths."""
+
     prot: str
     root: str
     path: str
 
     def __post_init__(self):
-        SUPPORTED_PROTOCOLS = {'s3', 'file'}
+        SUPPORTED_PROTOCOLS = {"s3", "file"}
         if self.prot and self.prot not in SUPPORTED_PROTOCOLS:
             raise ValueError(
-                f'Unsupported protocol: {self.prot}; '
-                f'supported protocols are {SUPPORTED_PROTOCOLS}'
+                f"Unsupported protocol: {self.prot}; "
+                f"supported protocols are {SUPPORTED_PROTOCOLS}"
             )
 
     @classmethod
-    def parse(cls, path: PathType) -> 'MultiPath':
+    def parse(cls, path: PathType) -> "MultiPath":
         """Parse a path into a PathParser object.
 
         Args:
@@ -78,22 +78,22 @@ class MultiPath:
     @property
     def is_s3(self) -> bool:
         """Is true if the path is an S3 path."""
-        return self.prot == 's3'
+        return self.prot == "s3"
 
     @property
     def is_local(self) -> bool:
         """Is true if the path is a local path."""
-        return self.prot == 'file' or self.prot == ''
+        return self.prot == "file" or self.prot == ""
 
     def _remove_extra_slashes(self, path: str) -> str:
-        return re.sub(r'//+', '/', path)
+        return re.sub(r"//+", "/", path)
 
     def __str__(self) -> str:
         if self.prot:
-            loc = self._remove_extra_slashes(f'{self.root}/{self.path}')
-            return f'{self.prot}://{loc}'
+            loc = self._remove_extra_slashes(f"{self.root}/{self.path}")
+            return f"{self.prot}://{loc}"
         elif self.root:
-            return self._remove_extra_slashes(f'/{self.root}/{self.path}')
+            return self._remove_extra_slashes(f"/{self.root}/{self.path}")
         else:
             return self._remove_extra_slashes(self.path)
 
@@ -102,7 +102,7 @@ class MultiPath:
         """If the path is an S3 path, return the bucket name.
         Otherwise, raise a ValueError."""
         if not self.is_s3:
-            raise ValueError(f'Not an S3 path: {self}')
+            raise ValueError(f"Not an S3 path: {self}")
         return self.root
 
     @property
@@ -110,14 +110,14 @@ class MultiPath:
         """If the path is an S3 path, return the prefix.
         Otherwise, raise a ValueError."""
         if not self.is_s3:
-            raise ValueError(f'Not an S3 path: {self}')
-        return self.path.lstrip('/')
+            raise ValueError(f"Not an S3 path: {self}")
+        return self.path.lstrip("/")
 
     @property
     def as_path(self) -> Path:
         """Return the path as a pathlib.Path object."""
         if not self.is_local:
-            raise ValueError(f'Not a local path: {self}')
+            raise ValueError(f"Not a local path: {self}")
         return Path(self.as_str)
 
     def __hash__(self) -> int:
@@ -135,34 +135,34 @@ class MultiPath:
         """Return the path as a string."""
         return str(self)
 
-    def __truediv__(self, other: PathType) -> 'MultiPath':
+    def __truediv__(self, other: PathType) -> "MultiPath":
         """Join two paths together using the / operator."""
         other = MultiPath.parse(other)
 
         if isinstance(other, MultiPath) and other.prot:
-            raise ValueError(f'Cannot combine fully formed path {other}')
+            raise ValueError(f"Cannot combine fully formed path {other}")
 
         return MultiPath(
             prot=self.prot,
             root=self.root,
-            path=f"{self.path.rstrip('/')}/{str(other).lstrip('/')}"
+            path=f"{self.path.rstrip('/')}/{str(other).lstrip('/')}",
         )
 
     def __len__(self) -> int:
         return len(self.as_str)
 
-    def __sub__(self, other: PathType) -> 'MultiPath':
+    def __sub__(self, other: PathType) -> "MultiPath":
         _o_str = MultiPath.parse(other).as_str
         _s_str = self.as_str
         loc = _s_str.find(_o_str)
-        return MultiPath.parse(_s_str[:loc] + _s_str[loc + len(_o_str):])
+        return MultiPath.parse(_s_str[:loc] + _s_str[loc + len(_o_str) :])
 
     @classmethod
-    def join(cls, *others: PathType) -> 'MultiPath':
+    def join(cls, *others: PathType) -> "MultiPath":
         """Join multiple paths together; each path can be a string,
         pathlib.Path, or MultiPath object."""
         if not others:
-            raise ValueError('No paths provided')
+            raise ValueError("No paths provided")
 
         first, *rest = others
         first = cls.parse(first)
@@ -345,7 +345,7 @@ def recursively_list_files(
                         prefixes.append(obj["Key"])
                     else:
                         yield MultiPath(
-                            prot='s3', root=path.root, path=obj['Key']
+                            prot="s3", root=path.root, path=obj["Key"]
                         )
 
     if path.is_local:
