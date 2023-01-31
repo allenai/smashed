@@ -178,7 +178,7 @@ def get_logger() -> Logger:
     return logger
 
 
-def get_client_if_needed(path: PathType) -> ClientType:
+def get_client_if_needed(path: PathType, **boto3_kwargs: Any) -> ClientType:
     """Return the appropriate client given the protocol of the path."""
 
     path = MultiPath.parse(path)
@@ -192,7 +192,7 @@ def get_client_if_needed(path: PathType) -> ClientType:
                 "run 'pip install smashed[remote]' or 'pip install boto3'."
             ),
         ):
-            return boto3.client("s3")  # pyright: ignore
+            return boto3.client("s3", **boto3_kwargs)  # pyright: ignore
 
     return None  # pyright: ignore
 
