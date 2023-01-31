@@ -2,7 +2,7 @@ import re
 import shutil
 from contextlib import AbstractContextManager, ExitStack, contextmanager
 from dataclasses import dataclass
-from functools import partial, reduce
+from functools import partial
 from logging import INFO, Logger, getLogger
 from os import remove as remove_local_file
 from os import stat as stat_local_file
