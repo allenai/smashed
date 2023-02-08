@@ -4,10 +4,14 @@ from itertools import chain
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from necessary import necessary
 
 from ..base import SingleBaseMapper, TransformElementType
 from ..base.abstract import AbstractBaseMapper
+
+with necessary("transformers", soft=True):
+    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+
 
 __all__ = [
     "ListCollatorMapper",
@@ -87,7 +91,7 @@ CollatorMixIn = BaseCollator
 class FromTokenizerMixIn(BaseCollator):
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: 'PreTrainedTokenizerBase',
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,

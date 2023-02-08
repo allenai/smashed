@@ -1,6 +1,6 @@
 from typing import Dict, Literal, Optional, Sequence, TypeVar, Union
 
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from necessary import necessary
 
 from ..base.mappers import ChainableMapperMixIn
 from ..base.recipes import BaseRecipe
@@ -11,6 +11,9 @@ from ..mappers.prompting import (
     TruncateMultipleFieldsMapper,
 )
 from ..mappers.shape import SingleSequenceStriderMapper
+
+with necessary("transformers", soft=True):
+    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 C = TypeVar("C", bound=ChainableMapperMixIn)
 
@@ -34,7 +37,7 @@ class PromptingRecipe(BaseRecipe):
 
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: 'PreTrainedTokenizerBase',
         source_template: str,
         source_add_bos_token: bool = True,
         source_add_eos_token: bool = False,
@@ -229,7 +232,7 @@ class PromptingRecipe(BaseRecipe):
         self,
         pipeline: C,
         prompt_mapper: FillEncodedPromptMapper,
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: 'PreTrainedTokenizerBase',
         all_fields_to_truncate: Sequence[str],
         all_fields_to_stride: Sequence[str],
         strategy: Union[Literal["longest"], Literal["uniform"]],

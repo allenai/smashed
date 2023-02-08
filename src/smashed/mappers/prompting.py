@@ -4,12 +4,14 @@ from math import floor
 from string import Formatter
 from typing import Dict, List, Literal, Optional, Sequence, Union
 
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+from necessary import necessary
 
 from ..base import SingleBaseMapper, TransformElementType
 from ..utils.shape_utils import flatten_with_indices, reconstruct_from_indices
 from .tokenize import GetTokenizerOutputFieldsAndNamesMixIn
+
+with necessary("transformers", soft=True):
+    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 __all__ = [
     "EncodeFieldsMapper",
@@ -23,7 +25,7 @@ __all__ = [
 class EncodeFieldsMapper(SingleBaseMapper):
     """Simply encodes the fields in the input data using the tokenizer."""
 
-    tokenizer: PreTrainedTokenizerBase
+    tokenizer: 'PreTrainedTokenizerBase'
     is_split_into_words: bool
     fields_to_encode: Dict[str, None]
 
@@ -35,7 +37,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
     def __init__(
         self,
         fields_to_encode: Sequence[str],
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: 'PreTrainedTokenizerBase',
         is_split_into_words: bool = False,
         fields_to_return_offset_mapping: Union[Sequence[str], bool] = False,
         offset_prefix: str = "offset",
@@ -61,13 +63,16 @@ class EncodeFieldsMapper(SingleBaseMapper):
                 new field with offsets. Defaults to "pos_start".
         """
 
-        if fields_to_return_offset_mapping and not isinstance(
-            tokenizer, PreTrainedTokenizerFast
-        ):
-            raise TypeError(
-                "return_offsets_mapping is only supported for fast tokenizers,"
-                " i.e. those that inherit from PreTrainedTokenizerFast."
-            )
+        if fields_to_return_offset_mapping and necessary("transformers"):
+            from transformers.tokenization_utils_fast \
+                import PreTrainedTokenizerFast
+
+            if not isinstance(tokenizer, PreTrainedTokenizerFast):
+                raise TypeError(
+                    "return_offsets_mapping is only supported for fast "
+                    "tokenizers, i.e., those that inherit from "
+                    "PreTrainedTokenizerFast."
+                )
 
         if isinstance(fields_to_return_offset_mapping, bool):
             # if user provides true, it means they want to return the
@@ -139,7 +144,7 @@ class TruncateMultipleFieldsMapper(SingleBaseMapper):
         self,
         fields_to_truncate: List[str],
         fields_to_preserve: Optional[List[str]] = None,
-        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+        tokenizer: Optional['PreTrainedTokenizerBase'] = None,
         max_length: Optional[int] = None,
         length_penalty: int = 0,
         strategy: Union[Literal["longest"], Literal["uniform"]] = "longest",

@@ -7,9 +7,12 @@ Bunch of tokenization mappers for the smashed library.
 import unicodedata
 from typing import Any, Dict, List, Optional
 
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from necessary import necessary
 
 from ..base import SingleBaseMapper, TransformElementType
+
+with necessary("transformers", soft=True):
+    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 __all__ = [
     "PaddingMapper",
@@ -23,7 +26,7 @@ class GetTokenizerOutputFieldsAndNamesMixIn:
     """A mixin class that figures out the output fields based on the arguments
     that will be passed a to tokenizer.__call__ method."""
 
-    tokenizer: PreTrainedTokenizerBase
+    tokenizer: 'PreTrainedTokenizerBase'
     _prefix: Optional[str]
 
     def __init__(
@@ -81,7 +84,7 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsAndNamesMixIn):
 
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: 'PreTrainedTokenizerBase',
         input_field: str,
         output_prefix: Optional[str] = None,
         output_rename_map: Optional[Dict[str, str]] = None,
