@@ -4,7 +4,6 @@ from pathlib import Path
 
 def get_version() -> str:
     """Get the version of the package."""
-
     # This is a workaround for the fact that if the package is installed
     # in editable mode, the version is not reliability available.
     # Therefore, we check for the existence of a file called EDITABLE,
@@ -16,7 +15,7 @@ def get_version() -> str:
     try:
         # package has been installed, so it has a version number
         # from pyproject.toml
-        version = importlib.metadata.version(__package__ or __name__)
+        version = importlib.metadata.version(get_name())
     except importlib.metadata.PackageNotFoundError:
         # package hasn't been installed, so set version to "dev"
         version = "dev"
@@ -26,9 +25,7 @@ def get_version() -> str:
 
 def get_name() -> str:
     """Get the name of the package."""
-    import smashed
-
-    return smashed.__package__ or smashed.__name__
+    return 'smashed'
 
 
 def get_name_and_version() -> str:

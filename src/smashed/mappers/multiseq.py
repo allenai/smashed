@@ -12,9 +12,12 @@ from typing import (
     Union,
 )
 
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from necessary import necessary
 
 from ..base import BatchedBaseMapper, SingleBaseMapper, TransformElementType
+
+with necessary('transformers', soft=True):
+    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 
 class TokensSequencesPaddingMapper(SingleBaseMapper):
@@ -24,7 +27,7 @@ class TokensSequencesPaddingMapper(SingleBaseMapper):
 
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: 'PreTrainedTokenizerBase',
         input_field: str = "input_ids",
     ) -> None:
         """Mapper that add BOS/SEP/EOS sequences of tokens.
@@ -42,7 +45,7 @@ class TokensSequencesPaddingMapper(SingleBaseMapper):
 
     @staticmethod
     def _find_special_token_ids(
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: 'PreTrainedTokenizerBase',
     ) -> Tuple[List[int], List[int], List[int]]:
         """By default, tokenizers only know how to concatenate 2 fields
         as input; However, for our purposes, we might care about more than
@@ -99,7 +102,7 @@ class TokensSequencesPaddingMapper(SingleBaseMapper):
 class AttentionMaskSequencePaddingMapper(TokensSequencesPaddingMapper):
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: 'PreTrainedTokenizerBase',
         input_field: str = "attention_mask",
     ) -> None:
         """Mapper to add BOS/SEP/EOS tokens to an attention mask sequence.
@@ -121,7 +124,7 @@ class AttentionMaskSequencePaddingMapper(TokensSequencesPaddingMapper):
 class TokenTypeIdsSequencePaddingMapper(TokensSequencesPaddingMapper):
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: 'PreTrainedTokenizerBase',
         input_field: str = "token_type_ids",
     ) -> None:
         """Mapper to add BOS/SEP/EOS tokens to a token type ids sequence.
@@ -295,7 +298,7 @@ class MultiSequenceStriderMapper(BatchedBaseMapper):
         fields_to_stride: Optional[List[str]] = None,
         max_length: Optional[int] = None,
         extra_length_per_seq: Optional[int] = None,
-        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+        tokenizer: Optional['PreTrainedTokenizerBase'] = None,
         max_step: Optional[int] = None,
     ) -> None:
         """Mapper to create multiple subset sequences from a single sequence

@@ -1,6 +1,6 @@
 [project]
 name = "smashed"
-version = "0.17.1"
+version = "0.18.0"
 description = """\
 SMASHED is a toolkit designed to apply transformations to samples in \
 datasets, such as fields extraction, tokenization, prompting, batching, \
@@ -12,8 +12,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     "torch>=1.9",
-    "transformers>=4.5",
-    "necessary>=0.3.3",
+    "necessary>=0.4.1",
     "trouting>=0.3.3",
     "ftfy>=6.1.1",
     "platformdirs>=2.5.0",
@@ -104,10 +103,12 @@ remote = [
     "boto3>=1.25.5",
 ]
 datasets = [
-  "datasets>=2.8.0",
-  "dill>=0.3.0",
+    "transformers>=4.5",
+    "datasets>=2.8.0",
+    "dill>=0.3.0",
 ]
 prompting = [
+    "transformers>=4.5",
     "promptsource>=0.2.3",
     "blingfire>=0.1.8",
 ]
