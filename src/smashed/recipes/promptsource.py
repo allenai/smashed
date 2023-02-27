@@ -1,7 +1,13 @@
 from functools import reduce
-from typing import Literal, Optional, Sequence, Set, Union, cast
+from typing import TYPE_CHECKING, Literal, Optional, Sequence, Set, Union, cast
 
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from necessary import necessary
+
+with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
+    if TRANSFORMERS_AVAILABLE or TYPE_CHECKING:
+        from transformers.tokenization_utils_base import (
+            PreTrainedTokenizerBase,
+        )
 
 from ..base.recipes import BaseRecipe
 from ..mappers.fields import ChangeFieldsMapper
@@ -14,7 +20,7 @@ from ..mappers.tokenize import TokenizerMapper
 class JinjaRecipe(BaseRecipe):
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizerBase,
+        tokenizer: "PreTrainedTokenizerBase",
         jinja_template: str,
         num_shots: int = 0,
         max_source_length_per_shot: Optional[int] = None,

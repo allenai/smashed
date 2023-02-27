@@ -5,14 +5,17 @@ Bunch of tokenization mappers for the smashed library.
 
 """
 import unicodedata
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from necessary import necessary
 
 from ..base import SingleBaseMapper, TransformElementType
 
-with necessary("transformers", soft=True):
-    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
+    if TRANSFORMERS_AVAILABLE or TYPE_CHECKING:
+        from transformers.tokenization_utils_base import (
+            PreTrainedTokenizerBase,
+        )
 
 __all__ = [
     "PaddingMapper",
@@ -26,7 +29,7 @@ class GetTokenizerOutputFieldsAndNamesMixIn:
     """A mixin class that figures out the output fields based on the arguments
     that will be passed a to tokenizer.__call__ method."""
 
-    tokenizer: 'PreTrainedTokenizerBase'
+    tokenizer: "PreTrainedTokenizerBase"
     _prefix: Optional[str]
 
     def __init__(
@@ -45,7 +48,6 @@ class GetTokenizerOutputFieldsAndNamesMixIn:
     def output_fields_from_tokenizer_kwargs(
         tokenizer_kwargs: Optional[dict] = None,
     ) -> List[str]:
-
         tokenizer_kwargs = tokenizer_kwargs or {}
 
         output_fields = ["input_ids"]
@@ -84,7 +86,7 @@ class TokenizerMapper(SingleBaseMapper, GetTokenizerOutputFieldsAndNamesMixIn):
 
     def __init__(
         self,
-        tokenizer: 'PreTrainedTokenizerBase',
+        tokenizer: "PreTrainedTokenizerBase",
         input_field: str,
         output_prefix: Optional[str] = None,
         output_rename_map: Optional[Dict[str, str]] = None,

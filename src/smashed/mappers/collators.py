@@ -1,7 +1,17 @@
 import functools
 from collections import abc
 from itertools import chain
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import torch
 from necessary import necessary
@@ -9,8 +19,11 @@ from necessary import necessary
 from ..base import SingleBaseMapper, TransformElementType
 from ..base.abstract import AbstractBaseMapper
 
-with necessary("transformers", soft=True):
-    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
+    if TRANSFORMERS_AVAILABLE or TYPE_CHECKING:
+        from transformers.tokenization_utils_base import (
+            PreTrainedTokenizerBase,
+        )
 
 
 __all__ = [
@@ -91,7 +104,7 @@ CollatorMixIn = BaseCollator
 class FromTokenizerMixIn(BaseCollator):
     def __init__(
         self,
-        tokenizer: 'PreTrainedTokenizerBase',
+        tokenizer: "PreTrainedTokenizerBase",
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
@@ -240,7 +253,6 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
     def transform(  # type: ignore
         self: "TensorCollatorMapper", data: Dict[str, Sequence[torch.Tensor]]
     ) -> Dict[str, torch.Tensor]:
-
         collated_data = {
             field_name: self._pad(
                 sequence=list_of_tensors,
@@ -383,7 +395,6 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
         padding_symbol: Any,
         pad_right: bool = True,
     ) -> List[Any]:
-
         padding_shape = self._get_list_shape_recursive(seq_of_seq_to_pad)
 
         if self.pad_to_length is not None:

@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 import glom
 from necessary import necessary
@@ -7,7 +7,7 @@ from necessary import necessary
 from ..base import DataRowView, SingleBaseMapper, TransformElementType
 
 with necessary("datasets", soft=True) as DATASETS_AVAILABLE:
-    if DATASETS_AVAILABLE:
+    if DATASETS_AVAILABLE or TYPE_CHECKING:
         try:
             from datasets.formatting.formatting import LazyRow
         except ImportError:

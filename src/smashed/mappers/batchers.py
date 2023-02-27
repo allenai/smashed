@@ -4,7 +4,6 @@ from ..base import BatchedBaseMapper, TransformElementType
 
 
 class FixedBatchSizeMapper(BatchedBaseMapper):
-
     batch_size: Union[int, float]
     keep_last: bool
 

@@ -3,7 +3,7 @@ import shutil
 from contextlib import AbstractContextManager, ExitStack, contextmanager
 from dataclasses import dataclass
 from functools import partial
-from logging import INFO, Logger, getLogger
+from logging import Logger, getLogger
 from os import remove as remove_local_file
 from os import stat as stat_local_file
 from os import walk as local_walk
@@ -44,6 +44,8 @@ __all__ = [
 
 PathType = Union[str, Path, "MultiPath"]
 ClientType = Union["BaseClient", None]
+
+LOGGER = getLogger(__file__)
 
 
 @dataclass
@@ -172,12 +174,6 @@ class MultiPath:
         return first
 
 
-def get_logger() -> Logger:
-    """Get the default logger for this module."""
-    (logger := getLogger(__file__)).setLevel(INFO)
-    return logger
-
-
 def get_client_if_needed(path: PathType, **boto3_kwargs: Any) -> ClientType:
     """Return the appropriate client given the protocol of the path."""
 
@@ -223,7 +219,7 @@ def open_file_for_read(
             to the open function. Defaults to None.
     """
     open_kwargs = open_kwargs or {}
-    logger = logger or get_logger()
+    logger = logger or LOGGER
     open_fn = open_fn or open
     remove = False
 
@@ -277,7 +273,7 @@ def open_file_for_write(
 
     path = str(path)
     local = None
-    logger = logger or get_logger()
+    logger = logger or LOGGER
     open_fn = open_fn or open
     open_kwargs = open_kwargs or {}
 
@@ -309,7 +305,9 @@ def open_file_for_write(
                 logger.info(f"Uploading {local} to {path}")
                 client = client or get_client_if_needed(path)
                 assert client is not None, "Could not get S3 client"
-                client.upload_file(local, path.bucket, path.key.lstrip("/"))
+                client.upload_file(
+                    local.as_str, path.bucket, path.key.lstrip("/")
+                )
             remove_local_file(local.as_path)
 
 
@@ -377,7 +375,7 @@ def copy_directory(
             logger at INFO level.
     """
 
-    logger = logger or get_logger()
+    logger = logger or LOGGER
 
     # we convert to string because the Path library does not handle
     # well network locations.

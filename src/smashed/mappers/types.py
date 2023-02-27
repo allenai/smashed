@@ -181,7 +181,6 @@ class BinarizerMapper(CastMapper):
 
 class LookupMapper(CastMapper):
     def __init__(self, field_name: str, lookup_table: Dict[Any, Any]):
-
         source_types = set([type(k) for k in lookup_table.keys()])
         target_types = set([type(v) for v in lookup_table.values()])
 

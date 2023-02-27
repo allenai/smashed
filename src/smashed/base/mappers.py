@@ -18,7 +18,6 @@ P = TypeVar("P", bound="ChainableMapperMixIn")
 
 
 class ChainableMapperMixIn(AbstractBaseMapper):
-
     input_fields: Tuple[str, ...]
     output_fields: Tuple[str, ...]
     fingerprint: str

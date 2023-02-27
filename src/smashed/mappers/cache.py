@@ -293,7 +293,6 @@ class StartCachingMapper(SingleBaseMapper):
             return Dataset.load_from_disk(str(path))
 
     def map(self, dataset: Any, **map_kwargs: Any) -> Any:
-
         *pipeline, end_cache_mapper = self._get_pipeline_to_cache()
 
         # last element is always a EndCachingMapper, but we need to
@@ -303,7 +302,6 @@ class StartCachingMapper(SingleBaseMapper):
         with CachePathContext(
             base_dir=self.cache_dir, dataset=dataset, pipeline=pipeline
         ) as cache_path, DisableIntermediateCachingContext(dataset):
-
             # we add the path to the cache in case we need to save the output
             end_cache_mapper.cache_path = cache_path
 

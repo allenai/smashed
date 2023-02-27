@@ -2,7 +2,15 @@ import sys
 from dataclasses import dataclass
 from math import floor
 from string import Formatter
-from typing import Dict, List, Literal, Optional, Sequence, Union
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Union,
+)
 
 from necessary import necessary
 
@@ -10,8 +18,11 @@ from ..base import SingleBaseMapper, TransformElementType
 from ..utils.shape_utils import flatten_with_indices, reconstruct_from_indices
 from .tokenize import GetTokenizerOutputFieldsAndNamesMixIn
 
-with necessary("transformers", soft=True):
-    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
+    if TRANSFORMERS_AVAILABLE or TYPE_CHECKING:
+        from transformers.tokenization_utils_base import (
+            PreTrainedTokenizerBase,
+        )
 
 __all__ = [
     "EncodeFieldsMapper",
@@ -25,7 +36,7 @@ __all__ = [
 class EncodeFieldsMapper(SingleBaseMapper):
     """Simply encodes the fields in the input data using the tokenizer."""
 
-    tokenizer: 'PreTrainedTokenizerBase'
+    tokenizer: "PreTrainedTokenizerBase"
     is_split_into_words: bool
     fields_to_encode: Dict[str, None]
 
@@ -37,7 +48,7 @@ class EncodeFieldsMapper(SingleBaseMapper):
     def __init__(
         self,
         fields_to_encode: Sequence[str],
-        tokenizer: 'PreTrainedTokenizerBase',
+        tokenizer: "PreTrainedTokenizerBase",
         is_split_into_words: bool = False,
         fields_to_return_offset_mapping: Union[Sequence[str], bool] = False,
         offset_prefix: str = "offset",
@@ -64,8 +75,9 @@ class EncodeFieldsMapper(SingleBaseMapper):
         """
 
         if fields_to_return_offset_mapping and necessary("transformers"):
-            from transformers.tokenization_utils_fast \
-                import PreTrainedTokenizerFast
+            from transformers.tokenization_utils_fast import (
+                PreTrainedTokenizerFast,
+            )
 
             if not isinstance(tokenizer, PreTrainedTokenizerFast):
                 raise TypeError(
@@ -144,7 +156,7 @@ class TruncateMultipleFieldsMapper(SingleBaseMapper):
         self,
         fields_to_truncate: List[str],
         fields_to_preserve: Optional[List[str]] = None,
-        tokenizer: Optional['PreTrainedTokenizerBase'] = None,
+        tokenizer: Optional["PreTrainedTokenizerBase"] = None,
         max_length: Optional[int] = None,
         length_penalty: int = 0,
         strategy: Union[Literal["longest"], Literal["uniform"]] = "longest",
@@ -359,7 +371,7 @@ class PromptSegment:
         cls,
         literal_text: str,
         field_name: Union[str, None],
-        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+        tokenizer: Optional["PreTrainedTokenizerBase"] = None,
     ) -> "PromptSegment":
         if tokenizer is not None:
             token_ids = tokenizer.encode(
@@ -377,7 +389,7 @@ class PromptSegment:
     def from_template(
         cls,
         template: str,
-        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+        tokenizer: Optional["PreTrainedTokenizerBase"] = None,
     ) -> List["PromptSegment"]:
         return [
             cls._from_template_single(
@@ -441,7 +453,7 @@ class FillEncodedPromptMapper(
     def __init__(
         self,
         template: str,
-        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+        tokenizer: Optional["PreTrainedTokenizerBase"] = None,
         output_prefix: Optional[str] = None,
         output_rename_map: Optional[Dict[str, str]] = None,
         return_attention_mask: bool = True,
