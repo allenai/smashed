@@ -19,7 +19,6 @@ class ZeroShotPrompting:
         max_generation_length: int = 350,
         model_cls: Type[PreTrainedModel] = T5ForConditionalGeneration,
     ) -> None:
-
         device = torch.device(
             device or "cuda" if torch.cuda.is_available() else "cpu"
         )

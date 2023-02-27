@@ -17,7 +17,6 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
 
 
 class Python2TorchMapper(SingleBaseMapper):
-
     __slots__ = ["field_cast_map", "device"]
     field_cast_map: Dict[str, torch.dtype]
     device: Union[torch.device, None]
@@ -51,7 +50,6 @@ class Python2TorchMapper(SingleBaseMapper):
 
     @staticmethod
     def _get_dtype(dtype: Any) -> torch.dtype:
-
         if isinstance(dtype, str):
             dtype = getattr(torch, dtype, None)
             if dtype is None:

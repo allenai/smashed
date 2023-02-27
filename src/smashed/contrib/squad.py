@@ -1,7 +1,16 @@
 from bisect import bisect_left, bisect_right
-from typing import Any, Literal, Optional, Sequence, Tuple, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
-from necessary import necessary, Necessary
+from necessary import Necessary, necessary
 
 from smashed.base import BaseRecipe, SingleBaseMapper, TransformElementType
 from smashed.base.mappers import ChainableMapperMixIn
@@ -16,8 +25,11 @@ from smashed.mappers import (
 )
 from smashed.recipes.prompting import PromptingRecipe
 
-with necessary("transformers", soft=True):
-    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
+    if TRANSFORMERS_AVAILABLE or TYPE_CHECKING:
+        from transformers.tokenization_utils_base import (
+            PreTrainedTokenizerBase,
+        )
 
 
 __all__ = [
@@ -321,7 +333,7 @@ class _SquadPromptingRecipe(PromptingRecipe):
     def __init__(
         self,
         *args,
-        tokenizer: 'PreTrainedTokenizerBase',
+        tokenizer: "PreTrainedTokenizerBase",
         context_field: str = "context",
         location_field: str = "locations",
         **kwargs,
@@ -342,7 +354,7 @@ class SquadPromptTrainRecipe(BaseRecipe):
 
     def __init__(
         self,
-        tokenizer: 'PreTrainedTokenizerBase',
+        tokenizer: "PreTrainedTokenizerBase",
         source_template: str,
         context_length: int,
         context_stride: int,
@@ -449,7 +461,7 @@ class SquadPromptValidRecipe(SquadPromptTrainRecipe):
     def __init__(
         self,
         *args,
-        tokenizer: 'PreTrainedTokenizerBase',
+        tokenizer: "PreTrainedTokenizerBase",
         target_output_name: Optional[str] = None,
         answer_field: str = "answers",
         **kwargs,

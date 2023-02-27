@@ -141,7 +141,7 @@ class DataBatchView(Generic[D, K, V]):
     def __setitem__(
         self, idx: int, value: Union[DataRowView[K, V], Dict[K, V]]
     ):
-        for (k, v) in value.items():
+        for k, v in value.items():
             self._data[k][idx] = v
 
     def __len__(self) -> int:

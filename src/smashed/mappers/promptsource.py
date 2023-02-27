@@ -1,6 +1,7 @@
 import re
 from functools import cached_property, reduce
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Iterable,
@@ -26,7 +27,7 @@ from ..base.mappers import (
 )
 
 with necessary("promptsource", soft=True) as PROMPTSOURCE_AVAILABLE:
-    if PROMPTSOURCE_AVAILABLE:
+    if PROMPTSOURCE_AVAILABLE or TYPE_CHECKING:
         from promptsource.templates import DatasetTemplates
         from promptsource.templates import Template as PromptsourceTemplate
 
@@ -448,7 +449,6 @@ class FewShotJinjaMapper(PromptsourceMixin, BatchedBaseMapper):
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
-
         accumulator: List[TransformElementType] = []
 
         for sample in data:

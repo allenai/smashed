@@ -81,6 +81,5 @@ class FilterMapper(BatchedBaseMapper, RecurseOpMixIn):
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
         for batch in data:
-
             if self._recursive_op(batch[self.field_name]):
                 yield batch

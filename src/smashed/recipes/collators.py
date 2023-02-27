@@ -1,7 +1,16 @@
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Union,
+)
 
 import torch
-from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+from necessary import necessary
 
 from ..base import BaseRecipe, SingleBaseMapper
 from ..mappers import (
@@ -12,6 +21,12 @@ from ..mappers import (
     Python2TorchMapper,
     TensorCollatorMapper,
 )
+
+with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
+    if TRANSFORMERS_AVAILABLE or TYPE_CHECKING:
+        from transformers.tokenization_utils_base import (
+            PreTrainedTokenizerBase,
+        )
 
 
 class CollateFnMixIn(SingleBaseMapper):
@@ -65,7 +80,7 @@ class CollateFnMixIn(SingleBaseMapper):
 class CollatorRecipe(CollateFnMixIn, BaseRecipe):
     def __init__(
         self,
-        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+        tokenizer: Optional["PreTrainedTokenizerBase"] = None,
         do_not_collate: Optional[Sequence[str]] = None,
         keep_last: bool = True,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
@@ -107,7 +122,7 @@ class CollatorRecipe(CollateFnMixIn, BaseRecipe):
 class SlowCollatorRecipe(CollateFnMixIn, BaseRecipe):
     def __init__(
         self,
-        tokenizer: Optional[PreTrainedTokenizerBase] = None,
+        tokenizer: Optional["PreTrainedTokenizerBase"] = None,
         do_not_collate: Optional[Sequence[str]] = None,
         keep_last: bool = True,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,

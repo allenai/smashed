@@ -30,7 +30,7 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
         )
 
 with necessary("smart_open", soft=True) as SMART_OPEN_AVAILABLE:
-    if SMART_OPEN_AVAILABLE:
+    if SMART_OPEN_AVAILABLE or TYPE_CHECKING:
         from smart_open import open
 
 
@@ -85,7 +85,6 @@ class HuggingFaceDatasetLoaderMapper(BatchedBaseMapper):
         ) -> Union[Dataset, IterableDataset]:
             datasets_accumulator = []
             for dataset_spec in data:
-
                 # load this specific dataset
                 try:
                     dataset = load_dataset(**dataset_spec)
@@ -154,7 +153,6 @@ class CsvLoaderMapper(BatchedBaseMapper):
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
-
         for row in data:
             paths = row[self.paths_field]
             if not isinstance(paths, abc.Sequence) or isinstance(paths, str):
@@ -183,7 +181,6 @@ class JsonlLoaderMapper(BatchedBaseMapper):
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
-
         for row in data:
             paths = row[self.paths_field]
             if not isinstance(paths, abc.Sequence) or isinstance(paths, str):

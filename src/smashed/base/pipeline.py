@@ -7,7 +7,7 @@ M = TypeVar("M", "SingleBaseMapper", "BatchedBaseMapper")
 
 def make_pipeline(
     first_mapper: M,
-    *rest_mappers: Union["SingleBaseMapper", "BatchedBaseMapper"]
+    *rest_mappers: Union["SingleBaseMapper", "BatchedBaseMapper"],
 ) -> M:
     """Make a pipeline of mappers."""
     for mapper in rest_mappers:

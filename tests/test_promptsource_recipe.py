@@ -83,7 +83,6 @@ class TestPromptsource(unittest.TestCase):
         )
 
     def test_few_shot_truncation(self):
-
         mapper = JinjaRecipe(
             tokenizer=self.tokenizer,
             jinja_template=FEW_SHOT_PROMPT,

@@ -4,15 +4,17 @@ Bunch of decoding mappers to reverse tokenization
 @lucas
 """
 
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union
 
 from necessary import necessary
 
 from ..base import SingleBaseMapper, TransformElementType
 
-
-with necessary("transformers", soft=True):
-    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
+    if TRANSFORMERS_AVAILABLE or TYPE_CHECKING:
+        from transformers.tokenization_utils_base import (
+            PreTrainedTokenizerBase,
+        )
 
 
 __all__ = ["DecodingMapper"]
@@ -21,7 +23,7 @@ __all__ = ["DecodingMapper"]
 class DecodingMapper(SingleBaseMapper):
     def __init__(
         self,
-        tokenizer: 'PreTrainedTokenizerBase',
+        tokenizer: "PreTrainedTokenizerBase",
         fields: Union[str, Sequence[str]],
         decode_batch: bool = False,
         skip_special_tokens: bool = False,

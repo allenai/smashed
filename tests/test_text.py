@@ -11,7 +11,6 @@ from smashed.mappers.tokenize import TruncateSingleFieldMapper
 
 class TestFtfyMapper(unittest.TestCase):
     def test_ftfy_mapper(self):
-
         # These are the test cases from the ftfy documentation
         dataset = [
             {"text": "âœ” No problems"},

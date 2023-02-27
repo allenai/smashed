@@ -1,4 +1,12 @@
-from typing import Dict, Literal, Optional, Sequence, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Literal,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+)
 
 from necessary import necessary
 
@@ -12,14 +20,16 @@ from ..mappers.prompting import (
 )
 from ..mappers.shape import SingleSequenceStriderMapper
 
-with necessary("transformers", soft=True):
-    from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
+    if TRANSFORMERS_AVAILABLE or TYPE_CHECKING:
+        from transformers.tokenization_utils_base import (
+            PreTrainedTokenizerBase,
+        )
 
 C = TypeVar("C", bound=ChainableMapperMixIn)
 
 
 class PromptingRecipe(BaseRecipe):
-
     # these make for easy replacement of the mappers in subclasses
     # of this recipe
 
@@ -37,7 +47,7 @@ class PromptingRecipe(BaseRecipe):
 
     def __init__(
         self,
-        tokenizer: 'PreTrainedTokenizerBase',
+        tokenizer: "PreTrainedTokenizerBase",
         source_template: str,
         source_add_bos_token: bool = True,
         source_add_eos_token: bool = False,
@@ -232,7 +242,7 @@ class PromptingRecipe(BaseRecipe):
         self,
         pipeline: C,
         prompt_mapper: FillEncodedPromptMapper,
-        tokenizer: 'PreTrainedTokenizerBase',
+        tokenizer: "PreTrainedTokenizerBase",
         all_fields_to_truncate: Sequence[str],
         all_fields_to_stride: Sequence[str],
         strategy: Union[Literal["longest"], Literal["uniform"]],
@@ -240,7 +250,6 @@ class PromptingRecipe(BaseRecipe):
         stride_max_length: Optional[int] = None,
         stride_step: Optional[int] = None,
     ) -> C:
-
         fields_to_truncate = []
         fields_to_preserve = []
         fields_to_stride = []

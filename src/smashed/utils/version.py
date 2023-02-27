@@ -25,7 +25,7 @@ def get_version() -> str:
 
 def get_name() -> str:
     """Get the name of the package."""
-    return 'smashed'
+    return "smashed"
 
 
 def get_name_and_version() -> str:

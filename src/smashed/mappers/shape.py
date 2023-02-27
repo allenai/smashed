@@ -119,14 +119,12 @@ class UnpackingMapper(BatchedBaseMapper):
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
-
         # we get the names of fields to unpack after seeing the
         # first sample; so we set this to None for now
         all_field_names_to_unpack: Optional[List[str]] = None
 
         # iterate over all samples
         for packed_sample in data:
-
             # first, compute the names of fields to unpack
             if all_field_names_to_unpack is None:
                 all_field_names_to_unpack = [
@@ -228,7 +226,6 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
 
         tail_elements = 0 if self.keep_last else self.max_length
         for i in range(0, seq_len - tail_elements + 1, self.stride):
-
             new_sample = {
                 name: (
                     values[i : i + self.max_length]
@@ -242,7 +239,6 @@ class SingleSequenceStriderMapper(BatchedBaseMapper):
     def transform(
         self, data: Iterable[TransformElementType]
     ) -> Iterable[TransformElementType]:
-
         if len(self.fields_to_stride) < 1:
             # no fields to stride
             yield from data
