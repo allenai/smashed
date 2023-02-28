@@ -84,11 +84,51 @@ class CollatorRecipe(CollateFnMixIn, BaseRecipe):
         do_not_collate: Optional[Sequence[str]] = None,
         keep_last: bool = True,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
+        pad_to_multiple_of: Optional[int] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
         field_cast_map: Optional[Mapping[str, Union[str, torch.dtype]]] = None,
         device: Optional[Union[torch.device, str]] = None,
     ) -> None:
+        """A recipe that creates a chain of mappers that can collate a sequence
+        of tensors into a batch of tensors.
+
+        Args:
+            tokenizer (PretrainedTokenizerBase, optional): the tokenizer to use
+                when collating. If None, the collator will assume that the
+                symbols to pad with are provided in the fields_pad_ids
+                argument. Defaults to None.
+            do_not_collate (Sequence[str], optional): a sequence of fields
+                that should not be collated but kept as lists of values.
+                Defaults to None.
+            keep_last (bool, optional): whether to keep the last batch if it
+                is smaller than the batch size. Defaults to True.
+            pad_to_length (Union[int, Sequence[int]], optional): the length
+                to pad the sequences to. If an int, all sequences will be
+                padded to the same length. If a sequence, the length of the
+                sequence must match the number of fields in the batch. If
+                None, the sequences will not be padded. Defaults to None.
+            pad_to_multiple_of (int, optional): the length to pad the
+                sequences to. If None, the sequences will not be padded or
+                padded according to the pad_to_length argument. Defaults to
+                None.
+            fields_pad_ids (Mapping[str, int], optional): a mapping from
+                field names to the ids to use for padding. If None, the
+                collator will assume that the symbols to pad with are
+                provided in the fields_pad_ids argument. Defaults to None.
+            unk_fields_pad_id (int, optional): the id to use for padding
+                unknown tokens. If None, the collator will assume that the
+                symbols to pad with are provided in the fields_pad_ids
+                argument. Defaults to None.
+            field_cast_map (Mapping[str, Union[str, torch.dtype]], optional):
+                a mapping from field names to the type to cast the field to.
+                If None, the collator will use the default type inferred by
+                torch.tensor. Defaults to None.
+            device (Union[torch.device, str], optional): the device to
+                create the tensors on. If None, the collator will use the
+                default device. Defaults to None.
+        """
+
         super().__init__(do_not_collate=do_not_collate)
 
         self.chain(
@@ -103,6 +143,7 @@ class CollatorRecipe(CollateFnMixIn, BaseRecipe):
                     fields_pad_ids=(fields_pad_ids or {}),
                     unk_fields_pad_id=unk_fields_pad_id,
                     pad_to_length=pad_to_length,
+                    pad_to_multiple_of=pad_to_multiple_of,
                 )
             )
         else:
@@ -126,9 +167,49 @@ class SlowCollatorRecipe(CollateFnMixIn, BaseRecipe):
         do_not_collate: Optional[Sequence[str]] = None,
         keep_last: bool = True,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
+        pad_to_multiple_of: Optional[int] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
     ) -> None:
+        """A recipe that creates a chain of mappers that can collate a sequence
+        of lists into a batch of tensors. It is slower than the CollatorRecipe,
+        as it pads Python lists before converting them to tensors.
+
+                Args:
+            tokenizer (PretrainedTokenizerBase, optional): the tokenizer to use
+                when collating. If None, the collator will assume that the
+                symbols to pad with are provided in the fields_pad_ids
+                argument. Defaults to None.
+            do_not_collate (Sequence[str], optional): a sequence of fields
+                that should not be collated but kept as lists of values.
+                Defaults to None.
+            keep_last (bool, optional): whether to keep the last batch if it
+                is smaller than the batch size. Defaults to True.
+            pad_to_length (Union[int, Sequence[int]], optional): the length
+                to pad the sequences to. If an int, all sequences will be
+                padded to the same length. If a sequence, the length of the
+                sequence must match the number of fields in the batch. If
+                None, the sequences will not be padded. Defaults to None.
+            pad_to_multiple_of (int, optional): the length to pad the
+                sequences to. If None, the sequences will not be padded or
+                padded according to the pad_to_length argument. Defaults to
+                None.
+            fields_pad_ids (Mapping[str, int], optional): a mapping from
+                field names to the ids to use for padding. If None, the
+                collator will assume that the symbols to pad with are
+                provided in the fields_pad_ids argument. Defaults to None.
+            unk_fields_pad_id (int, optional): the id to use for padding
+                unknown tokens. If None, the collator will assume that the
+                symbols to pad with are provided in the fields_pad_ids
+                argument. Defaults to None.
+            field_cast_map (Mapping[str, Union[str, torch.dtype]], optional):
+                a mapping from field names to the type to cast the field to.
+                If None, the collator will use the default type inferred by
+                torch.tensor. Defaults to None.
+            device (Union[torch.device, str], optional): the device to
+                create the tensors on. If None, the collator will use the
+                default device. Defaults to None.
+        """
         super().__init__(do_not_collate=do_not_collate)
 
         self.chain(self.get_batcher(keep_last=keep_last))
@@ -140,6 +221,7 @@ class SlowCollatorRecipe(CollateFnMixIn, BaseRecipe):
                     fields_pad_ids=(fields_pad_ids or {}),
                     unk_fields_pad_id=unk_fields_pad_id,
                     pad_to_length=pad_to_length,
+                    pad_to_multiple_of=pad_to_multiple_of,
                 )
             )
         else:

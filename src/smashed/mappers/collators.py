@@ -1,4 +1,5 @@
 import functools
+import math
 from collections import abc
 from itertools import chain
 from typing import (
@@ -38,7 +39,8 @@ class BaseCollator(AbstractBaseMapper):
     def __init__(
         self,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
-        fields_pad_ids: Optional[Mapping[str, int]] = None,
+        pad_to_multiple_of: Optional[int] = None,
+        fields_pad_ids: Optional[Mapping[str, Union[int, float]]] = None,
         unk_fields_pad_id: Optional[int] = None,
         left_pad_fields: Optional[Sequence[str]] = None,
     ):
@@ -52,6 +54,8 @@ class BaseCollator(AbstractBaseMapper):
                 raise an error if any sequence is longer than the requested
                 length. When not provided or None, sequences will be padded to
                 the length of the longest sequence. Defaults to None.
+            pad_to_multiple_of (int, optional): If provided, pad all sequences
+                to the next multiple of this value. Defaults to None.
             fields_pad_ids (Mapping[str, int], optional): A mapping from field
                 names to the padding value to use for that field. If not
                 provided, the mapper will fail unless the unk_fields_pad_id
@@ -65,6 +69,7 @@ class BaseCollator(AbstractBaseMapper):
         """
         self.fields_pad_ids = fields_pad_ids or {}
         self.pad_to_length = pad_to_length
+        self.pad_to_multiple_of = pad_to_multiple_of
         self.unk_fields_pad_id = unk_fields_pad_id
         self.left_pad_fields = set(left_pad_fields or [])
 
@@ -76,7 +81,7 @@ class BaseCollator(AbstractBaseMapper):
 
         super().__init__()
 
-    def _get_padding_value(self, field_name: str) -> int:
+    def _get_padding_value(self, field_name: str) -> Union[int, float]:
         if field_name in self.fields_pad_ids:
             return self.fields_pad_ids[field_name]
         elif self.unk_fields_pad_id is not None:
@@ -106,6 +111,7 @@ class FromTokenizerMixIn(BaseCollator):
         self,
         tokenizer: "PreTrainedTokenizerBase",
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
+        pad_to_multiple_of: Optional[int] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
     ):
@@ -121,6 +127,8 @@ class FromTokenizerMixIn(BaseCollator):
                 raise an error if any sequence is longer than the requested
                 length. When not provided or None, sequences will be padded to
                 the length of the longest sequence. Defaults to None.
+            pad_to_multiple_of (int, optional): If provided, pad all sequences
+                to the next multiple of this value. Defaults to None.
             fields_pad_ids (Mapping[str, int], optional): A mapping from field
                 names to the padding value to use for that field. If not
                 provided, the mapper will fail unless the unk_fields_pad_id
@@ -164,9 +172,10 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
     @staticmethod
     def _pad(
         sequence: Sequence[torch.Tensor],
-        pad_value: int,
+        pad_value: Union[int, float],
         dim: int = 0,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
+        pad_to_multiple_of: Optional[int] = None,
         right_pad: bool = True,
     ) -> torch.Tensor:
         """Pad a sequence of tensors to the same length.
@@ -183,6 +192,8 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
                 we assume we should pad each dimension to the corresponding
                 length. If None, sequences will be padded to the length of the
                 longest sequence. Defaults to None.
+            pad_to_multiple_of (int, optional): If provided, pad all sequences
+                to the next multiple of this value. Defaults to None.
             right_pad (bool, optional): If True, pad to the right. If False,
                 pad to the left. Defaults to True.
         """
@@ -204,7 +215,16 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
         # this contains maximum length of all the sequences
         max_lengths = [max(t) for t in zip(*(t.size() for t in sequence))]
 
-        if isinstance(pad_to_length, int):
+        if pad_to_multiple_of is not None:
+            # if pad_to_multiple is provided, we derive pad_to_length by
+            # getting the maximum length for dimension and rounding it up to
+            # the next multiple of pad_to_multiple
+            pad_to_length = [
+                math.ceil(max_lengths[i] / pad_to_multiple_of)
+                * pad_to_multiple_of
+                for i in range(len(max_lengths))
+            ]
+        elif isinstance(pad_to_length, int):
             # if pad_to_length is a single integer, we pad all sequences to
             # the same length
             pad_to_length = [pad_to_length] * len(sequence)
@@ -258,6 +278,7 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
                 sequence=list_of_tensors,
                 pad_value=self._get_padding_value(field_name=field_name),
                 pad_to_length=self.pad_to_length,
+                pad_to_multiple_of=self.pad_to_multiple_of,
                 right_pad=(field_name not in self.left_pad_fields),
             )
             for field_name, list_of_tensors in data.items()
@@ -397,7 +418,16 @@ class ListCollatorMapper(BaseCollator, SingleBaseMapper):
     ) -> List[Any]:
         padding_shape = self._get_list_shape_recursive(seq_of_seq_to_pad)
 
-        if self.pad_to_length is not None:
+        if self.pad_to_multiple_of is not None:
+            # if pad_to_multiple is provided, we derive pad_to_length by
+            # getting the maximum length for dimension and rounding it up to
+            # the next multiple of pad_to_multiple
+            padding_shape = tuple(
+                math.ceil(p / self.pad_to_multiple_of)
+                * self.pad_to_multiple_of
+                for p in padding_shape
+            )
+        elif self.pad_to_length is not None:
             if not all(p <= self.pad_to_length for p in padding_shape):
                 raise ValueError(
                     "PaddingMapper expects every input sequence to be less"
