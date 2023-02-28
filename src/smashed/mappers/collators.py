@@ -152,6 +152,7 @@ class FromTokenizerMixIn(BaseCollator):
             pad_to_length=pad_to_length,
             unk_fields_pad_id=unk_fields_pad_id,
             fields_pad_ids=fields_pad_ids,
+            pad_to_multiple_of=pad_to_multiple_of,
         )
 
 
