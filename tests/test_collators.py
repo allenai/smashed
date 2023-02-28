@@ -7,6 +7,7 @@ Email:  lucas@allenai.org
 
 import unittest
 
+import numpy as np
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 from smashed.mappers.batchers import FixedBatchSizeMapper
@@ -104,6 +105,31 @@ class TestListCollators(unittest.TestCase):
         self.assertEqual(output[0]["a"][1], [-1, -1, -1, 4, 5])
         self.assertEqual(output[0]["a"][2], [6, 7, 8, 9, 10])
 
+    def test_padding_to_multiple(self):
+        dataset = [
+            {"a": [[1.0, 1.1], [2.0], [3.0, 3.1, 3.2, 3.3]], "b": [11, 12]},
+            {"a": [[4.0, 4.1, 4.2, 4.3, 4.4], [5.0, 5.1]], "b": [13]},
+        ]
+        pipeline = FixedBatchSizeMapper(batch_size=2) >> ListCollatorMapper(
+            fields_pad_ids={"a": -1, "b": -2}, pad_to_multiple_of=4
+        )
+        batch, *_ = pipeline.map(dataset)
+
+        # dimension 0 is batch size, so that doesn't change, but the second
+        # dimension is padded to a multiple of 4 therefore should be of
+        # length 4 (contains 3 elements), and the third dimension should be
+        # of length 8 (contains 5 elements)
+        # we will create some numpy arrays to make the check easier.
+        batch_a = np.array(batch["a"])
+        self.assertEqual(batch_a.shape, (2, 4, 8))
+
+        # now let's do the same thing but for "b"; this time the second
+        # dimension is padded to a multiple of 4, so it should be of length
+        # 4 (contains 2 elements).
+        # we will create some numpy arrays to make the check easier.
+        batch_b = np.array(batch["b"])
+        self.assertEqual(batch_b.shape, (2, 4))
+
 
 class TestTensorCollators(unittest.TestCase):
     def test_base_collator(self):
@@ -175,3 +201,28 @@ class TestTensorCollators(unittest.TestCase):
         self.assertEqual(output[0]["a"][0].tolist(), [-1, -1, 1, 2, 3])
         self.assertEqual(output[0]["a"][1].tolist(), [-1, -1, -1, 4, 5])
         self.assertEqual(output[0]["a"][2].tolist(), [6, 7, 8, 9, 10])
+
+    def test_padding_to_multiple(self):
+        dataset = [
+            {"a": [[1.0, 1.1, 2.0, 3.0, 3.1, 3.2, 3.3]], "b": [11, 12]},
+            {"a": [[4.0, 4.1, 4.2, 4.3, 4.4, 5.0, 5.1]], "b": [13]},
+        ]
+        pipeline = (
+            Python2TorchMapper()
+            >> FixedBatchSizeMapper(batch_size=2)
+            >> TensorCollatorMapper(
+                fields_pad_ids={"a": -1.0, "b": -2}, pad_to_multiple_of=4
+            )
+        )
+        batch, *_ = pipeline.map(dataset)
+
+        # dimension 0 is batch size, so that doesn't change, but the second
+        # dimension is padded to a multiple of 4 therefore should be of
+        # length 4 (contains 3 elements), and the third dimension should be
+        # of length 8 (contains 5 elements)
+        self.assertEqual(batch["a"].shape, (2, 4, 8))
+
+        # now let's do the same thing but for "b"; this time the second
+        # dimension is padded to a multiple of 4, so it should be of length
+        # 4 (contains 2 elements).
+        self.assertEqual(batch["b"].shape, (2, 4))

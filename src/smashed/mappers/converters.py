@@ -61,15 +61,20 @@ class Python2TorchMapper(SingleBaseMapper):
         return dtype
 
     def transform(self, data: TransformElementType) -> TransformElementType:
-        return {
-            # .to(type) and .to(device) will return the original tensor if
-            # the type and device are the same/None; this is because
-            # for any torch.Tensor t, hash(t) == hash(t.to(None).to(None))
-            field_name: torch.tensor(field_value)
-            .to(self.field_cast_map.get(field_name, None))
-            .to(self.device)
-            for field_name, field_value in data.items()
-        }
+        try:
+            return {
+                # .to(type) and .to(device) will return the original tensor if
+                # the type and device are the same/None; this is because
+                # for any torch.Tensor t, hash(t) == hash(t.to(None).to(None))
+                field_name: torch.tensor(field_value)
+                .to(self.field_cast_map.get(field_name, None))
+                .to(self.device)
+                for field_name, field_value in data.items()
+            }
+        except Exception as e:
+            import ipdb
+
+            ipdb.set_trace()
 
     @trouting
     def map(  # type: ignore
