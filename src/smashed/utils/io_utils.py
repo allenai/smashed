@@ -73,6 +73,10 @@ class MultiPath:
         """
         if isinstance(path, cls):
             return path
+        elif isinstance(path, Path):
+            path = str(path)
+        elif not isinstance(path, str):
+            raise ValueError(f"Cannot parse path of type {type(path)}")
 
         p = urlparse(str(path))
         return cls(prot=p.scheme, root=p.netloc, path=p.path)
@@ -312,10 +316,10 @@ def open_file_for_write(
 
 
 def recursively_list_files(
-    path: MultiPath,
+    path: PathType,
     ignore_hidden_files: bool = True,
     client: Optional[ClientType] = None,
-) -> Iterable[MultiPath]:
+) -> Iterable[str]:
     """Recursively list all files in the given directory for a given
     path, local or remote.
 
@@ -339,12 +343,12 @@ def recursively_list_files(
             pages = paginator.paginate(Bucket=path.bucket, Prefix=prefix)
             for page in pages:
                 for obj in page["Contents"]:
-                    if obj["Key"][-1] == "/":
-                        prefixes.append(obj["Key"])
+                    key = obj["Key"]
+                    if key[-1] == "/":  # last char is a slash
+                        prefixes.append(key)
                     else:
-                        yield MultiPath(
-                            prot="s3", root=path.root, path=obj["Key"]
-                        )
+                        p = MultiPath(prot="s3", root=path.root, path=key)
+                        yield str(p)
 
     if path.is_local:
         for _root, _, files in local_walk(path.as_str):
@@ -352,7 +356,7 @@ def recursively_list_files(
             for f in files:
                 if ignore_hidden_files and f.startswith("."):
                     continue
-                yield MultiPath.parse(root / f)
+                yield str(MultiPath.parse(root / f))
 
 
 def copy_directory(
@@ -385,9 +389,12 @@ def copy_directory(
 
     client = client or get_client_if_needed(src) or get_client_if_needed(dst)
 
-    for source_path in recursively_list_files(
+    for sp in recursively_list_files(
         path=src, ignore_hidden_files=ignore_hidden_files
     ):
+        # parse the source path
+        source_path = MultiPath.parse(sp)
+
         # we strip the segment of source_path that is the
         # common prefix in src, then join the remaining bit
         destination = dst / (source_path - src)
