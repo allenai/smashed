@@ -8,7 +8,7 @@ from os import remove as remove_local_file
 from os import stat as stat_local_file
 from os import walk as local_walk
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory, gettempdir
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -197,6 +197,25 @@ def get_client_if_needed(path: PathType, **boto3_kwargs: Any) -> ClientType:
     return None  # pyright: ignore
 
 
+def get_temp_dir(path: Optional[PathType]) -> Path:
+    """Check if the directory `path` can be used as a temporary directory."""
+
+    if path is None:
+        # return the default temporary directory
+        return Path(gettempdir())
+
+    path = MultiPath.parse(path)
+    if not path.is_local:
+        raise ValueError(f"Temporary directory must be local: {path}")
+
+    path = Path(str(path))
+    if path.exists() and not path.is_dir():
+        raise ValueError(f"Temporary directory must be a directory: {path}")
+
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 @contextmanager
 def open_file_for_read(
     path: PathType,
@@ -205,6 +224,7 @@ def open_file_for_read(
     logger: Optional[Logger] = None,
     open_kwargs: Optional[Dict[str, Any]] = None,
     client: Optional[ClientType] = None,
+    temp_dir: Optional[PathType] = None,
 ) -> Generator[IO, None, None]:
     """Get a context manager to read in a file that is either in a local
     or remote location. If the path is a remote path, the file will be
@@ -221,6 +241,12 @@ def open_file_for_read(
             logger at INFO level.
         open_kwargs (Dict[str, Any], optional): Any additional keyword to pass
             to the open function. Defaults to None.
+        client (ClientType, optional): The client to use to download the file.
+            If not provided, one will be created using the default boto3
+            if necessary. Defaults to None.
+        temp_dir (Union[str, Path, MultiPath], optional): The directory to
+            download the file to. Defaults to None, which will use the
+            system default.
     """
     open_kwargs = open_kwargs or {}
     logger = logger or LOGGER
@@ -236,7 +262,10 @@ def open_file_for_read(
         assert client is not None, "Could not get S3 client"
 
         logger.info(f"Downloading {path} to a temporary file")
-        with NamedTemporaryFile(delete=False) as f:
+        with NamedTemporaryFile(
+            delete=False,
+            dir=get_temp_dir(temp_dir)
+        ) as f:
             client.download_fileobj(path.bucket, path.key.lstrip("/"), f)
             path = MultiPath.parse(f.name)
             remove = True
@@ -257,6 +286,7 @@ def open_file_for_write(
     logger: Optional[Logger] = None,
     open_kwargs: Optional[Dict[str, Any]] = None,
     client: Optional[ClientType] = None,
+    temp_dir: Optional[PathType] = None,
 ) -> Generator[IO, None, None]:
     """Get a context manager to write to a file. If the file is from a
     remote location (e.g. S3), the file will be written to a temporary
@@ -273,6 +303,10 @@ def open_file_for_write(
             logger at INFO level.
         open_kwargs (Dict[str, Any], optional): Any additional keyword to pass
             to the open function. Defaults to None.
+        client (boto3.client, optional): The boto3 client to use. If not
+            provided, one will be created if necessary.
+        temp_dir (Union[str, Path, MultiPath], optional): The directory to
+            use for temporary files. Defaults to the system temp directory.
     """
 
     path = str(path)
@@ -293,7 +327,11 @@ def open_file_for_write(
             with open_fn(file=str(path), mode=mode, **open_kwargs) as f:
                 yield f
         else:
-            with NamedTemporaryFile(delete=False, mode=mode) as f:
+            with NamedTemporaryFile(
+                delete=False,
+                mode=mode,
+                dir=get_temp_dir(temp_dir)
+            ) as f:
                 yield f
                 local = MultiPath.parse(f.name)
     finally:
