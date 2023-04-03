@@ -262,10 +262,7 @@ def open_file_for_read(
         assert client is not None, "Could not get S3 client"
 
         logger.info(f"Downloading {path} to a temporary file")
-        with NamedTemporaryFile(
-            delete=False,
-            dir=get_temp_dir(temp_dir)
-        ) as f:
+        with NamedTemporaryFile(delete=False, dir=get_temp_dir(temp_dir)) as f:
             client.download_fileobj(path.bucket, path.key.lstrip("/"), f)
             path = MultiPath.parse(f.name)
             remove = True
@@ -328,9 +325,7 @@ def open_file_for_write(
                 yield f
         else:
             with NamedTemporaryFile(
-                delete=False,
-                mode=mode,
-                dir=get_temp_dir(temp_dir)
+                delete=False, mode=mode, dir=get_temp_dir(temp_dir)
             ) as f:
                 yield f
                 local = MultiPath.parse(f.name)

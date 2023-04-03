@@ -87,7 +87,6 @@ requires = [
 
 [project.optional-dependencies]
 dev = [
-    "springs>=1.9.1",
     "black[jupyter]>=21.12b0",
     "isort>=5.8.0",
     "mypy>=0.971",
