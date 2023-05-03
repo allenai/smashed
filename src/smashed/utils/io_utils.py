@@ -446,7 +446,7 @@ def recursively_list_files(
             paginator = client.get_paginator("list_objects_v2")
             pages = paginator.paginate(Bucket=path.bucket, Prefix=prefix)
             for page in pages:
-                for obj in page["Contents"]:
+                for obj in page.get("Contents", []):
                     key = obj["Key"]
                     path = MultiPath(prot="s3", root=path.root, path=key)
                     if key[-1] == "/" and key != prefix:
