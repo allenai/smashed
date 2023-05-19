@@ -54,7 +54,6 @@ class BaseZlibDecompressorIO:
 
         return bytes(return_value)
 
-
     def _read(self, size: int = -1) -> bytes:
         while size < 0 or len(self.ready_buffer) < size:
             read_data = self.buffered_reader.read(self.chunk_size)
