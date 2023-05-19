@@ -1,3 +1,4 @@
+import io
 import re
 import shutil
 from contextlib import AbstractContextManager, ExitStack, contextmanager
@@ -20,6 +21,7 @@ from typing import (
     Optional,
     TypeVar,
     Union,
+    cast,
 )
 from urllib.parse import urlparse
 
@@ -38,6 +40,7 @@ __all__ = [
     "is_dir",
     "is_file",
     "open_file_for_read",
+    "stream_file_for_read",
     "open_file_for_write",
     "recursively_list_files",
     "remove_directory",
@@ -219,6 +222,69 @@ def get_temp_dir(path: Optional[PathType]) -> Path:
     return path
 
 
+class StreamingBodyIO(io.RawIOBase):
+    """Wrap a boto StreamingBody in the IOBase API. From
+    https://github.com/boto/botocore/issues/879#issuecomment-245587868"""
+    def __init__(self, body):
+        self.body = body
+
+    def readable(self):
+        return True
+
+    def read(self, n=-1):
+        n = None if n < 0 else n
+        return self.body.read(n)
+
+
+@contextmanager
+def stream_file_for_read(
+    path: PathType,
+    mode: str = "r",
+    open_fn: Optional[Callable] = None,
+    logger: Optional[Logger] = None,
+    open_kwargs: Optional[Dict[str, Any]] = None,
+    client: Optional[ClientType] = None,
+) -> Generator[IO, None, None]:
+    """Just like open_file_for_read, but returns a file-like object that
+    streams content from remote files instead of saving it locally first.
+
+    Args:
+        path (Union[str, Path, MultiPath]): The path to the file to read.
+        mode (str, optional): The mode to open the file in. Defaults to "r".
+        open_fn (Callable, optional): The function to use to  open the file.
+            Defaults to the built-in open function.
+        logger (Logger, optional): The logger to use. Defaults to the built-in
+            logger at INFO level.
+        open_kwargs (Dict[str, Any], optional): Any additional keyword to pass
+            to the open function. Defaults to None.
+        client (ClientType, optional): The client to use to download the file.
+            If not provided, one will be created using the default boto3
+            if necessary. Defaults to None.
+    """
+
+    open_kwargs = open_kwargs or {}
+    logger = logger or LOGGER
+    open_fn = open_fn or open
+
+    assert "r" in mode, "Only read mode is supported"
+
+    path = MultiPath.parse(path)
+
+    if path.is_s3:
+        client = client or get_client_if_needed(path)
+        assert client is not None, "Could not get S3 client"
+
+        obj = client.get_object(Bucket=path.bucket, Key=path.key.lstrip("/"))
+
+        # content is a streamable object, must be wrapped in a file-like object
+        yield cast(IO, StreamingBodyIO(obj["Body"]))
+    elif path.is_local:
+        with open_fn(file=path.as_str, mode=mode, **open_kwargs) as f:
+            yield f
+    else:
+        raise ValueError(f"Unsupported protocol: {path.prot}")
+
+
 @contextmanager
 def open_file_for_read(
     path: PathType,
@@ -228,6 +294,7 @@ def open_file_for_read(
     open_kwargs: Optional[Dict[str, Any]] = None,
     client: Optional[ClientType] = None,
     temp_dir: Optional[PathType] = None,
+    streaming: bool = False,
 ) -> Generator[IO, None, None]:
     """Get a context manager to read in a file that is either in a local
     or remote location. If the path is a remote path, the file will be
@@ -250,7 +317,21 @@ def open_file_for_read(
         temp_dir (Union[str, Path, MultiPath], optional): The directory to
             download the file to. Defaults to None, which will use the
             system default.
+        streaming (bool, optional): Whether to stream the file or copy it
+            locally first. Defaults to False.
     """
+    if streaming:
+        # fallback to streaming method if requested
+        with stream_file_for_read(
+            path=path,
+            mode=mode,
+            open_fn=open_fn,
+            logger=logger,
+            open_kwargs=open_kwargs,
+            client=client,
+        ) as f:
+            yield f
+
     open_kwargs = open_kwargs or {}
     logger = logger or LOGGER
     open_fn = open_fn or open

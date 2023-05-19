@@ -1,6 +1,6 @@
 [project]
 name = "smashed"
-version = "0.19.6"
+version = "0.20.0"
 description = """\
 SMASHED is a toolkit designed to apply transformations to samples in \
 datasets, such as fields extraction, tokenization, prompting, batching, \
@@ -97,6 +97,7 @@ dev = [
     "ipdb>=0.13.0",
     "flake8-pyi>=22.8.1",
     "Flake8-pyproject>=1.1.0",
+    "moto[ec2,s3,all] >= 4.0.0",
 ]
 remote = [
     "smart-open>=5.2.1",
