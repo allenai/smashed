@@ -1,6 +1,9 @@
 #! /usr/bin/env python3
 
+
+import platform
 from subprocess import call
+from warnings import warn
 
 BASH_SCRIPT = """
 #! /usr/bin/env bash
@@ -39,7 +42,17 @@ rm -rf $TMP_DIR
 
 
 def main():
-    call(BASH_SCRIPT.strip(), shell=True)
+    # check if we are on MacOS
+    if platform.system() != "Darwin":
+        warn("This script is only meant to be run on MacOS; skipping...")
+        return
+
+    # check that architecture is arm64
+    if platform.machine() != "arm64":
+        warn("This script is only meant to be run on arm64; skipping...")
+        return
+
+    return call(BASH_SCRIPT.strip(), shell=True)
 
 
 if __name__ == "__main__":

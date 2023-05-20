@@ -1,15 +1,12 @@
 import io
-import re
 import shutil
-from contextlib import AbstractContextManager, ExitStack, contextmanager
-from dataclasses import dataclass
-from functools import partial
+from contextlib import ExitStack, contextmanager
 from logging import Logger, getLogger
 from os import remove as remove_local_file
 from os import stat as stat_local_file
 from os import walk as local_walk
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory, gettempdir
+from tempfile import NamedTemporaryFile, gettempdir
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -19,14 +16,14 @@ from typing import (
     Generator,
     Iterable,
     Optional,
-    TypeVar,
     Union,
     cast,
 )
-from urllib.parse import urlparse
 
 from necessary import necessary
-from typing_extensions import Concatenate, ParamSpec
+
+from .io_wrappers import ReadBytesIO, ReadTextIO
+from .multipath import MultiPath
 
 with necessary("boto3", soft=True) as BOTO_AVAILABLE:
     if TYPE_CHECKING or BOTO_AVAILABLE:
@@ -34,154 +31,10 @@ with necessary("boto3", soft=True) as BOTO_AVAILABLE:
         from botocore.client import BaseClient
 
 
-__all__ = [
-    "copy_directory",
-    "exists",
-    "is_dir",
-    "is_file",
-    "open_file_for_read",
-    "stream_file_for_read",
-    "open_file_for_write",
-    "recursively_list_files",
-    "remove_directory",
-    "remove_file",
-    "upload_on_success",
-]
-
 PathType = Union[str, Path, "MultiPath"]
 ClientType = Union["BaseClient", None]
 
 LOGGER = getLogger(__file__)
-
-
-@dataclass
-class MultiPath:
-    """A path object that can handle both local and remote paths."""
-
-    prot: str
-    root: str
-    path: str
-
-    def __post_init__(self):
-        SUPPORTED_PROTOCOLS = {"s3", "file"}
-        if self.prot and self.prot not in SUPPORTED_PROTOCOLS:
-            raise ValueError(
-                f"Unsupported protocol: {self.prot}; "
-                f"supported protocols are {SUPPORTED_PROTOCOLS}"
-            )
-
-    @classmethod
-    def parse(cls, path: PathType) -> "MultiPath":
-        """Parse a path into a PathParser object.
-
-        Args:
-            path (str): The path to parse.
-        """
-        if isinstance(path, cls):
-            return path
-        elif isinstance(path, Path):
-            path = str(path)
-        elif not isinstance(path, str):
-            raise ValueError(f"Cannot parse path of type {type(path)}")
-
-        p = urlparse(str(path))
-        return cls(prot=p.scheme, root=p.netloc, path=p.path)
-
-    @property
-    def is_s3(self) -> bool:
-        """Is true if the path is an S3 path."""
-        return self.prot == "s3"
-
-    @property
-    def is_local(self) -> bool:
-        """Is true if the path is a local path."""
-        return self.prot == "file" or self.prot == ""
-
-    def _remove_extra_slashes(self, path: str) -> str:
-        return re.sub(r"//+", "/", path)
-
-    def __str__(self) -> str:
-        if self.prot:
-            loc = self._remove_extra_slashes(f"{self.root}/{self.path}")
-            return f"{self.prot}://{loc}"
-        elif self.root:
-            return self._remove_extra_slashes(f"/{self.root}/{self.path}")
-        else:
-            return self._remove_extra_slashes(self.path)
-
-    @property
-    def bucket(self) -> str:
-        """If the path is an S3 path, return the bucket name.
-        Otherwise, raise a ValueError."""
-        if not self.is_s3:
-            raise ValueError(f"Not an S3 path: {self}")
-        return self.root
-
-    @property
-    def key(self) -> str:
-        """If the path is an S3 path, return the prefix.
-        Otherwise, raise a ValueError."""
-        if not self.is_s3:
-            raise ValueError(f"Not an S3 path: {self}")
-        return self.path.lstrip("/")
-
-    @property
-    def as_path(self) -> Path:
-        """Return the path as a pathlib.Path object."""
-        if not self.is_local:
-            raise ValueError(f"Not a local path: {self}")
-        return Path(self.as_str)
-
-    def __hash__(self) -> int:
-        return hash(self.as_str)
-
-    def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, (MultiPath, str, Path)):
-            return False
-
-        other = MultiPath.parse(other)
-        return self.as_str == other.as_str
-
-    @property
-    def as_str(self) -> str:
-        """Return the path as a string."""
-        return str(self)
-
-    def __truediv__(self, other: PathType) -> "MultiPath":
-        """Join two paths together using the / operator."""
-        other = MultiPath.parse(other)
-
-        if isinstance(other, MultiPath) and other.prot:
-            raise ValueError(f"Cannot combine fully formed path {other}")
-
-        return MultiPath(
-            prot=self.prot,
-            root=self.root,
-            path=f"{self.path.rstrip('/')}/{str(other).lstrip('/')}",
-        )
-
-    def __len__(self) -> int:
-        return len(self.as_str)
-
-    def __sub__(self, other: PathType) -> "MultiPath":
-        _o_str = MultiPath.parse(other).as_str
-        _s_str = self.as_str
-        loc = _s_str.find(_o_str)
-        return MultiPath.parse(_s_str[:loc] + _s_str[loc + len(_o_str) :])
-
-    @classmethod
-    def join(cls, *others: PathType) -> "MultiPath":
-        """Join multiple paths together; each path can be a string,
-        pathlib.Path, or MultiPath object."""
-        if not others:
-            raise ValueError("No paths provided")
-
-        first, *rest = others
-        first = cls.parse(first)
-        for part in rest:
-            # explicitly call __div__ to avoid mypy errors
-            first = first / part
-        return first
 
 
 def get_client_if_needed(path: PathType, **boto3_kwargs: Any) -> ClientType:
@@ -220,20 +73,6 @@ def get_temp_dir(path: Optional[PathType]) -> Path:
 
     path.mkdir(parents=True, exist_ok=True)
     return path
-
-
-class StreamingBodyIO(io.RawIOBase):
-    """Wrap a boto StreamingBody in the IOBase API. From
-    https://github.com/boto/botocore/issues/879#issuecomment-245587868"""
-    def __init__(self, body):
-        self.body = body
-
-    def readable(self):
-        return True
-
-    def read(self, n=-1):
-        n = None if n < 0 else n
-        return self.body.read(n)
 
 
 @contextmanager
@@ -276,8 +115,13 @@ def stream_file_for_read(
 
         obj = client.get_object(Bucket=path.bucket, Key=path.key.lstrip("/"))
 
-        # content is a streamable object, must be wrapped in a file-like object
-        yield cast(IO, StreamingBodyIO(obj["Body"]))
+        stream: io.IOBase
+        if "b" in mode:
+            stream = ReadBytesIO(obj["Body"])
+        else:
+            stream = ReadTextIO(obj["Body"])
+
+        yield cast(IO, stream)
     elif path.is_local:
         with open_fn(file=path.as_str, mode=mode, **open_kwargs) as f:
             yield f
@@ -643,102 +487,3 @@ def remove_directory(path: PathType, client: Optional[ClientType] = None):
 
     if path.is_local:
         shutil.rmtree(path.as_str, ignore_errors=True)
-
-
-T = TypeVar("T")
-P = ParamSpec("P")
-
-
-class upload_on_success(AbstractContextManager):
-    """Context manager to upload a directory of results to a remote
-    location if the execution in the context manager is successful.
-
-    You can use this class in two ways:
-
-    1. As a context manager
-
-        ```python
-
-        with upload_on_success('s3://my-bucket/my-results') as path:
-            # run training, save temporary results in `path`
-            ...
-        ```
-
-    2. As a function decorator
-
-        ```python
-        @upload_on_success('s3://my-bucket/my-results')
-        def my_function(path: str, ...)
-            # run training, save temporary results in `path`
-        ```
-
-    You can specify a local destination by passing `local_path` to
-    `upload_on_success`. Otherwise, a temporary directory is created for  you.
-    """
-
-    def __init__(
-        self,
-        remote_path: PathType,
-        local_path: Optional[PathType] = None,
-        keep_local: bool = False,
-    ) -> None:
-        """Constructor for upload_on_success context manager
-
-        Args:
-            remote_path (str or urllib.parse.ParseResult): The remote location
-                to upload to (e.g., an S3 prefix for a bucket you have
-                access to).
-            local_path (str or Path): The local path where to temporarily
-                store files before upload. If not provided, a temporary
-                directory is created for you and returned by the context
-                manager. It will be deleted at the end of the context
-                (unless keep_local is set to True). Defaults to None
-            keep_local (bool, optional): Whether to keep the local results
-                as well as uploading to the remote path. Only available
-                if `local_path` is provided.
-        """
-
-        self._ctx = ExitStack()
-        self.remote_path = remote_path
-        self.local_path = MultiPath.parse(
-            local_path or self._ctx.enter_context(TemporaryDirectory())
-        )
-        if local_path is None and keep_local:
-            raise ValueError(
-                "Cannot keep local destination if `local_path` is None"
-            )
-        self.keep_local = keep_local
-
-        super().__init__()
-
-    def _decorated(
-        self,
-        func: Callable[Concatenate[str, P], T],
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> T:
-        with type(self)(
-            local_path=self.local_path,
-            remote_path=self.remote_path,
-            keep_local=self.keep_local,
-        ) as path:
-            output = func(path.as_str, *args, **kwargs)
-        return output
-
-    def __call__(
-        self, func: Callable[Concatenate[str, P], T]
-    ) -> Callable[P, T]:
-        return partial(self._decorated, func=func)  # type: ignore
-
-    def __enter__(self):
-        return self.local_path
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is None:
-            # all went well, so we copy the local directory to the remote
-            copy_directory(src=self.local_path, dst=self.remote_path)
-
-        if not self.keep_local:
-            remove_directory(self.local_path)
-
-        self._ctx.close()
