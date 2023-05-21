@@ -1,6 +1,7 @@
 import io
 import zlib
-from typing import IO, Any, Generic, Iterator, Optional, TypeVar
+from contextlib import contextmanager
+from typing import IO, Any, Generic, Iterator, Literal, Optional, TypeVar, cast
 
 T = TypeVar("T", bound=Any)
 
@@ -165,3 +166,31 @@ class TextZLibDecompressorIO(BaseZlibDecompressorIO[str], ReadTextIO):
         )
 
         ...
+
+
+@contextmanager
+def decompress_stream(
+    stream: IO,
+    mode: Literal["r", "rt", "rb"] = "r",
+    encoding: Optional[str] = "utf-8",
+    errors: str = "strict",
+    chunk_size: int = io.DEFAULT_BUFFER_SIZE,
+    gzip: bool = True,
+) -> Iterator[IO]:
+    out: io.IOBase
+
+    if "b" in mode:
+        out = BytesZLibDecompressorIO(
+            stream=stream, chunk_size=chunk_size, gzip=gzip
+        )
+    else:
+        assert encoding is not None, "encoding must be provided for text mode"
+        out = TextZLibDecompressorIO(
+            stream=stream,
+            chunk_size=chunk_size,
+            gzip=gzip,
+            encoding=encoding,
+            errors=errors,
+        )
+
+    yield cast(IO, out)

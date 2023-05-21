@@ -2,10 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from smashed.utils.io_utils import (
-    BytesZLibDecompressorIO,
-    TextZLibDecompressorIO,
-)
+from smashed.utils.io_utils import decompress_stream
 
 FIXTURES_PATH = Path(__file__).parent / "fixtures"
 
@@ -18,7 +15,7 @@ class TestDecompression(unittest.TestCase):
     def test_bytes_compression(self):
         cnt = 0
         with open(self.arxiv_path, "rb") as f:
-            with BytesZLibDecompressorIO(f, gzip=True) as g:
+            with decompress_stream(f, "rb", gzip=True) as g:
                 for ln in g:
                     json.loads(ln)
                     cnt += 1
@@ -26,7 +23,7 @@ class TestDecompression(unittest.TestCase):
 
         cnt = 0
         with open(self.c4_train_path, "rb") as f:
-            with BytesZLibDecompressorIO(f, gzip=True) as g:
+            with decompress_stream(f, "rb", gzip=True) as g:
                 for ln in g:
                     json.loads(ln)
                     cnt += 1
@@ -35,7 +32,7 @@ class TestDecompression(unittest.TestCase):
     def test_text_compression(self):
         cnt = 0
         with open(self.arxiv_path, "rb") as f:
-            with TextZLibDecompressorIO(f, gzip=True) as g:
+            with decompress_stream(f, gzip=True) as g:
                 for ln in g:
                     json.loads(ln)
                     cnt += 1
@@ -43,7 +40,7 @@ class TestDecompression(unittest.TestCase):
 
         cnt = 0
         with open(self.c4_train_path, "rb") as f:
-            with TextZLibDecompressorIO(f, gzip=True) as g:
+            with decompress_stream(f, "rt", gzip=True) as g:
                 for ln in g:
                     json.loads(ln)
                     cnt += 1
