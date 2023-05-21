@@ -138,7 +138,6 @@ def open_file_for_read(
     open_kwargs: Optional[Dict[str, Any]] = None,
     client: Optional[ClientType] = None,
     temp_dir: Optional[PathType] = None,
-    streaming: bool = False,
 ) -> Generator[IO, None, None]:
     """Get a context manager to read in a file that is either in a local
     or remote location. If the path is a remote path, the file will be
@@ -161,21 +160,7 @@ def open_file_for_read(
         temp_dir (Union[str, Path, MultiPath], optional): The directory to
             download the file to. Defaults to None, which will use the
             system default.
-        streaming (bool, optional): Whether to stream the file or copy it
-            locally first. Defaults to False.
     """
-    if streaming:
-        # fallback to streaming method if requested
-        with stream_file_for_read(
-            path=path,
-            mode=mode,
-            open_fn=open_fn,
-            logger=logger,
-            open_kwargs=open_kwargs,
-            client=client,
-        ) as f:
-            yield f
-
     open_kwargs = open_kwargs or {}
     logger = logger or LOGGER
     open_fn = open_fn or open
@@ -282,6 +267,8 @@ def open_file_for_write(
         path (Union[str, Path, MultiPath]): The path to the file to write.
         mode (str, optional): The mode to open the file in. Defaults  to "w".
             Only read modes are supported (e.g. 'wb', 'w', ...).
+        skip_if_empty (bool, optional): If True, the file will not be
+            written if the content is empty. Defaults to False.
         open_fn (Callable, optional): The function to use to  open the file.
             Defaults to the built-in open function.
         logger (Logger, optional): The logger to use. Defaults to the built-in
