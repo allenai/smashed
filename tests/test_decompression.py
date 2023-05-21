@@ -1,13 +1,14 @@
+import io
 import json
 import unittest
 from pathlib import Path
 
-from smashed.utils.io_utils import decompress_stream
+from smashed.utils.io_utils import compress_stream, decompress_stream
 
 FIXTURES_PATH = Path(__file__).parent / "fixtures"
 
 
-class TestDecompression(unittest.TestCase):
+class TestDeCompression(unittest.TestCase):
     def setUp(self) -> None:
         self.arxiv_path = FIXTURES_PATH / "compressed_jsonl" / "arxiv.gz"
         self.c4_train_path = FIXTURES_PATH / "compressed_jsonl" / "c4-train.gz"
@@ -45,3 +46,14 @@ class TestDecompression(unittest.TestCase):
                     json.loads(ln)
                     cnt += 1
         self.assertEqual(cnt, 185)
+
+    def test_compression(self):
+        text = "This is a test\nWith multiple lines\nBye!"
+        stream = io.BytesIO()
+
+        with compress_stream(stream, "wt", gzip=True) as f:
+            f.write(text)
+
+        stream.seek(0)
+        with decompress_stream(stream, "rt", gzip=True) as g:
+            self.assertEqual(g.read(), text)

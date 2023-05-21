@@ -1,7 +1,6 @@
 import io
 import zlib
-from contextlib import contextmanager
-from typing import IO, Any, Generic, Iterator, Literal, Optional, TypeVar, cast
+from typing import IO, Any, Generic, Iterator, Optional, TypeVar
 
 T = TypeVar("T", bound=Any)
 
@@ -52,6 +51,9 @@ class ReadIO(io.IOBase, Generic[T]):
                 break
 
             processed_data = self._process_data(read_data)
+            if read_data and not processed_data:
+                raise RuntimeError(f"{self.__class__.__name__} failed")
+
             self.ready_buffer.extend(processed_data)
 
         loc = self.ready_buffer.find(b"\n")
@@ -76,6 +78,9 @@ class ReadIO(io.IOBase, Generic[T]):
                 break
 
             processed_data = self._process_data(read_data)
+            if read_data and not processed_data:
+                raise RuntimeError(f"{self.__class__.__name__} failed")
+
             self.ready_buffer.extend(processed_data)
 
         # If size equals -1, return all available data
@@ -166,31 +171,3 @@ class TextZLibDecompressorIO(BaseZlibDecompressorIO[str], ReadTextIO):
         )
 
         ...
-
-
-@contextmanager
-def decompress_stream(
-    stream: IO,
-    mode: Literal["r", "rt", "rb"] = "r",
-    encoding: Optional[str] = "utf-8",
-    errors: str = "strict",
-    chunk_size: int = io.DEFAULT_BUFFER_SIZE,
-    gzip: bool = True,
-) -> Iterator[IO]:
-    out: io.IOBase
-
-    if "b" in mode:
-        out = BytesZLibDecompressorIO(
-            stream=stream, chunk_size=chunk_size, gzip=gzip
-        )
-    else:
-        assert encoding is not None, "encoding must be provided for text mode"
-        out = TextZLibDecompressorIO(
-            stream=stream,
-            chunk_size=chunk_size,
-            gzip=gzip,
-            encoding=encoding,
-            errors=errors,
-        )
-
-    yield cast(IO, out)

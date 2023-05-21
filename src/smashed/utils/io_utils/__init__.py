@@ -1,5 +1,5 @@
 from .closures import upload_on_success
-from .io_wrappers import decompress_stream
+from .compression import compress_stream, decompress_stream
 from .multipath import MultiPath
 from .operations import (
     copy_directory,
@@ -15,7 +15,9 @@ from .operations import (
 )
 
 __all__ = [
+    "compress_stream",
     "copy_directory",
+    "decompress_stream",
     "exists",
     "is_dir",
     "is_file",
@@ -26,6 +28,5 @@ __all__ = [
     "remove_directory",
     "remove_file",
     "stream_file_for_read",
-    "decompress_stream",
     "upload_on_success",
 ]
