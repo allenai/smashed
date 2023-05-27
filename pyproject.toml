@@ -1,6 +1,6 @@
 [project]
 name = "smashed"
-version = "0.20.0"
+version = "0.21.0"
 description = """\
 SMASHED is a toolkit designed to apply transformations to samples in \
 datasets, such as fields extraction, tokenization, prompting, batching, \
@@ -11,7 +11,6 @@ license = {text = "Apache-2.0"}
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "torch>=1.9",
     "necessary>=0.4.1",
     "trouting>=0.3.3",
     "ftfy>=6.1.1",
@@ -103,12 +102,17 @@ remote = [
     "smart-open>=5.2.1",
     "boto3>=1.25.5",
 ]
+torch = [
+    "torch>=1.9",
+]
 datasets = [
+    "smashed[torch]",
     "transformers>=4.5",
     "datasets>=2.8.0",
     "dill>=0.3.0",
 ]
 prompting = [
+    "smashed[torch]",
     "transformers>=4.5",
     "promptsource>=0.2.3",
     "blingfire>=0.1.8",
@@ -119,6 +123,7 @@ torchdata = [
 ]
 all = [
     "smashed[dev]",
+    "smashed[torch]",
     "smashed[datasets]",
     "smashed[torchdata]",
     "smashed[remote]",

@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar
 
 from necessary import necessary
-from torch._utils import classproperty
 
 from ..base import SingleBaseMapper, TransformElementType
 
@@ -19,7 +18,7 @@ class ChangeFieldsMapper(SingleBaseMapper):
     """Mapper that removes some of the fields in a dataset.
     Either `keep_fields` or `drop_fields` must be specified, but not both."""
 
-    @classproperty
+    @classmethod
     def always_remove_columns(cls) -> bool:
         return True
 
@@ -71,7 +70,7 @@ class ChangeFieldsMapper(SingleBaseMapper):
 class RenameFieldsMapper(SingleBaseMapper):
     """Mapper that renames some of the fields batch"""
 
-    @classproperty
+    @classmethod
     def always_remove_columns(cls) -> bool:
         return True
 
