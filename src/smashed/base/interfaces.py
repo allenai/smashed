@@ -15,7 +15,6 @@ from typing import (
 )
 
 from necessary import necessary
-from torch._utils import classproperty
 from trouting import trouting
 
 from .abstract import (
@@ -52,7 +51,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
     and various interfaces. Do not inherit from this class directly,
     but use SingleBaseMapper/BatchedBaseMapper instead."""
 
-    @classproperty
+    @classmethod
     def always_remove_columns(cls) -> bool:
         """Whether this mapper should always remove its input columns
         from the dataset. If False, the mapper will only remove columns
@@ -191,7 +190,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
         # TODO[lucas]: maybe support specifying which fields to keep?
         remove_columns = (
             bool(map_kwargs.get("remove_columns", False))
-            or self.always_remove_columns
+            or self.always_remove_columns()
         )
 
         if isinstance(dataset, abc.Sequence):
@@ -258,7 +257,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
 
             print_fingerprint = map_kwargs.pop("print_fingerprint", False)
 
-            if self.always_remove_columns:
+            if self.always_remove_columns():
                 remove_columns = list(dataset.features.keys())
             else:
                 remove_columns = map_kwargs.get("remove_columns", [])
@@ -320,7 +319,7 @@ class MapMethodInterfaceMixIn(AbstractBaseMapper):
             # TODO[lucas]: maybe support specifying which fields to keep?
             remove_columns = (
                 bool(map_kwargs.get("remove_columns", False))
-                or self.always_remove_columns
+                or self.always_remove_columns()
             )
 
             dtview: DataBatchView[LazyBatch, str, Any] = DataBatchView(dataset)

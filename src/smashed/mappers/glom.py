@@ -23,7 +23,7 @@ class ExtendGlommerMixin:
 
     def __getstate__(self):
         state = super().__getstate__()  # pyright: ignore
-        state["__dict__"].pop("glommer", None)
+        state["__dict__"].pop("glommer", None)  # pyright: ignore
         return state
 
     @cached_property

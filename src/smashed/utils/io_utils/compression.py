@@ -48,7 +48,6 @@ def compress_stream(
     errors: str = "strict",
     gzip: bool = True,
 ) -> Iterator[IO]:
-
     assert gzip, "Only gzip compression is supported at this time"
 
     if mode == "wb" or mode == "w":

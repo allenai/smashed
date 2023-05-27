@@ -14,7 +14,6 @@ from typing import (
     Union,
 )
 
-import torch
 from necessary import necessary
 
 from ..base import SingleBaseMapper, TransformElementType
@@ -25,6 +24,10 @@ with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
         from transformers.tokenization_utils_base import (
             PreTrainedTokenizerBase,
         )
+
+with necessary("torch", soft=True) as PYTORCH_AVAILABLE:
+    if PYTORCH_AVAILABLE or TYPE_CHECKING:
+        import torch
 
 
 __all__ = [
@@ -170,15 +173,21 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
     >>> data_loader = DataLoader(..., collate_fn=collator.transform)
     """
 
+    def __init__(self, *args, **kwargs):
+        if not PYTORCH_AVAILABLE:
+            cls_name = self.__class__.__name__
+            raise ImportError(f"Pytorch is required to use {cls_name}")
+        super().__init__(*args, **kwargs)
+
     @staticmethod
     def _pad(
-        sequence: Sequence[torch.Tensor],
+        sequence: Sequence["torch.Tensor"],
         pad_value: Union[int, float],
         dim: int = 0,
         pad_to_length: Optional[Union[int, Sequence[int]]] = None,
         pad_to_multiple_of: Optional[int] = None,
         right_pad: bool = True,
-    ) -> torch.Tensor:
+    ) -> "torch.Tensor":
         """Pad a sequence of tensors to the same length.
 
         Args:
@@ -272,8 +281,8 @@ class TensorCollatorMapper(BaseCollator, SingleBaseMapper):
         return torch.cat(to_stack, dim=dim)
 
     def transform(  # type: ignore
-        self: "TensorCollatorMapper", data: Dict[str, Sequence[torch.Tensor]]
-    ) -> Dict[str, torch.Tensor]:
+        self: "TensorCollatorMapper", data: Dict[str, Sequence["torch.Tensor"]]
+    ) -> Dict[str, "torch.Tensor"]:
         collated_data = {
             field_name: self._pad(
                 sequence=list_of_tensors,

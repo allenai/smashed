@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, TypeVar, Union
 
-import torch
 from necessary import necessary
 from trouting import trouting
 
@@ -15,16 +14,22 @@ with necessary("datasets", soft=True) as HUGGINGFACE_DATASET_AVAILABLE:
             "HuggingFaceDataset", Dataset, IterableDataset
         )
 
+with necessary("torch", soft=True) as PYTORCH_AVAILABLE:
+    if PYTORCH_AVAILABLE or TYPE_CHECKING:
+        import torch
+
 
 class Python2TorchMapper(SingleBaseMapper):
     __slots__ = ["field_cast_map", "device"]
-    field_cast_map: Dict[str, torch.dtype]
-    device: Union[torch.device, None]
+    field_cast_map: Dict[str, "torch.dtype"]
+    device: Union["torch.device", None]
 
     def __init__(
         self: "Python2TorchMapper",
-        field_cast_map: Optional[Mapping[str, Union[str, torch.dtype]]] = None,
-        device: Optional[Union[torch.device, str]] = None,
+        field_cast_map: Optional[
+            Mapping[str, Union[str, "torch.dtype"]]
+        ] = None,
+        device: Optional[Union["torch.device", str]] = None,
     ) -> None:
         """Mapper that converts Python types to Torch types. It can optionally
         cast the values of a field to a specific type, and move to a specific
@@ -37,6 +42,10 @@ class Python2TorchMapper(SingleBaseMapper):
             device (Union[torch.device, str], optional): Device to move the
                 tensors to. Defaults to None, which means no moving occurs.
         """
+        if not PYTORCH_AVAILABLE:
+            cls_name = self.__class__.__name__
+            raise ImportError(f"{cls_name} requires PyTorch to be installed")
+
         self.device = torch.device(device) if device else None
 
         self.field_cast_map = {
@@ -49,7 +58,7 @@ class Python2TorchMapper(SingleBaseMapper):
         )
 
     @staticmethod
-    def _get_dtype(dtype: Any) -> torch.dtype:
+    def _get_dtype(dtype: Any) -> "torch.dtype":
         if isinstance(dtype, str):
             dtype = getattr(torch, dtype, None)
             if dtype is None:
@@ -102,7 +111,7 @@ class Torch2PythonMapper(SingleBaseMapper):
         super().__init__()
 
     def transform(  # type: ignore
-        self: "Torch2PythonMapper", data: Dict[str, torch.Tensor]
+        self: "Torch2PythonMapper", data: Dict[str, "torch.Tensor"]
     ) -> TransformElementType:
         return {
             field_name: field_value.cpu().tolist()
