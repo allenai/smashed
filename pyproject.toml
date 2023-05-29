@@ -1,6 +1,6 @@
 [project]
 name = "smashed"
-version = "0.21.0"
+version = "0.21.1"
 description = """\
 SMASHED is a toolkit designed to apply transformations to samples in \
 datasets, such as fields extraction, tokenization, prompting, batching, \

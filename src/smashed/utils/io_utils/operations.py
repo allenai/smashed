@@ -329,6 +329,7 @@ def recursively_list_files(
     include_dirs: bool = False,
     include_files: bool = True,
     client: Optional[ClientType] = None,
+    local_follow_links: bool = False,
 ) -> Iterable[str]:
     """Recursively list all files in the given directory for a given
     path, local or remote.
@@ -343,6 +344,8 @@ def recursively_list_files(
             listing. Defaults to True.
         client (boto3.client, optional): The boto3 client to use. If not
             provided, one will be created if necessary.
+        local_follow_links (bool, optional): Whether to follow symlinks when
+            listing local files. Defaults to False.
     """
 
     path = MultiPath.parse(path)
@@ -373,7 +376,14 @@ def recursively_list_files(
                             yield str(path)
 
     if path.is_local:
-        for _root, dirnames, filenames in local_walk(path.as_str):
+        if not path.as_path.is_dir():
+            # yield the path itself if it's not a directory; this matches
+            # the behavior that we get for S3.
+            yield path.as_str
+
+        for _root, dirnames, filenames in local_walk(
+            top=path.as_str, followlinks=local_follow_links
+        ):
             root = Path(_root)
             to_list = [
                 *(dirnames if include_dirs else []),
