@@ -373,6 +373,11 @@ def recursively_list_files(
                             yield str(path)
 
     if path.is_local:
+        if not path.as_path.is_dir():
+            # yield the path itself if it's not a directory; this matches
+            # the behavior that we get for S3.
+            yield path.as_str
+
         for _root, dirnames, filenames in local_walk(path.as_str):
             root = Path(_root)
             to_list = [
