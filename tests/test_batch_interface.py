@@ -17,7 +17,7 @@ class TestBatchInterface(unittest.TestCase):
     def test_batch(self, remove_columns: bool = False):
         mapper = MockMapper(1, output_fields=["a"])
 
-        data = Dataset.from_list([{"a": i, "b": i**2} for i in range(100)])
+        data = Dataset.from_list([{"a": i, "b": i ** 2} for i in range(100)])
 
         def _batch_fn(data: LazyBatch, mapper: MockMapper) -> LazyBatch:
             return mapper.map(deepcopy(data), remove_columns=remove_columns)

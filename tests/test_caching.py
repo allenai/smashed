@@ -37,7 +37,7 @@ class TestCaching(unittest.TestCase):
 
     def test_datasets_cache(self):
         dt = Dataset.from_dict(
-            {"a": [i for i in range(5)], "b": [i**2 for i in range(5)]}
+            {"a": [i for i in range(5)], "b": [i ** 2 for i in range(5)]}
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
