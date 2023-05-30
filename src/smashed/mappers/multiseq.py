@@ -141,21 +141,24 @@ class TokenTypeIdsSequencePaddingMapper(TokensSequencesPaddingMapper):
         """
         super().__init__(tokenizer=tokenizer, input_field=input_field)
 
+    def _first_symbol(self, seq: List[int]) -> int:
+        return seq[0] if len(seq) > 0 else 0
+
     def transform(self, data: TransformElementType) -> TransformElementType:
         sequences = data[self.input_fields[0]]
         seqs_count = len(sequences)
         padded_sequences = [
             (
                 # a sequence start with BOS tags or SEP tags
-                [i for _ in self.bos]
+                [self._first_symbol(seq) for _ in self.bos]
                 if i == 0
-                else [i for _ in self.sep]
+                else [self._first_symbol(seq) for _ in self.sep]
             )
             + seq
             + (
                 # a sequence ends with EOS tags or nothing if it is not
                 # the last sequence
-                [i for _ in self.eos]
+                [self._first_symbol(seq) for _ in self.eos]
                 if (i + 1) == seqs_count
                 else []
             )
