@@ -9,7 +9,6 @@ from typing import (
     Union,
 )
 
-import torch
 from necessary import necessary
 
 from ..base import BaseRecipe, SingleBaseMapper
@@ -27,6 +26,10 @@ with necessary("transformers", soft=True) as TRANSFORMERS_AVAILABLE:
         from transformers.tokenization_utils_base import (
             PreTrainedTokenizerBase,
         )
+
+with necessary("torch", soft=True) as PYTORCH_AVAILABLE:
+    if PYTORCH_AVAILABLE or TYPE_CHECKING:
+        import torch
 
 
 class CollateFnMixIn(SingleBaseMapper):
@@ -64,8 +67,10 @@ class CollateFnMixIn(SingleBaseMapper):
 
     def get_tensorizer(
         self,
-        field_cast_map: Optional[Mapping[str, Union[str, torch.dtype]]] = None,
-        device: Optional[Union[torch.device, str]] = None,
+        field_cast_map: Optional[
+            Mapping[str, Union[str, "torch.dtype"]]
+        ] = None,
+        device: Optional[Union["torch.device", str]] = None,
     ) -> Python2TorchMapper:
         # this turns lists of ints/floats into tensors
         return Python2TorchMapper(field_cast_map=field_cast_map, device=device)
@@ -87,8 +92,10 @@ class CollatorRecipe(CollateFnMixIn, BaseRecipe):
         pad_to_multiple_of: Optional[int] = None,
         fields_pad_ids: Optional[Mapping[str, int]] = None,
         unk_fields_pad_id: Optional[int] = None,
-        field_cast_map: Optional[Mapping[str, Union[str, torch.dtype]]] = None,
-        device: Optional[Union[torch.device, str]] = None,
+        field_cast_map: Optional[
+            Mapping[str, Union[str, "torch.dtype"]]
+        ] = None,
+        device: Optional[Union["torch.device", str]] = None,
     ) -> None:
         """A recipe that creates a chain of mappers that can collate a sequence
         of tensors into a batch of tensors.
