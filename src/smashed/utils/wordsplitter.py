@@ -2,7 +2,9 @@ from typing import TYPE_CHECKING, List, Sequence, Union
 
 from necessary import Necessary, necessary
 
-with necessary("blingfire", soft=True) as BLINGFIRE_AVAILABLE:
+with necessary(
+    "blingfire", soft=True, errors=(ModuleNotFoundError, OSError)
+) as BLINGFIRE_AVAILABLE:
     if BLINGFIRE_AVAILABLE or TYPE_CHECKING:
         from blingfire import text_to_words
 
@@ -39,6 +41,7 @@ class BaseWordSplitter:
 
 @Necessary(
     "blingfire",
+    errors=(ModuleNotFoundError, OSError),
     message=(
         "{module_name} missing. Fix with 'pip install smashed[prompting]'."
         "If you are on a Mac with Apple Silicon chip, also run "
