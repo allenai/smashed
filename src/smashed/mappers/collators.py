@@ -91,7 +91,7 @@ class BaseCollator(AbstractBaseMapper):
             return self.unk_fields_pad_id
         else:
             raise ValueError(
-                f"Must specify a padding value for field {field_name}"
+                f"Must specify a padding value for field {field_name} "
                 f"or provide a extra_fields_padding_id attribute to "
                 "the mapper to handle unrecognized fields"
             )
