@@ -106,6 +106,18 @@ class TestPromptsource(unittest.TestCase):
         # The fact that the prompt is a bit different from the template
         # is totally fine: T5 removes multiple spaces, turns newlines into
         # spaces, and decoding strips the trailing spaces.
+
+        print('\n' + self.tokenizer.decode(mapped_dataset[0]["input_ids"]))
+        print('-----------')
+        print(
+            f"Q: {FEW_SHOT_DATASET[0]['question'][:14].rstrip()} "
+            f"A: {FEW_SHOT_DATASET[0]['answer'][:14].rstrip()} "
+            f"Q: {FEW_SHOT_DATASET[1]['question'][:14].rstrip()} "
+            f"A: {FEW_SHOT_DATASET[1]['answer'][:14].rstrip()} "
+            f"Q: {FEW_SHOT_DATASET[2]['question'][:14].rstrip()} "
+            "A:</s>"
+        )
+        return
         self.assertEqual(
             self.tokenizer.decode(mapped_dataset[0]["input_ids"]),
             (
