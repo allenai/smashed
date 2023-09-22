@@ -147,10 +147,15 @@ class PromptsourceMixin(ChainableMapperMixIn):
             for field in self.get_vars_from_txt(self.template)
             if field not in self.extra_vars
         )
-        return tuple(
-            {v for v in all_variables if v in fragment}
+        out = tuple(
+            {
+                field
+                for field in all_variables
+                if (field in fragment and field not in self.extra_vars)
+            }
             for fragment in self.template.split("|||")
         )
+        return out
 
     @property
     def template_text(self) -> Tuple[str, ...]:
