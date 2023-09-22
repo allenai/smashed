@@ -149,7 +149,8 @@ class PromptsourceMixin(ChainableMapperMixIn):
         )
         out = tuple(
             {
-                field for field in all_variables
+                field
+                for field in all_variables
                 if (field in fragment and field not in self.extra_vars)
             }
             for fragment in self.template.split("|||")
