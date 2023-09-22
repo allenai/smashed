@@ -11,7 +11,6 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    Type,
     Union,
     cast,
 )
@@ -49,13 +48,11 @@ class JinjaEnvironment:
     _env: Optional["Environment"] = None
 
     @classmethod
-    def env(cls, loader: Optional[Type["BaseLoader"]] = None) -> "Environment":
+    def env(cls, loader: Optional["BaseLoader"] = None) -> "Environment":
         if cls._env is not None:
             return cls._env
 
-        cls._env = Environment(
-            loader=(loader or BaseLoader)  # pyright: ignore
-        )
+        cls._env = Environment(loader=loader)
         return cls._env
 
     @classmethod
@@ -143,13 +140,16 @@ class PromptsourceMixin(ChainableMapperMixIn):
         since we can't parse out cases where for loops or if statements
         are used, nor cases where members of a variable are accessed.
         """
+
+        # we compute variables first because some might
+        all_variables = set(
+            field
+            for field in self.get_vars_from_txt(self.template)
+            if field not in self.extra_vars
+        )
         return tuple(
-            set(
-                field
-                for field in self.get_vars_from_txt(t)
-                if field not in self.extra_vars
-            )
-            for t in self.template.split("|||")
+            {v for v in all_variables if v in fragment}
+            for fragment in self.template.split("|||")
         )
 
     @property

@@ -45,21 +45,23 @@ class QasperChooseAnswerMapper(SingleBaseMapper):
 def main():
     dataset = load_dataset("qasper", split="validation")
 
+    template = """
+    {{title}}{{abs_sep}}
+    {{abstract}}{{abs_sep}}
+    {% for i in range(full_text['section_name'] | length) %}
+    {{full_text['section_name'][i]}}{{title_sep}}
+    {% for paragraph in full_text['paragraphs'][i] %}
+    {{paragraph}}{{para_sep}}
+    {% endfor %}
+    {{sec_sep}}
+    {% endfor %}
+    """
+
     pipeline = (
         # concatenate the full text into a single string; use
         # title_sep, para_sep, sec_sep, and abs_sep to manage separators
         sm.JinjaMapper(
-            jinja=(
-                "{{title}}{{abs_sep}}"
-                "{{abstract}}{{abs_sep}}"
-                "{% for i in range(full_text['section_name'] | length) %}"
-                "{{full_text['section_name'][i]}}{{title_sep}}"
-                "{% for paragraph in full_text['paragraphs'][i] %}"
-                "{{paragraph}}{{para_sep}}"
-                "{% endfor %}"
-                "{{sec_sep}}"
-                "{% endfor %}"
-            ),
+            jinja=template,
             source_field_name="context",
             extra_variables={
                 "title_sep": "\n",
